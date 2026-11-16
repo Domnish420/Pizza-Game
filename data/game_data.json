@@ -1,0 +1,1793 @@
+{
+ "ING": {
+  "flour00": {
+   "name": "00 flour",
+   "price": 1.5,
+   "store": "dry",
+   "unit": "g",
+   "pack": 1000,
+   "packName": "1 kg",
+   "life": 40,
+   "kind": "dough",
+   "space": 2,
+   "col": "e9dcc0",
+   "shape": "dot"
+  },
+  "breadflour": {
+   "name": "Strong bread flour",
+   "price": 1.3,
+   "store": "dry",
+   "unit": "g",
+   "pack": 1000,
+   "packName": "1 kg",
+   "life": 40,
+   "kind": "dough",
+   "space": 2,
+   "col": "dcc9a0",
+   "shape": "dot"
+  },
+  "yeast": {
+   "name": "Fresh yeast",
+   "price": 0.8,
+   "store": "fridge",
+   "unit": "g",
+   "pack": 50,
+   "packName": "50 g",
+   "life": 12,
+   "kind": "dough",
+   "space": 0.5,
+   "col": "c9b28a",
+   "shape": "dot"
+  },
+  "salt": {
+   "name": "Sea salt",
+   "price": 0.6,
+   "store": "dry",
+   "unit": "g",
+   "pack": 500,
+   "packName": "500 g",
+   "life": 999,
+   "kind": "dough",
+   "space": 0.5,
+   "col": "f2f2f2",
+   "shape": "dot"
+  },
+  "oil": {
+   "name": "Olive oil",
+   "price": 4,
+   "store": "dry",
+   "unit": "ml",
+   "pack": 500,
+   "packName": "500 ml",
+   "life": 120,
+   "kind": "dough",
+   "space": 1,
+   "col": "b9b34a",
+   "shape": "dot"
+  },
+  "sugar": {
+   "name": "Sugar",
+   "price": 0.9,
+   "store": "dry",
+   "unit": "g",
+   "pack": 500,
+   "packName": "500 g",
+   "life": 999,
+   "kind": "dough",
+   "space": 0.5,
+   "col": "ffffff",
+   "shape": "dot"
+  },
+  "tomato": {
+   "name": "Tomato sauce",
+   "price": 0.6,
+   "store": "dry",
+   "life": 45,
+   "kind": "sauce",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "c8321f",
+   "shape": "dot"
+  },
+  "cream": {
+   "name": "White sauce",
+   "price": 0.8,
+   "store": "fridge",
+   "life": 5,
+   "kind": "sauce",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "f1e6c8",
+   "shape": "dot"
+  },
+  "bbq": {
+   "name": "BBQ sauce",
+   "price": 0.7,
+   "store": "dry",
+   "life": 60,
+   "kind": "sauce",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "5b2513",
+   "shape": "dot"
+  },
+  "mozz": {
+   "name": "Mozzarella",
+   "price": 1,
+   "store": "fridge",
+   "life": 5,
+   "kind": "cheese",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "fbe7a0",
+   "shape": "dot"
+  },
+  "basil": {
+   "name": "Basil",
+   "price": 0.3,
+   "store": "fridge",
+   "life": 3,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "3f9142",
+   "shape": "leaf"
+  },
+  "pepperoni": {
+   "name": "Pepperoni",
+   "price": 0.9,
+   "store": "fridge",
+   "life": 12,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "a92a1e",
+   "shape": "disc"
+  },
+  "mushroom": {
+   "name": "Mushrooms",
+   "price": 0.6,
+   "store": "fridge",
+   "life": 4,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "e2d3b5",
+   "shape": "cap"
+  },
+  "pepper": {
+   "name": "Peppers",
+   "price": 0.5,
+   "store": "fridge",
+   "life": 6,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "3d9a3a",
+   "shape": "arc"
+  },
+  "onion": {
+   "name": "Red onion",
+   "price": 0.3,
+   "store": "dry",
+   "life": 14,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "a9549f",
+   "shape": "ring"
+  },
+  "olive": {
+   "name": "Olives",
+   "price": 0.6,
+   "store": "dry",
+   "life": 60,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "1e1b1b",
+   "shape": "dot"
+  },
+  "ham": {
+   "name": "Ham",
+   "price": 1,
+   "store": "fridge",
+   "life": 6,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "ee9aa2",
+   "shape": "square"
+  },
+  "pineapple": {
+   "name": "Pineapple",
+   "price": 0.6,
+   "store": "dry",
+   "life": 60,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "f4cf3d",
+   "shape": "tri"
+  },
+  "sausage": {
+   "name": "Italian sausage",
+   "price": 1.1,
+   "store": "freezer",
+   "life": 30,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "7b4a2c",
+   "shape": "blob"
+  },
+  "chicken": {
+   "name": "Roast chicken",
+   "price": 1.2,
+   "store": "freezer",
+   "life": 30,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "ecd2a0",
+   "shape": "square"
+  },
+  "prawn": {
+   "name": "King prawns",
+   "price": 1.9,
+   "store": "freezer",
+   "life": 30,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "f39a8a",
+   "shape": "arc"
+  },
+  "prosciutto": {
+   "name": "Prosciutto",
+   "price": 1.8,
+   "store": "fridge",
+   "life": 8,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "d8656f",
+   "shape": "strip"
+  },
+  "rocket": {
+   "name": "Rocket",
+   "price": 0.5,
+   "store": "fridge",
+   "life": 3,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "2f7d32",
+   "shape": "leaf"
+  },
+  "gorgonzola": {
+   "name": "Gorgonzola",
+   "price": 1.3,
+   "store": "fridge",
+   "life": 10,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "c9d6e8",
+   "shape": "blob"
+  },
+  "parmesan": {
+   "name": "Parmesan",
+   "price": 1.2,
+   "store": "fridge",
+   "life": 20,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "f3e3a3",
+   "shape": "strip"
+  },
+  "ricotta": {
+   "name": "Ricotta",
+   "price": 0.9,
+   "store": "fridge",
+   "life": 5,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "ffffff",
+   "shape": "blob"
+  },
+  "chilli": {
+   "name": "Chilli",
+   "price": 0.3,
+   "store": "dry",
+   "life": 30,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "d4281c",
+   "shape": "strip"
+  },
+  "artichoke": {
+   "name": "Artichokes",
+   "price": 1,
+   "store": "dry",
+   "life": 60,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "9aa857",
+   "shape": "tri"
+  },
+  "anchovy": {
+   "name": "Anchovies",
+   "price": 1.1,
+   "store": "dry",
+   "life": 60,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "7a6a5a",
+   "shape": "strip"
+  },
+  "nduja": {
+   "name": "'Nduja",
+   "price": 1.4,
+   "store": "fridge",
+   "life": 14,
+   "kind": "top",
+   "pack": 1,
+   "unit": "portion",
+   "space": 1,
+   "col": "d9502a",
+   "shape": "blob"
+  }
+ },
+ "DOUGHS": {
+  "neapolitan": {
+   "name": "Neapolitan",
+   "flour": "flour00",
+   "water": 62,
+   "salt": 2.8,
+   "yeast": 0.3,
+   "oil": 0,
+   "sugar": 0,
+   "ball": 260,
+   "shape": "hand",
+   "R": 106,
+   "bake": 1,
+   "crust": 9,
+   "lvl": 1,
+   "desc": "Soft, wet dough stretched by hand for a puffy, charred crust."
+  },
+  "ny": {
+   "name": "New York",
+   "flour": "breadflour",
+   "water": 63,
+   "salt": 2,
+   "yeast": 0.5,
+   "oil": 3,
+   "sugar": 2,
+   "ball": 290,
+   "shape": "hand",
+   "R": 118,
+   "bake": 1.15,
+   "crust": 6,
+   "lvl": 2,
+   "desc": "Strong flour, a little oil and sugar. Big, foldable, hand-stretched."
+  },
+  "roman": {
+   "name": "Roman thin",
+   "flour": "flour00",
+   "water": 55,
+   "salt": 2.5,
+   "yeast": 0.4,
+   "oil": 5,
+   "sugar": 0,
+   "ball": 180,
+   "shape": "roll",
+   "R": 120,
+   "bake": 0.8,
+   "crust": 2,
+   "lvl": 4,
+   "desc": "Drier dough with oil, rolled flat with a pin for a thin, cracker-crisp base."
+  },
+  "pan": {
+   "name": "Deep pan",
+   "flour": "breadflour",
+   "water": 70,
+   "salt": 2.2,
+   "yeast": 0.6,
+   "oil": 4,
+   "sugar": 1,
+   "ball": 380,
+   "shape": "press",
+   "R": 98,
+   "bake": 1.4,
+   "crust": 12,
+   "lvl": 7,
+   "desc": "Very wet dough pressed into an oiled pan. Thick, fluffy, takes longer to bake."
+  }
+ },
+ "DOUGH_PARTS": [
+  "flour",
+  "water",
+  "salt",
+  "yeast",
+  "oil",
+  "sugar"
+ ],
+ "RECIPES": [
+  {
+   "id": "margherita",
+   "name": "Margherita",
+   "base": "neapolitan",
+   "price": 10,
+   "sauce": "tomato",
+   "tops": [
+    "basil"
+   ]
+  },
+  {
+   "id": "pepperoni",
+   "name": "Pepperoni",
+   "base": "neapolitan",
+   "price": 12,
+   "sauce": "tomato",
+   "tops": [
+    "pepperoni"
+   ]
+  },
+  {
+   "id": "funghi",
+   "name": "Funghi",
+   "base": "neapolitan",
+   "price": 12,
+   "sauce": "tomato",
+   "tops": [
+    "mushroom"
+   ]
+  },
+  {
+   "id": "ortolana",
+   "name": "Ortolana",
+   "base": "neapolitan",
+   "price": 13,
+   "sauce": "tomato",
+   "tops": [
+    "pepper",
+    "onion",
+    "olive"
+   ]
+  },
+  {
+   "id": "salsiccia",
+   "name": "Salsiccia",
+   "base": "neapolitan",
+   "price": 14,
+   "sauce": "tomato",
+   "tops": [
+    "sausage",
+    "onion"
+   ]
+  },
+  {
+   "id": "nduja",
+   "name": "'Nduja & Onion",
+   "base": "neapolitan",
+   "price": 15,
+   "sauce": "tomato",
+   "tops": [
+    "nduja",
+    "onion"
+   ]
+  },
+  {
+   "id": "bianca",
+   "name": "Bianca",
+   "base": "neapolitan",
+   "price": 14,
+   "sauce": "cream",
+   "tops": [
+    "mushroom",
+    "basil"
+   ]
+  },
+  {
+   "id": "quattro",
+   "name": "Quattro Formaggi",
+   "base": "neapolitan",
+   "price": 15,
+   "sauce": "cream",
+   "tops": [
+    "gorgonzola",
+    "parmesan",
+    "ricotta"
+   ]
+  },
+  {
+   "id": "crudo",
+   "name": "Prosciutto e Rucola",
+   "base": "neapolitan",
+   "price": 18,
+   "sauce": "tomato",
+   "tops": [
+    "prosciutto",
+    "rocket"
+   ]
+  },
+  {
+   "id": "nycheese",
+   "name": "New York Cheese",
+   "base": "ny",
+   "price": 11,
+   "sauce": "tomato",
+   "tops": [
+    "parmesan"
+   ]
+  },
+  {
+   "id": "brooklyn",
+   "name": "Brooklyn Special",
+   "base": "ny",
+   "price": 14,
+   "sauce": "tomato",
+   "tops": [
+    "pepperoni",
+    "sausage"
+   ]
+  },
+  {
+   "id": "hawaiian",
+   "name": "Hawaiian",
+   "base": "ny",
+   "price": 13,
+   "sauce": "tomato",
+   "tops": [
+    "ham",
+    "pineapple"
+   ]
+  },
+  {
+   "id": "bbqchicken",
+   "name": "BBQ Chicken",
+   "base": "ny",
+   "price": 15,
+   "sauce": "bbq",
+   "tops": [
+    "chicken",
+    "onion"
+   ]
+  },
+  {
+   "id": "diavola",
+   "name": "Diavola",
+   "base": "roman",
+   "price": 13,
+   "sauce": "tomato",
+   "tops": [
+    "pepperoni",
+    "chilli"
+   ]
+  },
+  {
+   "id": "romana",
+   "name": "Romana",
+   "base": "roman",
+   "price": 12,
+   "sauce": "tomato",
+   "tops": [
+    "anchovy",
+    "olive"
+   ]
+  },
+  {
+   "id": "capricciosa",
+   "name": "Capricciosa",
+   "base": "roman",
+   "price": 15,
+   "sauce": "tomato",
+   "tops": [
+    "ham",
+    "mushroom",
+    "artichoke"
+   ]
+  },
+  {
+   "id": "gamberi",
+   "name": "Gamberi Piccanti",
+   "base": "roman",
+   "price": 18,
+   "sauce": "tomato",
+   "tops": [
+    "prawn",
+    "chilli"
+   ]
+  },
+  {
+   "id": "deepdish",
+   "name": "Deep-Pan Sausage",
+   "base": "pan",
+   "price": 16,
+   "sauce": "tomato",
+   "tops": [
+    "sausage",
+    "pepper",
+    "onion"
+   ]
+  },
+  {
+   "id": "meatfeast",
+   "name": "Meat Feast",
+   "base": "pan",
+   "price": 17,
+   "sauce": "tomato",
+   "tops": [
+    "pepperoni",
+    "sausage",
+    "ham"
+   ]
+  },
+  {
+   "id": "supreme",
+   "name": "The Supreme",
+   "base": "pan",
+   "price": 19,
+   "sauce": "tomato",
+   "tops": [
+    "pepperoni",
+    "mushroom",
+    "pepper",
+    "olive"
+   ]
+  }
+ ],
+ "MENUS": [
+  {
+   "id": "classics",
+   "name": "House Classics",
+   "lvl": 1,
+   "cost": 0,
+   "buzz": 0,
+   "items": [
+    "margherita",
+    "pepperoni",
+    "funghi"
+   ],
+   "desc": "The three everyone knows. Always available, never exciting."
+  },
+  {
+   "id": "street",
+   "name": "Street Slice",
+   "lvl": 2,
+   "cost": 60,
+   "buzz": 0.06,
+   "items": [
+    "nycheese",
+    "margherita",
+    "pepperoni"
+   ],
+   "desc": "Adds New York dough to the line-up."
+  },
+  {
+   "id": "garden",
+   "name": "Garden Fortnight",
+   "lvl": 3,
+   "cost": 90,
+   "buzz": 0.08,
+   "items": [
+    "margherita",
+    "ortolana",
+    "funghi"
+   ],
+   "desc": "Veg-led and cheap to stock, but fresh veg does not keep."
+  },
+  {
+   "id": "roman",
+   "name": "Roman Holiday",
+   "lvl": 4,
+   "cost": 140,
+   "buzz": 0.1,
+   "items": [
+    "diavola",
+    "romana",
+    "margherita"
+   ],
+   "desc": "Thin rolled bases. Mostly store-cupboard toppings."
+  },
+  {
+   "id": "tiki",
+   "name": "Tiki Fortnight",
+   "lvl": 6,
+   "cost": 200,
+   "buzz": 0.12,
+   "items": [
+    "hawaiian",
+    "bbqchicken",
+    "nycheese"
+   ],
+   "desc": "New York bases, sweet and smoky. Chicken needs a freezer."
+  },
+  {
+   "id": "butcher",
+   "name": "Butcher's Block",
+   "lvl": 8,
+   "cost": 300,
+   "buzz": 0.14,
+   "items": [
+    "salsiccia",
+    "brooklyn",
+    "meatfeast",
+    "pepperoni"
+   ],
+   "desc": "Three doughs and a freezer full of sausage."
+  },
+  {
+   "id": "bianca",
+   "name": "Bianca & Co",
+   "lvl": 10,
+   "cost": 420,
+   "buzz": 0.16,
+   "items": [
+    "bianca",
+    "quattro",
+    "funghi",
+    "capricciosa"
+   ],
+   "desc": "White pizzas and four cheeses. A fridge-heavy menu."
+  },
+  {
+   "id": "riviera",
+   "name": "Riviera",
+   "lvl": 13,
+   "cost": 600,
+   "buzz": 0.18,
+   "items": [
+    "crudo",
+    "gamberi",
+    "romana",
+    "margherita"
+   ],
+   "desc": "Premium prices, short shelf lives."
+  },
+  {
+   "id": "fuoco",
+   "name": "Fuoco",
+   "lvl": 15,
+   "cost": 800,
+   "buzz": 0.2,
+   "items": [
+    "nduja",
+    "diavola",
+    "gamberi",
+    "deepdish"
+   ],
+   "desc": "All heat. Three doughs to keep proofing."
+  },
+  {
+   "id": "grand",
+   "name": "Grand Tour",
+   "lvl": 18,
+   "cost": 1200,
+   "buzz": 0.25,
+   "items": [
+    "margherita",
+    "brooklyn",
+    "capricciosa",
+    "supreme",
+    "crudo"
+   ],
+   "desc": "One of everything: every dough style, every store."
+  }
+ ],
+ "MENU_DAYS": 14,
+ "VENUES": [
+  {
+   "name": "Pop-up Pizza Van",
+   "cost": 0,
+   "lvl": 1,
+   "rent": 12,
+   "rentName": "Pitch fee",
+   "traffic": 9,
+   "boh": 1,
+   "foh": 1,
+   "tables": 0,
+   "desc": "A second-hand van with a hatch and a gas oven. Just you, a cool box and a queue.",
+   "key": "van"
+  },
+  {
+   "name": "Food Market Kiosk",
+   "cost": 600,
+   "lvl": 3,
+   "rent": 35,
+   "rentName": "Stall rent",
+   "traffic": 18,
+   "boh": 2,
+   "foh": 1,
+   "tables": 0,
+   "desc": "A permanent unit in the covered market. Mains power, more footfall, room for a deck oven.",
+   "key": "kiosk"
+  },
+  {
+   "name": "Takeaway Shop",
+   "cost": 5000,
+   "lvl": 6,
+   "rent": 80,
+   "rentName": "Rent",
+   "traffic": 30,
+   "boh": 3,
+   "foh": 3,
+   "tables": 3,
+   "desc": "Your own shopfront with a proper kitchen, a counter, a few window seats and delivery.",
+   "key": "shop"
+  },
+  {
+   "name": "Neighbourhood Pizzeria",
+   "cost": 16000,
+   "lvl": 10,
+   "rent": 180,
+   "rentName": "Rent",
+   "traffic": 52,
+   "boh": 5,
+   "foh": 5,
+   "tables": 12,
+   "desc": "A sit-down pizzeria. Wood-fired oven, table service, a drinks licence.",
+   "key": "pizzeria"
+  },
+  {
+   "name": "High Street Restaurant",
+   "cost": 45000,
+   "lvl": 15,
+   "rent": 420,
+   "rentName": "Rent",
+   "traffic": 95,
+   "boh": 8,
+   "foh": 9,
+   "tables": 26,
+   "desc": "A big dining room on the high street with a full brigade and a bar.",
+   "key": "restaurant"
+  },
+  {
+   "name": "Flagship Trattoria",
+   "cost": 120000,
+   "lvl": 20,
+   "rent": 900,
+   "rentName": "Rent",
+   "traffic": 160,
+   "boh": 13,
+   "foh": 14,
+   "tables": 48,
+   "desc": "The destination restaurant. Twin ovens, open kitchen, queues round the block.",
+   "key": "flagship"
+  }
+ ],
+ "UPG": {
+  "oven": {
+   "area": "boh",
+   "name": "Oven",
+   "tiers": [
+    {
+     "n": "Portable gas oven",
+     "d": "1 pizza · 20s bake",
+     "slots": 1,
+     "bake": 20,
+     "q": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Twin portable ovens",
+     "d": "2 pizzas · 20s bake",
+     "c": 220,
+     "v": 0,
+     "slots": 2,
+     "bake": 20,
+     "q": 0
+    },
+    {
+     "n": "Electric deck oven",
+     "d": "3 pizzas · 17s bake · better crust",
+     "c": 1600,
+     "v": 1,
+     "slots": 3,
+     "bake": 17,
+     "q": 3
+    },
+    {
+     "n": "Double-deck oven",
+     "d": "5 pizzas · 16s bake",
+     "c": 5200,
+     "v": 2,
+     "slots": 5,
+     "bake": 16,
+     "q": 4
+    },
+    {
+     "n": "Wood-fired brick oven",
+     "d": "7 pizzas · 10s bake · leopard-spotted crust",
+     "c": 15000,
+     "v": 3,
+     "slots": 7,
+     "bake": 10,
+     "q": 9
+    },
+    {
+     "n": "Rotating stone-hearth oven",
+     "d": "12 pizzas · 9s bake",
+     "c": 42000,
+     "v": 4,
+     "slots": 12,
+     "bake": 9,
+     "q": 11
+    },
+    {
+     "n": "Twin rotating hearth ovens",
+     "d": "22 pizzas · 8s bake",
+     "c": 98000,
+     "v": 5,
+     "slots": 22,
+     "bake": 8,
+     "q": 13
+    }
+   ]
+  },
+  "mixer": {
+   "area": "boh",
+   "name": "Dough mixing",
+   "tiers": [
+    {
+     "n": "Bowl & elbow grease",
+     "d": "Up to 1 kg of flour per batch, kneaded by hand",
+     "batch": 1,
+     "knead": 1,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "10qt planetary mixer",
+     "d": "Up to 3 kg of flour per batch · kneads 2× faster",
+     "c": 280,
+     "v": 0,
+     "batch": 3,
+     "knead": 2
+    },
+    {
+     "n": "30qt spiral mixer",
+     "d": "Up to 8 kg per batch · kneads 3× faster",
+     "c": 2000,
+     "v": 2,
+     "batch": 8,
+     "knead": 3
+    },
+    {
+     "n": "60qt spiral mixer",
+     "d": "Up to 16 kg per batch",
+     "c": 7000,
+     "v": 3,
+     "batch": 16,
+     "knead": 4
+    },
+    {
+     "n": "120qt mixer with bowl lift",
+     "d": "Up to 32 kg per batch",
+     "c": 20000,
+     "v": 4,
+     "batch": 32,
+     "knead": 5
+    }
+   ]
+  },
+  "proofer": {
+   "area": "boh",
+   "name": "Dough proofing",
+   "tiers": [
+    {
+     "n": "Lidded tubs",
+     "d": "Dough keeps 3 days",
+     "q": 0,
+     "days": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Dough trays & rack",
+     "d": "+5 dough quality",
+     "c": 150,
+     "v": 0,
+     "q": 5,
+     "days": 0
+    },
+    {
+     "n": "Proofing cabinet",
+     "d": "+10 dough quality",
+     "c": 1800,
+     "v": 2,
+     "q": 10,
+     "days": 0
+    },
+    {
+     "n": "Retarder-prover",
+     "d": "+16 dough quality · dough keeps a 4th day",
+     "c": 8000,
+     "v": 3,
+     "q": 16,
+     "days": 1
+    }
+   ]
+  },
+  "fridge": {
+   "area": "boh",
+   "name": "Fridge",
+   "tiers": [
+    {
+     "n": "Ice cool box",
+     "d": "Holds 40 (fresh toppings, yeast, dough balls)",
+     "cap": 40,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Undercounter fridge",
+     "d": "Holds 90",
+     "c": 240,
+     "v": 0,
+     "cap": 90
+    },
+    {
+     "n": "Upright reach-in fridge",
+     "d": "Holds 200",
+     "c": 1300,
+     "v": 1,
+     "cap": 200
+    },
+    {
+     "n": "Double-door fridge",
+     "d": "Holds 420",
+     "c": 3800,
+     "v": 2,
+     "cap": 420
+    },
+    {
+     "n": "Walk-in cold room",
+     "d": "Holds 900",
+     "c": 8500,
+     "v": 3,
+     "cap": 900
+    },
+    {
+     "n": "Twin cold rooms",
+     "d": "Holds 2,000",
+     "c": 24000,
+     "v": 4,
+     "cap": 2000
+    }
+   ]
+  },
+  "freezer": {
+   "area": "boh",
+   "name": "Freezer",
+   "tiers": [
+    {
+     "n": "No freezer",
+     "d": "You cannot stock frozen sausage, chicken or prawns",
+     "cap": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Chest freezer",
+     "d": "Holds 40",
+     "c": 260,
+     "v": 1,
+     "cap": 40
+    },
+    {
+     "n": "Upright freezer",
+     "d": "Holds 110",
+     "c": 1500,
+     "v": 2,
+     "cap": 110
+    },
+    {
+     "n": "Walk-in freezer",
+     "d": "Holds 320",
+     "c": 9000,
+     "v": 3,
+     "cap": 320
+    },
+    {
+     "n": "Large walk-in freezer",
+     "d": "Holds 700",
+     "c": 22000,
+     "v": 4,
+     "cap": 700
+    }
+   ]
+  },
+  "dry": {
+   "area": "boh",
+   "name": "Dry store",
+   "tiers": [
+    {
+     "n": "A shelf in the van",
+     "d": "Holds 30 (flour, tins, oil, onions)",
+     "cap": 30,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Wire racking",
+     "d": "Holds 70",
+     "c": 120,
+     "v": 0,
+     "cap": 70
+    },
+    {
+     "n": "Store cupboard",
+     "d": "Holds 160",
+     "c": 900,
+     "v": 1,
+     "cap": 160
+    },
+    {
+     "n": "Dry store room",
+     "d": "Holds 380",
+     "c": 4200,
+     "v": 3,
+     "cap": 380
+    },
+    {
+     "n": "Bulk racking & pallets",
+     "d": "Holds 1,000",
+     "c": 15000,
+     "v": 4,
+     "cap": 1000
+    }
+   ]
+  },
+  "roller": {
+   "area": "boh",
+   "name": "Dough rolling",
+   "tiers": [
+    {
+     "n": "Rolling pin",
+     "d": "Roll thin bases by hand",
+     "auto": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Tabletop dough sheeter",
+     "d": "One press rolls a thin base, fairly even",
+     "c": 900,
+     "v": 1,
+     "auto": 0.86
+    },
+    {
+     "n": "Two-stage dough roller",
+     "d": "One press, near-perfect thin bases",
+     "c": 4500,
+     "v": 2,
+     "auto": 0.97
+    }
+   ]
+  },
+  "prep": {
+   "area": "boh",
+   "name": "Prep station",
+   "tiers": [
+    {
+     "n": "Folding table",
+     "d": "Wobbly but it works",
+     "speed": 0,
+     "q": 0,
+     "brush": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Stainless prep bench",
+     "d": "Bigger ladle · staff 10% faster",
+     "c": 200,
+     "v": 0,
+     "speed": 0.1,
+     "q": 0,
+     "brush": 3
+    },
+    {
+     "n": "Refrigerated prep counter",
+     "d": "Toppings at arm’s reach · staff 25% faster",
+     "c": 2400,
+     "v": 2,
+     "speed": 0.25,
+     "q": 1,
+     "brush": 5
+    },
+    {
+     "n": "Marble-top makeline",
+     "d": "Staff 40% faster · +3 quality",
+     "c": 10000,
+     "v": 3,
+     "speed": 0.4,
+     "q": 3,
+     "brush": 7
+    },
+    {
+     "n": "Dual makelines",
+     "d": "Staff 60% faster · +4 quality",
+     "c": 30000,
+     "v": 4,
+     "speed": 0.6,
+     "q": 4,
+     "brush": 8
+    }
+   ]
+  },
+  "dish": {
+   "area": "boh",
+   "name": "Dishwashing",
+   "tiers": [
+    {
+     "n": "Bucket & sink",
+     "d": "Fine for takeaway boxes",
+     "turn": 1,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Three-compartment sink",
+     "d": "Tables turn 15% faster",
+     "c": 400,
+     "v": 2,
+     "turn": 0.85
+    },
+    {
+     "n": "Undercounter dishwasher",
+     "d": "Tables turn 30% faster",
+     "c": 2200,
+     "v": 3,
+     "turn": 0.7
+    },
+    {
+     "n": "Pass-through hood washer",
+     "d": "Tables turn 45% faster",
+     "c": 7500,
+     "v": 3,
+     "turn": 0.55
+    },
+    {
+     "n": "Conveyor dishwasher",
+     "d": "Tables turn 60% faster",
+     "c": 22000,
+     "v": 5,
+     "turn": 0.4
+    }
+   ]
+  },
+  "supplier": {
+   "area": "boh",
+   "name": "Suppliers",
+   "tiers": [
+    {
+     "n": "Supermarket run",
+     "d": "Retail prices",
+     "mult": 1,
+     "q": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Cash & carry card",
+     "d": "Ingredients 10% cheaper",
+     "c": 250,
+     "v": 0,
+     "mult": 0.9,
+     "q": 0
+    },
+    {
+     "n": "Wholesale account",
+     "d": "Ingredients 20% cheaper",
+     "c": 2200,
+     "v": 2,
+     "mult": 0.8,
+     "q": 1
+    },
+    {
+     "n": "Direct importer & farms",
+     "d": "30% cheaper · San Marzano & fior di latte (+3 quality)",
+     "c": 14000,
+     "v": 3,
+     "mult": 0.7,
+     "q": 3
+    }
+   ]
+  },
+  "pos": {
+   "area": "foh",
+   "name": "Ordering & payments",
+   "tiers": [
+    {
+     "n": "Cash tin",
+     "d": "Cash only",
+     "tr": 0,
+     "pat": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Card reader",
+     "d": "+8% customers",
+     "c": 120,
+     "v": 0,
+     "tr": 0.08,
+     "pat": 0
+    },
+    {
+     "n": "Touchscreen POS till",
+     "d": "+10% customers · +10% patience",
+     "c": 1100,
+     "v": 1,
+     "tr": 0.1,
+     "pat": 0.1
+    },
+    {
+     "n": "Kitchen display + online ordering",
+     "d": "+16% customers · +20% patience",
+     "c": 5500,
+     "v": 2,
+     "tr": 0.16,
+     "pat": 0.2
+    },
+    {
+     "n": "Self-order kiosks & app",
+     "d": "+22% customers · +30% patience",
+     "c": 18000,
+     "v": 4,
+     "tr": 0.22,
+     "pat": 0.3
+    }
+   ]
+  },
+  "sign": {
+   "area": "foh",
+   "name": "Signage",
+   "tiers": [
+    {
+     "n": "Chalk A-board",
+     "d": "People find you by smell",
+     "tr": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Printed banner & menu board",
+     "d": "+8% customers",
+     "c": 140,
+     "v": 0,
+     "tr": 0.08
+    },
+    {
+     "n": "Illuminated fascia sign",
+     "d": "+15% customers",
+     "c": 1500,
+     "v": 2,
+     "tr": 0.15
+    },
+    {
+     "n": "Neon sign & window vinyls",
+     "d": "+22% customers",
+     "c": 6000,
+     "v": 3,
+     "tr": 0.22
+    },
+    {
+     "n": "Landmark signage",
+     "d": "+30% customers",
+     "c": 20000,
+     "v": 4,
+     "tr": 0.3
+    }
+   ]
+  },
+  "marketing": {
+   "area": "foh",
+   "name": "Marketing",
+   "tiers": [
+    {
+     "n": "Word of mouth",
+     "d": "Free, slow",
+     "tr": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Flyers & loyalty cards",
+     "d": "+8% customers",
+     "c": 100,
+     "v": 0,
+     "tr": 0.08
+    },
+    {
+     "n": "Social media & food bloggers",
+     "d": "+15% customers",
+     "c": 700,
+     "v": 1,
+     "tr": 0.15
+    },
+    {
+     "n": "Local press & tasting nights",
+     "d": "+22% customers",
+     "c": 4000,
+     "v": 3,
+     "tr": 0.22
+    },
+    {
+     "n": "Radio & billboards",
+     "d": "+30% customers",
+     "c": 16000,
+     "v": 4,
+     "tr": 0.3
+    }
+   ]
+  },
+  "drinks": {
+   "area": "foh",
+   "name": "Drinks",
+   "tiers": [
+    {
+     "n": "No drinks",
+     "d": "Pizza only",
+     "per": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Soft-drinks fridge",
+     "d": "About $1.50 extra per customer",
+     "c": 220,
+     "v": 0,
+     "per": 1.5
+    },
+    {
+     "n": "Espresso machine",
+     "d": "About $3 extra per customer",
+     "c": 1900,
+     "v": 2,
+     "per": 3
+    },
+    {
+     "n": "Beer taps & wine list",
+     "d": "About $6 per customer · needs a bartender",
+     "c": 7500,
+     "v": 3,
+     "per": 6
+    },
+    {
+     "n": "Full cocktail bar",
+     "d": "About $10 per customer · needs a bartender",
+     "c": 24000,
+     "v": 4,
+     "per": 10
+    }
+   ]
+  },
+  "delivery": {
+   "area": "foh",
+   "name": "Delivery",
+   "tiers": [
+    {
+     "n": "Collection only",
+     "d": "No delivery",
+     "per": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Delivery bicycle",
+     "d": "Each driver brings ~6 extra orders a day",
+     "c": 450,
+     "v": 2,
+     "per": 6
+    },
+    {
+     "n": "Scooters & hot bags",
+     "d": "~10 extra orders per driver",
+     "c": 2800,
+     "v": 2,
+     "per": 10
+    },
+    {
+     "n": "Delivery app partnerships",
+     "d": "~16 extra orders per driver",
+     "c": 9000,
+     "v": 3,
+     "per": 16
+    }
+   ]
+  },
+  "furniture": {
+   "area": "foh",
+   "name": "Furniture",
+   "tiers": [
+    {
+     "n": "Plastic patio chairs",
+     "d": "They stack",
+     "tip": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Wooden bistro sets",
+     "d": "+12% tips",
+     "c": 1200,
+     "v": 2,
+     "tip": 0.12
+    },
+    {
+     "n": "Upholstered booths",
+     "d": "+25% tips",
+     "c": 6500,
+     "v": 3,
+     "tip": 0.25
+    },
+    {
+     "n": "Designer interior",
+     "d": "+40% tips",
+     "c": 26000,
+     "v": 4,
+     "tip": 0.4
+    }
+   ]
+  },
+  "ambience": {
+   "area": "foh",
+   "name": "Ambience",
+   "tiers": [
+    {
+     "n": "Bare walls",
+     "d": "Character, sort of",
+     "tip": 0,
+     "rep": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Fresh paint & plants",
+     "d": "+5% tips · nicer reviews",
+     "c": 500,
+     "v": 1,
+     "tip": 0.05,
+     "rep": 0.1
+    },
+    {
+     "n": "Pendant lights & sound system",
+     "d": "+10% tips · better dine-in reviews",
+     "c": 3200,
+     "v": 3,
+     "tip": 0.1,
+     "rep": 0.2
+    },
+    {
+     "n": "Open-kitchen theatre",
+     "d": "+18% tips · great dine-in reviews",
+     "c": 14000,
+     "v": 4,
+     "tip": 0.18,
+     "rep": 0.35
+    }
+   ]
+  },
+  "comfort": {
+   "area": "foh",
+   "name": "Customer comfort",
+   "tiers": [
+    {
+     "n": "An awning",
+     "d": "Keeps the drizzle off",
+     "tr": 0,
+     "pat": 0,
+     "c": 0,
+     "v": 0
+    },
+    {
+     "n": "Covered waiting area & heaters",
+     "d": "+12% patience",
+     "c": 300,
+     "v": 0,
+     "tr": 0,
+     "pat": 0.12
+    },
+    {
+     "n": "Customer restrooms",
+     "d": "+5% customers · +20% patience",
+     "c": 3000,
+     "v": 3,
+     "tr": 0.05,
+     "pat": 0.2
+    },
+    {
+     "n": "Air-con & heated terrace",
+     "d": "+10% customers · +30% patience",
+     "c": 12000,
+     "v": 4,
+     "tr": 0.1,
+     "pat": 0.3
+    }
+   ]
+  }
+ },
+ "ROLES": {
+  "pizzaiolo": {
+   "area": "boh",
+   "name": "Pizzaiolo",
+   "wage": 48,
+   "v": 0,
+   "lvl": 2,
+   "desc": "Makes pizzas straight off the ticket rail.",
+   "max": 0,
+   "needs": ""
+  },
+  "prep": {
+   "area": "boh",
+   "name": "Prep Cook",
+   "wage": 40,
+   "v": 1,
+   "desc": "Makes tomorrow’s dough at close every night and keeps the line 8% faster.",
+   "lvl": 1,
+   "max": 0,
+   "needs": ""
+  },
+  "fornaio": {
+   "area": "boh",
+   "name": "Oven Tender",
+   "wage": 45,
+   "v": 1,
+   "max": 1,
+   "desc": "Pulls your pizzas at the perfect moment. Bakes 10% faster.",
+   "lvl": 1,
+   "needs": ""
+  },
+  "porter": {
+   "area": "boh",
+   "name": "Kitchen Porter",
+   "wage": 32,
+   "v": 2,
+   "desc": "Washes up and clears dirty tables.",
+   "lvl": 1,
+   "max": 0,
+   "needs": ""
+  },
+  "headchef": {
+   "area": "boh",
+   "name": "Head Chef",
+   "wage": 120,
+   "v": 3,
+   "max": 1,
+   "desc": "Lifts the quality of every pizza the brigade makes.",
+   "lvl": 1,
+   "needs": ""
+  },
+  "cashier": {
+   "area": "foh",
+   "name": "Counter Assistant",
+   "wage": 35,
+   "v": 0,
+   "lvl": 2,
+   "desc": "Takes orders at the counter and hands over takeaways.",
+   "max": 0,
+   "needs": ""
+  },
+  "server": {
+   "area": "foh",
+   "name": "Server",
+   "wage": 38,
+   "v": 2,
+   "desc": "Seats guests, takes table orders, runs food, brings the bill, clears.",
+   "lvl": 1,
+   "max": 0,
+   "needs": ""
+  },
+  "driver": {
+   "area": "foh",
+   "name": "Delivery Driver",
+   "wage": 36,
+   "v": 2,
+   "needs": "delivery",
+   "desc": "Brings in delivery orders (needs a Delivery upgrade).",
+   "lvl": 1,
+   "max": 0
+  },
+  "host": {
+   "area": "foh",
+   "name": "Host",
+   "wage": 42,
+   "v": 3,
+   "max": 1,
+   "desc": "Seats guests the moment they arrive. More customers.",
+   "lvl": 1,
+   "needs": ""
+  },
+  "bartender": {
+   "area": "foh",
+   "name": "Bartender",
+   "wage": 48,
+   "v": 3,
+   "desc": "Runs the bar. Needed for beer taps and cocktails.",
+   "lvl": 1,
+   "max": 0,
+   "needs": ""
+  },
+  "manager": {
+   "area": "foh",
+   "name": "General Manager",
+   "wage": 140,
+   "v": 3,
+   "max": 1,
+   "desc": "Orders the day’s stock every morning and keeps the team 10% faster.",
+   "lvl": 1,
+   "needs": ""
+  }
+ },
+ "NAMES": [
+  "Marco",
+  "Giulia",
+  "Luca",
+  "Sofia",
+  "Matteo",
+  "Chiara",
+  "Enzo",
+  "Aisha",
+  "Tom",
+  "Priya",
+  "Dani",
+  "Nico",
+  "Rosa",
+  "Kofi",
+  "Mei",
+  "Sam",
+  "Elena",
+  "Jorge",
+  "Fatima",
+  "Ben",
+  "Lola",
+  "Pietro",
+  "Yuki",
+  "Amara",
+  "Leo",
+  "Ines",
+  "Omar",
+  "Greta",
+  "Viktor",
+  "Nina",
+  "Paolo",
+  "Carmen",
+  "Dev",
+  "Zoe",
+  "Bruno",
+  "Tess"
+ ]
+}
