@@ -1,0 +1,11 @@
+{
+  "name": "Crust Empire",
+  "short_name": "Crust Empire",
+  "description": "Make every pizza by hand and grow a pop-up van into a flagship trattoria.",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1c2a22",
+  "theme_color": "#1c2a22",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

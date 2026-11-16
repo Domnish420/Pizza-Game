@@ -1,0 +1,173 @@
+/* Crust Empire – static game data */
+const ING = {
+  flour:     { name: 'Flour (00)',     icon: '🌾', price: 1.4, lvl: 1, kind: 'dough' },
+  yeast:     { name: 'Yeast',          icon: '🧫', price: 0.4, lvl: 1, kind: 'dough' },
+  salt:      { name: 'Sea salt',       icon: '🧂', price: 0.2, lvl: 1, kind: 'dough' },
+  tomato:    { name: 'Tomato sauce',   icon: '🍅', price: 0.6, lvl: 1, kind: 'sauce', perish: 1, color: '#c8321f' },
+  cream:     { name: 'White sauce',    icon: '🥛', price: 0.8, lvl: 10, kind: 'sauce', perish: 1, color: '#f1e6c8' },
+  bbq:       { name: 'BBQ sauce',      icon: '🍯', price: 0.7, lvl: 12, kind: 'sauce', color: '#5b2513' },
+  mozz:      { name: 'Mozzarella',     icon: '🧀', price: 1.0, lvl: 1, kind: 'cheese', perish: 1 },
+  basil:     { name: 'Basil',          icon: '🌿', price: 0.3, lvl: 1, kind: 'top', perish: 1 },
+  pepperoni: { name: 'Pepperoni',      icon: '🍕', price: 0.9, lvl: 2, kind: 'top', perish: 1 },
+  mushroom:  { name: 'Mushrooms',      icon: '🍄', price: 0.6, lvl: 3, kind: 'top', perish: 1 },
+  pepper:    { name: 'Peppers',        icon: '🫑', price: 0.5, lvl: 5, kind: 'top', perish: 1 },
+  onion:     { name: 'Red onion',      icon: '🧅', price: 0.3, lvl: 5, kind: 'top', perish: 1 },
+  olive:     { name: 'Olives',         icon: '🫒', price: 0.6, lvl: 5, kind: 'top' },
+  ham:       { name: 'Ham',            icon: '🥓', price: 1.0, lvl: 6, kind: 'top', perish: 1 },
+  pineapple: { name: 'Pineapple',      icon: '🍍', price: 0.6, lvl: 6, kind: 'top', perish: 1 },
+  sausage:   { name: 'Italian sausage',icon: '🌭', price: 1.1, lvl: 8, kind: 'top', perish: 1 },
+  chicken:   { name: 'Roast chicken',  icon: '🍗', price: 1.2, lvl: 12, kind: 'top', perish: 1 },
+  prosciutto:{ name: 'Prosciutto',     icon: '🥩', price: 1.8, lvl: 18, kind: 'top', perish: 1 },
+  rocket:    { name: 'Rocket',         icon: '🥬', price: 0.5, lvl: 18, kind: 'top', perish: 1 },
+};
+
+const RECIPES = [
+  { id: 'margherita', name: 'Margherita',     lvl: 1,  price: 10, sauce: 'tomato', tops: ['basil'] },
+  { id: 'pepperoni',  name: 'Pepperoni',      lvl: 2,  price: 12, sauce: 'tomato', tops: ['pepperoni'] },
+  { id: 'funghi',     name: 'Funghi',         lvl: 3,  price: 12, sauce: 'tomato', tops: ['mushroom'] },
+  { id: 'ortolana',   name: 'Ortolana',       lvl: 5,  price: 13, sauce: 'tomato', tops: ['pepper', 'onion', 'olive'] },
+  { id: 'hawaiian',   name: 'Hawaiian',       lvl: 6,  price: 13, sauce: 'tomato', tops: ['ham', 'pineapple'] },
+  { id: 'salsiccia',  name: 'Salsiccia',      lvl: 8,  price: 14, sauce: 'tomato', tops: ['sausage', 'onion'] },
+  { id: 'bianca',     name: 'Bianca',         lvl: 10, price: 14, sauce: 'cream',  tops: ['mushroom', 'basil'] },
+  { id: 'bbqchicken', name: 'BBQ Chicken',    lvl: 12, price: 15, sauce: 'bbq',    tops: ['chicken', 'onion'] },
+  { id: 'capricciosa',name: 'Capricciosa',    lvl: 14, price: 16, sauce: 'tomato', tops: ['ham', 'mushroom', 'olive'] },
+  { id: 'meatfeast',  name: 'Meat Feast',     lvl: 16, price: 17, sauce: 'tomato', tops: ['pepperoni', 'sausage', 'ham'] },
+  { id: 'crudo',      name: 'Prosciutto e Rucola', lvl: 18, price: 18, sauce: 'tomato', tops: ['prosciutto', 'rocket'] },
+  { id: 'supreme',    name: 'The Supreme',    lvl: 20, price: 19, sauce: 'tomato', tops: ['pepperoni', 'mushroom', 'pepper', 'olive'] },
+];
+
+const VENUES = [
+  { name: 'Pop-up Pizza Van',       icon: '🚐', cost: 0,      lvl: 1,  rent: 12,  rentName: 'Pitch fee', traffic: 8,   boh: 1,  foh: 1,  tables: 0,
+    desc: 'A second-hand van with a hatch and a gas oven. Just you, a cool box and a queue.' },
+  { name: 'Food Market Kiosk',      icon: '🏪', cost: 600,    lvl: 3,  rent: 35,  rentName: 'Stall rent', traffic: 18,  boh: 2,  foh: 1,  tables: 0,
+    desc: 'A permanent unit in the covered market. Mains power, more footfall, room for a deck oven.' },
+  { name: 'Takeaway Shop',          icon: '🏬', cost: 5000,   lvl: 6,  rent: 80,  rentName: 'Rent', traffic: 30,  boh: 3,  foh: 3,  tables: 3,
+    desc: 'Your own shopfront with a proper kitchen, a counter, a few window seats and delivery.' },
+  { name: 'Neighbourhood Pizzeria', icon: '🍽️', cost: 16000,  lvl: 10, rent: 180, rentName: 'Rent', traffic: 52,  boh: 5,  foh: 5,  tables: 12,
+    desc: 'A sit-down pizzeria. Wood-fired oven, table service, a drinks licence.' },
+  { name: 'High Street Restaurant', icon: '🏛️', cost: 45000,  lvl: 15, rent: 420, rentName: 'Rent', traffic: 95,  boh: 8,  foh: 9,  tables: 26,
+    desc: 'A big dining room on the high street with a full brigade and a bar.' },
+  { name: 'Flagship Trattoria',     icon: '🏰', cost: 120000, lvl: 20, rent: 900, rentName: 'Rent', traffic: 160, boh: 13, foh: 14, tables: 48,
+    desc: 'The destination restaurant. Twin ovens, open kitchen, queues round the block.' },
+];
+
+/* Upgrade tracks. Tier 0 is what you start with. c = cost, v = minimum venue index. */
+const UPG = {
+  oven: { area: 'boh', name: 'Oven', icon: '🔥', tiers: [
+    { n: 'Portable gas oven',          d: '1 pizza · 20s bake', slots: 1, bake: 20, q: 0 },
+    { n: 'Twin portable ovens',        d: '2 pizzas · 20s bake', c: 220, v: 0, slots: 2, bake: 20, q: 0 },
+    { n: 'Electric deck oven',         d: '3 pizzas · 17s bake · better crust', c: 1600, v: 1, slots: 3, bake: 17, q: 3 },
+    { n: 'Double-deck oven',           d: '5 pizzas · 16s bake', c: 5200, v: 2, slots: 5, bake: 16, q: 4 },
+    { n: 'Wood-fired brick oven',      d: '7 pizzas · 10s bake · leopard-spotted crust', c: 15000, v: 3, slots: 7, bake: 10, q: 9 },
+    { n: 'Rotating stone-hearth oven', d: '12 pizzas · 9s bake', c: 42000, v: 4, slots: 12, bake: 9, q: 11 },
+    { n: 'Twin rotating hearth ovens', d: '22 pizzas · 8s bake', c: 98000, v: 5, slots: 22, bake: 8, q: 13 },
+  ]},
+  mixer: { area: 'boh', name: 'Dough mixing', icon: '🥣', tiers: [
+    { n: 'Bowl & elbow grease',        d: '6 dough balls per batch, all by hand', batch: 1, knead: 1 },
+    { n: '10qt planetary mixer',       d: '12 balls per batch · kneads 2× faster', c: 280, v: 0, batch: 2, knead: 2 },
+    { n: '30qt spiral mixer',          d: '24 balls per batch · kneads 3× faster', c: 2000, v: 2, batch: 4, knead: 3 },
+    { n: '60qt spiral mixer',          d: '48 balls per batch', c: 7000, v: 3, batch: 8, knead: 4 },
+    { n: '120qt mixer with bowl lift', d: '96 balls per batch', c: 20000, v: 4, batch: 16, knead: 5 },
+  ]},
+  proofer: { area: 'boh', name: 'Dough proofing', icon: '🫓', tiers: [
+    { n: 'Lidded tubs',                d: 'Dough proofs wherever there is room', q: 0, zone: 0 },
+    { n: 'Dough trays & rack',         d: '+5 dough quality · easier proofing', c: 150, v: 0, q: 5, zone: 3 },
+    { n: 'Proofing cabinet',           d: '+10 dough quality', c: 1800, v: 2, q: 10, zone: 6 },
+    { n: 'Retarder-prover',            d: '+16 dough quality · slow cold ferment', c: 8000, v: 3, q: 16, zone: 9 },
+  ]},
+  fridge: { area: 'boh', name: 'Refrigeration', icon: '🧊', tiers: [
+    { n: 'Ice cool box',               d: '25% of fresh stock spoils overnight', spoil: 0.25 },
+    { n: 'Undercounter fridge',        d: '12% spoilage', c: 240, v: 0, spoil: 0.12 },
+    { n: 'Upright reach-in fridge',    d: '7% spoilage', c: 1300, v: 1, spoil: 0.07 },
+    { n: 'Walk-in cold room',          d: '3% spoilage', c: 8500, v: 3, spoil: 0.03 },
+    { n: 'Cold room + blast chiller',  d: '1% spoilage', c: 24000, v: 4, spoil: 0.01 },
+  ]},
+  prep: { area: 'boh', name: 'Prep station', icon: '🔪', tiers: [
+    { n: 'Folding table',              d: 'Wobbly but it works', speed: 0, q: 0, brush: 0 },
+    { n: 'Stainless prep bench',       d: 'Bigger ladle · staff 10% faster', c: 200, v: 0, speed: 0.1, q: 0, brush: 3 },
+    { n: 'Refrigerated prep counter',  d: 'Toppings at arm’s reach · staff 25% faster', c: 2400, v: 2, speed: 0.25, q: 1, brush: 5 },
+    { n: 'Marble-top makeline',        d: 'Staff 40% faster · +3 quality', c: 10000, v: 3, speed: 0.4, q: 3, brush: 7 },
+    { n: 'Dual makelines',             d: 'Staff 60% faster · +4 quality', c: 30000, v: 4, speed: 0.6, q: 4, brush: 8 },
+  ]},
+  dish: { area: 'boh', name: 'Dishwashing', icon: '🧽', tiers: [
+    { n: 'Bucket & sink',              d: 'Fine for takeaway boxes', turn: 1 },
+    { n: 'Three-compartment sink',     d: 'Tables turn 15% faster', c: 400, v: 2, turn: 0.85 },
+    { n: 'Undercounter dishwasher',    d: 'Tables turn 30% faster', c: 2200, v: 3, turn: 0.7 },
+    { n: 'Pass-through hood washer',   d: 'Tables turn 45% faster', c: 7500, v: 3, turn: 0.55 },
+    { n: 'Conveyor dishwasher',        d: 'Tables turn 60% faster', c: 22000, v: 5, turn: 0.4 },
+  ]},
+  supplier: { area: 'boh', name: 'Suppliers', icon: '🚚', tiers: [
+    { n: 'Supermarket run',            d: 'Retail prices', mult: 1, q: 0 },
+    { n: 'Cash & carry card',          d: 'Ingredients 10% cheaper', c: 250, v: 0, mult: 0.9, q: 0 },
+    { n: 'Wholesale account',          d: 'Ingredients 20% cheaper', c: 2200, v: 2, mult: 0.8, q: 1 },
+    { n: 'Direct importer & farms',    d: '30% cheaper · San Marzano & fior di latte (+3 quality)', c: 14000, v: 3, mult: 0.7, q: 3 },
+  ]},
+  pos: { area: 'foh', name: 'Ordering & payments', icon: '💳', tiers: [
+    { n: 'Cash tin',                   d: 'Cash only', tr: 0, pat: 0 },
+    { n: 'Card reader',                d: '+8% customers', c: 120, v: 0, tr: 0.08, pat: 0 },
+    { n: 'Touchscreen POS till',       d: '+10% customers · +10% patience', c: 1100, v: 1, tr: 0.1, pat: 0.1 },
+    { n: 'Kitchen display + online ordering', d: '+16% customers · +20% patience', c: 5500, v: 2, tr: 0.16, pat: 0.2 },
+    { n: 'Self-order kiosks & app',    d: '+22% customers · +30% patience', c: 18000, v: 4, tr: 0.22, pat: 0.3 },
+  ]},
+  sign: { area: 'foh', name: 'Signage', icon: '🪧', tiers: [
+    { n: 'Chalk A-board',              d: 'People find you by smell', tr: 0 },
+    { n: 'Printed banner & menu board',d: '+8% customers', c: 140, v: 0, tr: 0.08 },
+    { n: 'Illuminated fascia sign',    d: '+15% customers', c: 1500, v: 2, tr: 0.15 },
+    { n: 'Neon sign & window vinyls',  d: '+22% customers', c: 6000, v: 3, tr: 0.22 },
+    { n: 'Landmark signage',           d: '+30% customers', c: 20000, v: 4, tr: 0.3 },
+  ]},
+  marketing: { area: 'foh', name: 'Marketing', icon: '📣', tiers: [
+    { n: 'Word of mouth',              d: 'Free, slow', tr: 0 },
+    { n: 'Flyers & loyalty cards',     d: '+8% customers', c: 100, v: 0, tr: 0.08 },
+    { n: 'Social media & food bloggers', d: '+15% customers', c: 700, v: 1, tr: 0.15 },
+    { n: 'Local press & tasting nights', d: '+22% customers', c: 4000, v: 3, tr: 0.22 },
+    { n: 'Radio & billboards',         d: '+30% customers', c: 16000, v: 4, tr: 0.3 },
+  ]},
+  drinks: { area: 'foh', name: 'Drinks', icon: '🥤', tiers: [
+    { n: 'No drinks',                  d: 'Pizza only', per: 0 },
+    { n: 'Soft-drinks fridge',         d: 'About $1.50 extra per customer', c: 220, v: 0, per: 1.5 },
+    { n: 'Espresso machine',           d: 'About $3 extra per customer', c: 1900, v: 2, per: 3 },
+    { n: 'Beer taps & wine list',      d: 'About $6 per customer · needs a bartender', c: 7500, v: 3, per: 6 },
+    { n: 'Full cocktail bar',          d: 'About $10 per customer · needs a bartender', c: 24000, v: 4, per: 10 },
+  ]},
+  delivery: { area: 'foh', name: 'Delivery', icon: '🛵', tiers: [
+    { n: 'Collection only',            d: 'No delivery', per: 0 },
+    { n: 'Delivery bicycle',           d: 'Each driver brings ~6 extra orders a day', c: 450, v: 2, per: 6 },
+    { n: 'Scooters & hot bags',        d: '~10 extra orders per driver', c: 2800, v: 2, per: 10 },
+    { n: 'Delivery app partnerships',  d: '~16 extra orders per driver', c: 9000, v: 3, per: 16 },
+  ]},
+  furniture: { area: 'foh', name: 'Furniture', icon: '🪑', tiers: [
+    { n: 'Plastic patio chairs',       d: 'They stack', tip: 0 },
+    { n: 'Wooden bistro sets',         d: '+12% tips', c: 1200, v: 2, tip: 0.12 },
+    { n: 'Upholstered booths',         d: '+25% tips', c: 6500, v: 3, tip: 0.25 },
+    { n: 'Designer interior',          d: '+40% tips', c: 26000, v: 4, tip: 0.4 },
+  ]},
+  ambience: { area: 'foh', name: 'Ambience', icon: '💡', tiers: [
+    { n: 'Bare walls',                 d: 'Character, sort of', tip: 0, rep: 0 },
+    { n: 'Fresh paint & plants',       d: '+5% tips · nicer reviews', c: 500, v: 1, tip: 0.05, rep: 0.1 },
+    { n: 'Pendant lights & sound system', d: '+10% tips · better dine-in reviews', c: 3200, v: 3, tip: 0.1, rep: 0.2 },
+    { n: 'Open-kitchen theatre',       d: '+18% tips · great dine-in reviews', c: 14000, v: 4, tip: 0.18, rep: 0.35 },
+  ]},
+  comfort: { area: 'foh', name: 'Customer comfort', icon: '🚻', tiers: [
+    { n: 'An awning',                  d: 'Keeps the drizzle off', tr: 0, pat: 0 },
+    { n: 'Covered waiting area & heaters', d: '+12% patience', c: 300, v: 0, tr: 0, pat: 0.12 },
+    { n: 'Customer restrooms',         d: '+5% customers · +20% patience', c: 3000, v: 3, tr: 0.05, pat: 0.2 },
+    { n: 'Air-con & heated terrace',   d: '+10% customers · +30% patience', c: 12000, v: 4, tr: 0.1, pat: 0.3 },
+  ]},
+};
+
+const ROLES = {
+  pizzaiolo: { area: 'boh', name: 'Pizzaiolo',        icon: '👨‍🍳', wage: 48,  v: 0, lvl: 2, desc: 'Makes pizzas straight off the ticket rail.' },
+  prep:      { area: 'boh', name: 'Prep Cook',        icon: '🥣', wage: 40,  v: 1, desc: 'Makes the dough every morning and keeps the line 8% faster.' },
+  fornaio:   { area: 'boh', name: 'Oven Tender',      icon: '🔥', wage: 45,  v: 1, max: 1, desc: 'Pulls your pizzas at the perfect moment. Bakes 10% faster.' },
+  porter:    { area: 'boh', name: 'Kitchen Porter',   icon: '🧽', wage: 32,  v: 2, desc: 'Washes up so tables turn faster.' },
+  headchef:  { area: 'boh', name: 'Head Chef',        icon: '⭐', wage: 120, v: 3, max: 1, desc: 'Lifts the quality of every pizza the brigade makes.' },
+  cashier:   { area: 'foh', name: 'Counter Assistant',icon: '🧾', wage: 35,  v: 0, lvl: 2, desc: 'Takes orders: longer queue, more patient customers.' },
+  server:    { area: 'foh', name: 'Server',           icon: '🤵', wage: 38,  v: 2, desc: 'Looks after 4 tables. Better dine-in tips.' },
+  driver:    { area: 'foh', name: 'Delivery Driver',  icon: '🛵', wage: 36,  v: 2, needs: 'delivery', desc: 'Brings in delivery orders (needs a Delivery upgrade).' },
+  host:      { area: 'foh', name: 'Host',             icon: '💁', wage: 42,  v: 3, max: 1, desc: 'Greets and seats guests: more customers.' },
+  bartender: { area: 'foh', name: 'Bartender',        icon: '🍸', wage: 48,  v: 3, desc: 'Runs the bar. Needed for beer taps and cocktails.' },
+  manager:   { area: 'foh', name: 'General Manager',  icon: '📋', wage: 140, v: 3, max: 1, desc: 'Orders stock every morning and keeps the team 10% faster.' },
+};
+
+const NAMES = ['Marco','Giulia','Luca','Sofia','Matteo','Chiara','Enzo','Aisha','Tom','Priya','Dani','Nico','Rosa','Kofi','Mei','Sam','Elena','Jorge','Fatima','Ben','Lola','Pietro','Yuki','Amara','Leo','Ines','Omar','Greta','Viktor','Nina','Paolo','Carmen','Dev','Zoe','Bruno','Tess'];
