@@ -31,6 +31,15 @@ coordinates; small props are placed at their own position, so model them around 
 | `fp.ticket` | A paper order ticket, 0.19 x 0.26 m, hanging from its top; the text is drawn by code |
 | `fp.hand.right`, `fp.hand.left` | Forearm and hand, attached to the camera, pointing forward (-Z), fingertips at the origin |
 | `fp.mouse` | A mouse running across the floor |
+| `fp.fridge` | Upright fridge against the back wall, door facing -Z (placed at -0.62, 0, 0.97) |
+| `fp.thermometer` | The fridge thermometer on the door |
+| `fp.freezer` | Chest freezer (only when the premises has one) |
+| `fp.drystore` | Dry store shelving with flour sacks, tins and jars (placed at 0.42, 0, 1.08) |
+| `fp.mop`, `fp.spray`, `fp.trapbox` | Mop and bucket, spray bottle, box of traps |
+| `fp.boxes` | A wall shelf with flat pizza boxes and the folded stack (the stacks are scaled by code) |
+| `fp.mixer`, `fp.bowl` | The dough mixer (any mixer upgrade) or the mixing bowl |
+| `fp.dough_trays` | Lidded dough proving trays, stacked |
+| `fp.clipboard`, `fp.sign` | The checklist clipboard and the OPEN / LOCK UP sign at the hatch (the text is drawn by code) |
 
 ## Front of house, classic 2D layout (`scripts/front_scene.gd`)
 

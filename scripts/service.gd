@@ -2008,7 +2008,7 @@ func _build_side() -> void:
 		_side_prep()
 		return
 	if pz == null:
-		info.add_child(Kit.label("Tap an order on the left to start it. Open the base, top it by weight, bake it, slice it, send it to the pass.", 17, Kit.MUTED, true))
+		info.add_child(Kit.label(("Tap a ticket on the rail above the counter to start it." if fp_mode else "Tap an order on the left to start it.") + " Open the base, top it by weight, bake it, slice it, send it to the pass.", 17, Kit.MUTED, true))
 		return
 	info.add_child(Kit.label("#%d %s" % [pz.tk.id, pz.rec.name], 21))
 	if view == "board":

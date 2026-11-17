@@ -109,11 +109,19 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   looks), the rider, tables, pans, ladles and tickets.
 - **Customers** are placed from the simulation's 2D positions (`FPWorld._to3d`). They need walk, idle, order (talking),
   waiting-impatiently, eating and leaving animations, and seated poses at tables.
-- **Next to bring into the world**: the screens between services (Today, Jobs, Suppliers, KitBox and so on) are still
-  flat 2D. In the same spirit they should become things you hold or walk to: a phone or tablet in your hand for ordering
-  and KitBox, a clipboard for the checklists, the walk-in and dry store as rooms you step into, the hands-on prep and
-  cleaning minigames on the prep bench.
-- The classic 2D layout is still there (Today page, "Service in 3D: off") for testing; keep it working.
+- **Between services** (`scripts/fp/kitchen_screen.gd`): the morning and evening happen in the same 3D kitchen with
+  no service running. Every job is a prop with a live label: the delivery crates, prep tubs, sink with dirty tubs,
+  pans on the rail, mixer or bowl, proving trays, mop and bucket, spray, box of traps, pizza boxes on the shelf, the
+  fridge with its thermometer, the freezer, the dry store shelves, the checklist clipboard and the OPEN / LOCK UP sign.
+  Tapping one runs the job (`KitchenScreen.job`).
+- **The phone**: the management screens (`Hub`) open in a phone overlay. A modelled phone held in the left hand,
+  raised into view, would be the natural upgrade.
+- **Still flat** (next to bring into 3D): the hands-on minigames open as 2D sheets over the world: prep (knife,
+  grater, picking, pouring, stirring), cleaning, unpacking deliveries onto shelves, traps on the floor plan, folding
+  boxes, and making dough. They work and are scored; each would be better done on the 3D prop it starts from (the knife
+  through the mushroom on the prep board, the mop on the real floor, crates unpacked onto the real shelves, traps placed
+  on the real floor, the dough in the real mixer).
+- The classic 2D layout is still there (on the phone's Today page, "Service in 3D: off") for testing; keep it working.
 - Performance: the Compatibility renderer, four small SubViewports for the surfaces, unshaded quads. Keep the polygon
   budget phone-sized, bake lighting where you can, and check frame time on a low-end Android phone.
 

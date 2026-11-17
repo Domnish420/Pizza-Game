@@ -51,7 +51,13 @@ func _margins(full: bool) -> void:
 	for m in ["margin_left", "margin_right"]: content.add_theme_constant_override(m, 0 if full else 28)
 	for m in ["margin_top", "margin_bottom"]: content.add_theme_constant_override(m, 6 if full else 12)
 
+## between services: the 3D kitchen (KitchenScreen, with the management screens on your phone), or the classic hub
 func show_hub(tab: String = "") -> void:
+	if Game.s.get("view3d", true):
+		_margins(true)
+		Kit.clear(content)
+		content.add_child(KitchenScreen.new(tab))
+		return
 	_margins(false)
 	Kit.clear(content)
 	var hub := Hub.new()

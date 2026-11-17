@@ -6,7 +6,7 @@ extends SubViewportContainer
 var vp: SubViewport
 var world: FPWorld
 
-func _init(svc: ServiceScreen, ctrls: Dictionary) -> void:
+func _init(svc: ServiceScreen, ctrls: Dictionary, host = null) -> void:
 	stretch = true
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	vp = SubViewport.new()
@@ -14,5 +14,5 @@ func _init(svc: ServiceScreen, ctrls: Dictionary) -> void:
 	vp.handle_input_locally = true
 	vp.msaa_3d = Viewport.MSAA_2X
 	add_child(vp)
-	world = FPWorld.new(svc, ctrls)
+	world = FPWorld.new(svc, ctrls, host)
 	vp.add_child(world)

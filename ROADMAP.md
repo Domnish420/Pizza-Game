@@ -77,7 +77,10 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 
 - [x] 3D first-person service world (GoPro angle): room, stations, look and gyro, touch on 3D objects and surfaces
 - [ ] Models for every `fp.*` key, rigged hands and customers, the dough as a deforming 3D mesh
-- [ ] The screens between services brought into the world (phone/tablet in hand, clipboard, walk-in and dry store)
+- [x] The morning and evening in the same 3D kitchen: every job a prop you tap (deliveries, prep, wash-up, counter,
+      dough, cleaning, traps, boxes, temperatures, stores, checklist, open / lock up); management on a phone
+- [ ] The hands-on minigames (prep, cleaning, unpacking, traps, folding, dough) done on the 3D props instead of 2D sheets
+- [ ] A modelled phone in the hand for the management screens
 
 - [ ] Art for every screen, animated customers and staff in a visible kitchen
 - [ ] Dough that deforms properly for every stretching technique

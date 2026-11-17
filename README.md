@@ -33,6 +33,14 @@ set the fridge and dry-store vents, wash up the tubs. Every job takes minutes; r
 
 `ROADMAP.md` has the story mode (starting as an employed pizzaiolo) and everything still to come.
 
+**The whole day is 3D and first person.** Between services you are in the same kitchen (`scripts/fp/kitchen_screen.gd`)
+and every job is something in the room: the crates at the back door (put the delivery away), the tubs on the prep
+counter (prep), the sink (wash up), the pans on the rail (set up the counter), the mixer (make dough), the proving
+trays, the mop and the spray (clean), the box of traps (pest control on the floor plan), the pizza boxes on the shelf
+(fold them), the fridge thermometer (the temperature log), the fridge and dry store (stores and vents), the clipboard
+(the checklist) and the sign at the hatch (open up in the morning, lock up and go home at night). Labels over them say
+how each stands. Ordering, KitBox, the menu, staff and premises are on your phone (the Phone button).
+
 **Service is 3D and first person** (`scripts/fp/`): you stand at the counter in the van or the kitchen, seen from a
 chest-mounted wide camera, with the hatch or the pass ahead, the oven and cutting board on your right and the prep
 station on your left. The station buttons turn your head; drag on the room to look around (or turn the phone). Tap
@@ -166,7 +174,8 @@ and invoices are paid when they fall due.
 | `scripts/hub.gd`, `jobs_page.gd`, `suppliers_page.gd`, `stores_page.gd`, `dough_game.gd` | The management screens |
 | `scripts/prep_task.gd`, `clean_task.gd`, `shelf_task.gd` | Prepping, cleaning and unpacking by hand |
 | `scripts/rail_view.gd` | The rail of gastro pans above the bench (2D layout) |
-| `scripts/fp/fp_world.gd`, `fp_view.gd`, `fp_surface.gd` | The 3D first-person kitchen: room, camera, look, touch, 3D props, and the station surfaces |
+| `scripts/fp/fp_world.gd`, `fp_view.gd`, `fp_surface.gd` | The 3D first-person kitchen: room, camera, look, touch, 3D props and job props, and the station surfaces |
+| `scripts/fp/kitchen_screen.gd` | Between services in 3D: the jobs you tap in the room, the checklist, the phone with the management screens |
 | `scripts/orders.gd` | Order notes and allergies turned into a recipe card per ticket |
 | `scripts/checks.gd` | Opening and closing checklists, the temperature log (autoload `Checks`) |
 | `scripts/story.gd` | The career: the employer, the crew, shift reviews, promotions, going solo (autoload `Story`) |
