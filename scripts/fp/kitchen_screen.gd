@@ -31,6 +31,7 @@ var phone: Control
 var top_l: Label
 var cash_l: Label
 var act_btn: Button
+var phone_btn: Button
 var list_box: VBoxContainer
 var list_panel: PanelContainer
 var tab_btns := {}
@@ -67,7 +68,8 @@ func _build() -> void:
 	top.add_child(top_l)
 	cash_l = Kit.label("", 24, Kit.CHEESE)
 	top.add_child(cash_l)
-	top.add_child(Kit.button("Phone", func(): open_phone("home"), "primary", 20))
+	phone_btn = Kit.button("Phone", func(): open_phone("home"), "primary", 20)
+	top.add_child(phone_btn)
 	act_btn = Kit.button("", func(): job("open", {}), "danger", 20)
 	top.add_child(act_btn)
 	var stack := Control.new()
@@ -178,6 +180,8 @@ func job(name: String, act: Dictionary) -> void:
 	var G := Game
 	var morning: bool = G.s.phase == "morning"
 	match name:
+		"open" when Tutor.running() and not Tutor.training_service():
+			Kit.main.toast("Not yet: %s has more to show you" % Story.BOSS)
 		"open":
 			if G.s.hygiene.get("closed_day", -1) == G.s.day and morning: hub._closed_day()
 			elif morning: hub._open()

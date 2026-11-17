@@ -51,21 +51,25 @@ func load_game() -> bool:
 	var d = JSON.parse_string(FileAccess.open(SAVE_PATH, FileAccess.READ).get_as_text())
 	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("equip"): return false
 	s = d
-	# fields added since the save was written
+	normalise()
+	return true
+
+## a game read back from JSON has every number as a float: put back the ones the game counts with, and add fields
+## that are newer than the save (also used when a training day puts back the game it saved)
+func normalise() -> void:
 	var added := {"view3d": true, "gyro": true, "folded": 0, "folded_c": 0.0, "extra_off": {}, "app": {"on": false, "paused": false, "rating": float(Data.APP.start_rating), "orders": 0}}
 	for k in added:
 		if not s.has(k): s[k] = added[k]
 	for k in Data.UPG: s.upg[k] = int(s.upg.get(k, 0))
 	for k in ["day", "level", "venue", "pitch", "tables", "price", "sid", "oid", "cycle_start", "ratings", "xp", "house_grade", "clock", "late_start"]:
 		s[k] = int(s[k])
-	return true
 
 # ---------- calendar ----------
 func weekday(day: int = -1) -> int:
-	return ((s.day if day < 0 else day) - 1) % 7
+	return (int(s.day if day < 0 else day) - 1) % 7
 
 func season(day: int = -1) -> int:
-	return (((s.day if day < 0 else day) - 1) / 28) % 4
+	return ((int(s.day if day < 0 else day) - 1) / 28) % 4
 
 func date_text(day: int = -1) -> String:
 	var d: int = s.day if day < 0 else day

@@ -21,6 +21,16 @@ prep, set up the counter and make pizzas, and each shift is reviewed and paid in
 pizzaiolo hands you the back of house (temperature logs, deliveries, rotation, cleaning down, dough, ordering and the
 junior's prep list). Then your savings buy a van and you go it alone. **Free play** starts straight away in the van.
 
+**Training days.** Before your first shift, and again before your first shift as senior, Marco walks you through it
+in the 3D kitchen (`scripts/tutor.gd`, autoload `Tutor`). A box at the bottom says what to do next and a yellow
+marker floats over the thing to touch (or a button lights up). Each step finishes when you have actually done it:
+look around, turn to prep, prep a tub by hand, fill the counter, open, make a Margherita from the ticket (press,
+stretch, sauce, cheese, basil), oven, board, cut, pass, then two more on your own. The senior day covers the fridge
+and freezer temperatures, the delivery at the back door, a sprung trap, the counter, the phone, then the evening:
+cleaning down, washing up, the dough, the order, tomorrow's prep sheet and the evening temperature. Nothing counts:
+the training service has only practice customers who wait forever, no inspector, no mice and no walk-ins, and when
+the day ends (or you skip it) the game goes back to exactly how it was, ready for the real shift.
+
 ## A day
 
 The day runs on a clock. You start at 07:00 and the venue opens at its opening time (11:30 for the van).
@@ -191,6 +201,7 @@ and invoices are paid when they fall due.
 | `scripts/orders.gd` | Order notes and allergies turned into a recipe card per ticket |
 | `scripts/checks.gd` | Opening and closing checklists, the temperature log (autoload `Checks`) |
 | `scripts/story.gd` | The career: the employer, the crew, shift reviews, promotions, going solo (autoload `Story`) |
+| `scripts/tutor.gd` | The training days before the first pizzaiolo and first senior shift: Marco's steps, the marker, put the game back after (autoload `Tutor`) |
 | `scripts/equip.gd` | Utensils and small equipment: what you own, what each one does, what you need, KitBox orders and parcels (autoload `Equip`) |
 | `scripts/shop_page.gd` | The KitBox catering-supplies website |
 | `scripts/trap_task.gd`, `fold_task.gd` | Laying traps on the floor plan, folding boxes by hand |

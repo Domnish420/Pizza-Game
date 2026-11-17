@@ -182,6 +182,17 @@ The boss is Marco and the crew are Luca, Sofia, Tom, Aisha and Kofi (all fiction
 text in dialogs and on the Today page. They need faces, a few lines of personality, and small scenes for the
 moments that matter: the first morning, each shift review, the promotion, and handing in your notice.
 
+**Training days** (`scripts/tutor.gd`). Before the first shift and before the first senior shift, Marco walks the
+player through the day in the 3D kitchen. Right now he is a text box at the bottom of the screen with his name, a
+"Skip training" button, and a yellow cone and ring (`FPWorld.set_highlight`) floating over the thing to touch. A HUD
+button can be lit with a yellow border instead. Ideas for the art pass, keeping the same steps and checks:
+- Marco as a person standing in the kitchen who points, or his hands demonstrating (pressing the dough, the ladle
+  spiral), with his lines voiced or as speech bubbles.
+- A nicer marker: a glow on the object itself, or a hand icon tapping it.
+- A small celebration when a step is done (the step already plays the `up` sound).
+Each step's text is in `_pizzaiolo()` and `_senior()`; its check is a plain function on the game state, so the
+wording and the look can change freely without touching the checks.
+
 ### 4b. The counter and the hands-on jobs
 
 The bench is the marble top of the pizza counter, with the rail of gastro pans above it (`scripts/rail_view.gd`).
@@ -236,7 +247,7 @@ dough slaps, the sauce ladle, the oven door, the fire, the pizza wheel, a busy d
 
 ## Not built yet (fair game)
 
-- A tutorial or first-day walkthrough. The game currently explains itself in text on each screen.
+- A tutorial for free play (story mode has the training days; free play explains itself in text on each screen).
 - A settings screen, save slots, cloud saves.
 - Showing pizzas made by staff on the bench (they are simulated, not drawn).
 - Delivery drivers on the road, and the van driving to the cash & carry.

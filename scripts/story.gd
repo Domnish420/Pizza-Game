@@ -40,7 +40,7 @@ func traffic() -> float:
 func start() -> void:
 	Game.new_game()
 	var s: Dictionary = Game.s
-	s.story = {"stage": "pizzaiolo", "shifts": [], "savings": 150.0, "sheet": {}, "sheet_day": -1, "started": s.day, "reviews": []}
+	s.story = {"stage": "pizzaiolo", "shifts": [], "savings": 150.0, "sheet": {}, "sheet_day": -1, "started": s.day, "reviews": [], "training": "pizzaiolo"}
 	s.venue = 3
 	s.tables = 12
 	s.cash = 6000.0
@@ -229,6 +229,7 @@ func promote() -> String:
 	if stage() == "pizzaiolo":
 		st.stage = "senior"
 		st.promoted = Game.s.day + 1
+		st.training = "senior"          # a training day before the first senior shift (see Tutor)
 		_crew("senior")
 		Game.s.hygiene.next = Game.s.day + randi_range(3, 5)
 		Game.save_game()

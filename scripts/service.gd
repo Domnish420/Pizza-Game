@@ -53,6 +53,7 @@ var ladle_ing := ""
 var phones := []                 # calls ringing: {n, until}
 var tablet := []                 # delivery-app orders pinging on the tablet: {n, until}
 var app_acc := 0.0
+var training := false            # a training day: no customers of its own, nobody else takes the tickets (see Tutor)
 var carried: Pizza = null        # the pizza you took from the bench to the oven and have not loaded yet
 var spiked := []                 # tickets that have just gone (walked out, collected): {tk, why, until (msec)} - they stay on the rail a moment
 var critic_at := -1.0            # when the food critic walks in today (-1: not today)
@@ -101,7 +102,8 @@ func _ready() -> void:
 	# opened late: the start of the day has gone
 	t = clamp((float(G.s.clock) - c.open) / (c.close - c.open), 0.0, 0.9) * DAY
 	G.s.phase = "service"
-	if G.s.day >= int(G.s.critic_next) and G.s.level >= 3: critic_at = randf_range(0.2, 0.7) * DAY
+	training = Tutor.training_service()
+	if G.s.day >= int(G.s.critic_next) and G.s.level >= 3 and not training: critic_at = randf_range(0.2, 0.7) * DAY
 	oven = Oven.new(G.tier("oven"))
 	if oven.def.feeds:
 		var lit := Stock.take("wood", 3.0)       # lighting the oven before service
@@ -432,6 +434,10 @@ func _speed() -> void:
 
 # ---------- customers ----------
 func set_pat(p: Dictionary, secs: float) -> void:
+	if p.get("training", false):         # practice customers wait as long as you need
+		p.max = 99999.0
+		p.pat = p.max
+		return
 	if p.max > 0: p.waits.append(clamp(p.pat / p.max, 0.0, 1.0))
 	p.max = secs * c.patience * randf_range(0.9, 1.1)
 	p.pat = p.max
@@ -627,6 +633,30 @@ func oven_rounds(n: int) -> float:
 ## a ticket that has just gone stays on the rail a moment so you can see what happened
 func spike(tk: Dictionary, why: String, secs_shown: float) -> void:
 	spiked.append({"tk": tk, "why": why, "until": Time.get_ticks_msec() + int(secs_shown * 1000.0)})
+	dirty = true
+
+## a practice order for the training day: one pizza, for a table (or the hatch), that will wait as long as you need
+func training_order(rec_id: String) -> void:
+	pid += 1
+	var p := {"id": pid, "type": "dine" if tables.size() > 0 else "take", "n": 1, "pos": L.spawn, "target": L.spawn, "state": "wait", "pat": 99999.0, "max": 99999.0,
+		"tks": [], "got": 0, "items": [], "waits": [], "table": -1, "timer": 0.0, "gone": false, "look": randi() % 6, "hue": randf(), "nobox": false,
+		"want_x": 0, "got_x": 0, "xitems": [], "drinks": [], "training": true, "dessert_asked": true}
+	if p.type == "dine":
+		var tb = free_table()
+		if tb != null:
+			tb.party = p
+			p.table = tb.i
+			p.pos = tb.pos
+			p.target = tb.pos
+	else:
+		p.pos = w_pos(waiters.size())
+		waiters.append(p)
+	parties.append(p)
+	nid += 1
+	var tk := {"id": nid - 1, "rec": Orders.build(Data.REC[rec_id], []), "p": p, "state": "new", "owner": "", "gone": false, "age": 0.0}
+	tickets.append(tk)
+	p.tks.append(tk)
+	Art.sfx("ding")
 	dirty = true
 
 ## the party orders a pizza each. false = there was nothing left to sell them.
@@ -1227,7 +1257,7 @@ func step(dt: float) -> void:
 	_crew_step(dt)
 	# the inspector
 	var at: float = G.s.hygiene.get("at", -1.0)
-	if at >= 0 and at <= now and not done:
+	if at >= 0 and at <= now and not done and not training:
 		r.inspect = Hygiene.inspect()
 		var res: Dictionary = r.inspect
 		Kit.main.message("Food hygiene inspection", "The inspector called in at %s and rated you %s.%s" % [Data.hhmm(now), Hygiene.rating_text(), ("\n\n" + "\n".join(res.notes)) if res.notes.size() > 0 else "\n\nNo problems found."] + ("\n\nYou are closed until you sort it out." if res.closed else ""), "OK")
@@ -1236,16 +1266,16 @@ func step(dt: float) -> void:
 			finish(false)
 			return
 	# mice
-	if mouse.is_empty() and randf() < Hygiene.sighting_rate() * gm * dt:
+	if mouse.is_empty() and not training and randf() < Hygiene.sighting_rate() * gm * dt:
 		_mouse()
 	if not mouse.is_empty():
 		mouse.t -= dt
 		mouse.pos += mouse.vel * dt
 		if mouse.t <= 0: mouse = {}
-	if t < DAY * 0.94:
+	if t < DAY * 0.94 and not training:
 		acc += c.total / DAY * (0.55 + 0.9 * sin(PI * t / DAY)) / 1.123 / 0.94 * dt
 		while acc >= 1.0: acc -= spawn_party()
-	if t < DAY * 0.9 and c.app > 0 and not Game.s.app.paused:
+	if t < DAY * 0.9 and c.app > 0 and not Game.s.app.paused and not training:
 		app_acc += c.app / 1.6 / DAY * (0.4 + 1.0 * sin(PI * t / DAY)) / 1.04 / 0.9 * dt
 		while app_acc >= 1.0:
 			app_acc -= 1.0
@@ -1384,7 +1414,7 @@ func step(dt: float) -> void:
 				w.prep = ""
 				dirty = true
 			continue
-		if w.job == null:
+		if w.job == null and not training:
 			for tk in _by_due():
 				if tk.state != "new" or tk.owner != "" or tk.age <= 1.2: continue
 				var mk: String = tk.rec.get("make", "pizza")
@@ -1431,6 +1461,7 @@ func step(dt: float) -> void:
 	# end of day
 	var idle: bool = tickets.is_empty() and bench == null and board.is_empty() and oven.items.is_empty() and oven.shelf.is_empty()
 	var anyone := parties.any(func(p): return p.state != "leave")
+	if training: return                 # the training day ends when Marco says so
 	if idle and not anyone and t >= DAY: finish(false)
 	elif tickets.is_empty() and not anyone and t >= DAY + 20.0 and busy.is_empty(): finish(false)     # only pizzas nobody is waiting for are left: they are binned
 	elif idle and t > 5 and not anyone and busy.is_empty() and not G.active_recipes().any(func(rc): return sellable(rc)): finish(true)

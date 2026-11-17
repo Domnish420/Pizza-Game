@@ -69,6 +69,8 @@ var mouse_node: Node3D
 var float_labels := []
 var hands := []                        # [{node, rest, target}]
 var held: MeshInstance3D               # what is in your right hand
+var marker: Node3D                     # the training-day marker bobbing over the thing to touch
+var marker_on = null
 var ptr := {}                          # pointer index -> what it is doing
 var touch_seen := false
 var _mats := {}
@@ -233,9 +235,11 @@ func _counter() -> void:
 	_prop("counter", Vector3.ZERO, _mk_counter)
 	# what used to be buttons: the pass you send pizzas out on, the bin, the dough sheeter
 	var pass_n := _prop("pass", Vector3(1.47, 0.92, -1.0), _mk_pass)
+	job_nodes.pass = pass_n
 	_tappable(pass_n, Vector3(0.32, 0.16, 0.24), Vector3(0, 0.06, 0), {"kind": "pass"})
 	job_labels.pass = _small_label("Pass", Vector3(0, 0.2, 0), pass_n)
 	var bin_n := _prop("bin", Vector3(-0.62, 0.92, -0.78), _mk_bin)
+	job_nodes.bin = bin_n
 	_tappable(bin_n, Vector3(0.18, 0.2, 0.18), Vector3(0, 0.08, 0), {"kind": "bin"})
 	job_labels.bin = _small_label("Bin", Vector3(0, 0.22, 0), bin_n)
 	if float(Game.tier("roller").auto) > 0.0:
@@ -906,7 +910,56 @@ func _sync_misc(dt: float) -> void:
 			l.position = _to3d(f.pos) + Vector3(0, 2.1 + (1.8 - float(f.t)) * 0.3, 0)
 		else: l.visible = false
 
+# ---------- the training-day marker ----------
+## point at something (or null for nothing)
+func set_highlight(node) -> void:
+	marker_on = node
+	if marker == null:
+		marker = Node3D.new()
+		add_child(marker)
+		var cone := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.045
+		cm.bottom_radius = 0.0
+		cm.height = 0.11
+		cone.mesh = cm
+		cone.material_override = _mat(Kit.CHEESE, 0.4, 0.0, true)
+		marker.add_child(cone)
+		var ring := MeshInstance3D.new()
+		var tm := TorusMesh.new()
+		tm.inner_radius = 0.09
+		tm.outer_radius = 0.11
+		ring.mesh = tm
+		ring.position.y = -0.14
+		ring.material_override = _mat(Color(Kit.CHEESE, 0.8), 0.4, 0.0, true)
+		marker.add_child(ring)
+	marker.visible = node != null and is_instance_valid(node)
+
+## what a training step points at: "job:<name>", "pan:<ingredient>", "ticket", "surface:<station>", "pass", "bin"
+func node_for(key: String):
+	if key.begins_with("job:"): return job_nodes.get(key.substr(4), null)
+	if key.begins_with("surface:"): return surfaces.get(key.substr(8), null)
+	if key.begins_with("pan:"):
+		var r := Stock.rail()
+		for e in pan_nodes:
+			if e.i < r.size() and r[e.i].ing == key.substr(4): return e.root
+		return null
+	if key == "ticket": return ticket_root.get_child(0) if ticket_root.get_child_count() > 0 else null
+	return job_nodes.get(key, null)
+
+func _sync_marker() -> void:
+	if marker == null or not marker.visible: return
+	if marker_on == null or not is_instance_valid(marker_on):
+		marker.visible = false
+		return
+	# tickets hang high on the rail, so their marker points up from underneath (above would be off the top of the view)
+	var under: bool = marker_on.get_parent() == ticket_root
+	var top := -0.36 if under else (0.32 if marker_on is FPSurface else 0.45)
+	marker.global_position = marker_on.global_position + Vector3(0, top + sin(time * 5.0) * 0.03, 0)
+	marker.rotation = Vector3(PI if under else 0.0, time * 2.0, 0.0)
+
 func _sync_hands(dt: float) -> void:
+	_sync_marker()
 	var tool: String = svc.tool if svc != null else ""
 	held.visible = tool != ""
 	if tool != "":

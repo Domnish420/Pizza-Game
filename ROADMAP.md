@@ -28,6 +28,10 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
       dough, ordering, and tomorrow's prep list that the junior preps before you get in; reviewed on checklists,
       waste, customers and hygiene; promotion needs 6 good shifts and a hygiene inspection of 3 or better
 - [x] Going solo: your savings buy the van, your level comes with you, career goals up to the flagship
+- [x] Training day before the first pizzaiolo shift: Marco walks you through prep, the counter, opening and making a
+      Margherita from the ticket to the pass, then two on your own; a marker shows what to touch; nothing counts
+- [x] Training day before the first senior shift: temperatures, the delivery, a sprung trap, the counter, the phone,
+      then the evening close (cleaning, washing up, dough, the order, the prep sheet, the evening temperature)
 - [ ] Cut scenes and character art for the boss and crew; more story beats between promotions
 
 ## 1. Hands-on jobs

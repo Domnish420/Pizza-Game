@@ -655,6 +655,9 @@ func _closed_day() -> void:
 
 func _open() -> void:
 	var G := Game
+	if Tutor.running() and not Tutor.training_service():
+		Kit.main.toast("Not yet: %s has more to show you" % Story.BOSS)
+		return
 	if Day.now() > Day.close_time() - 90.0:
 		Kit.main.message("Too late to open", "It is %s. There is no point opening now." % Data.hhmm(Day.now()), "OK")
 		return
@@ -710,6 +713,9 @@ func _go_open() -> void:
 
 func _sleep() -> void:
 	var G := Game
+	if Tutor.running():
+		Kit.main.toast("Not yet: %s has more to show you" % Story.BOSS)
+		return
 	var plan := G.dough_plan()
 	var short := 0
 	for k in plan: short += plan[k]
