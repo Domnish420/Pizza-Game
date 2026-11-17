@@ -16,11 +16,3 @@ func _init(svc: ServiceScreen, ctrls: Dictionary) -> void:
 	add_child(vp)
 	world = FPWorld.new(svc, ctrls)
 	vp.add_child(world)
-
-var dbg_gui := 0
-var dbg_unh := 0
-func _gui_input(e: InputEvent) -> void:
-	if e is InputEventScreenTouch or e is InputEventScreenDrag: dbg_gui += 1
-
-func _unhandled_input(e: InputEvent) -> void:
-	if e is InputEventScreenTouch or e is InputEventScreenDrag: dbg_unh += 1
