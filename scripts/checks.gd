@@ -26,6 +26,7 @@ func temp_of(store: String) -> float:
 
 ## write today's reading in the log (takes a minute). Returns the reading.
 func record(store: String) -> float:
+	if not Equip.thermo_for(store): return NAN
 	var t: float = snapped(temp_of(store) + randf_range(-0.2, 0.2), 0.1)
 	Game.s.templog.append({"day": Game.s.day, "when": half(), "store": store, "temp": t})
 	while Game.s.templog.size() > 200: Game.s.templog.pop_front()

@@ -36,8 +36,11 @@ func clean(area: String) -> String:
 	var k: float = got.got / want
 	var grade_bonus: float = (got.g - 1.0) * 0.04 if got.got > 0 else 0.0
 	var to: float = lerp(55.0, 100.0, k) * (1.0 + grade_bonus)
+	var kit := Equip.clean_cap(area)
+	to = min(to, kit.cap)
 	Game.s.clean[area] = clamp(max(level(area), to), 0.0, 100.0)
 	if k < 0.99: return "Not enough cleaning chemicals: it is only %d%% clean. Order some from the packaging supplier." % level(area)
+	if kit.why.size() > 0: return "Only %d%% clean: %s. Order from %s." % [level(area), ", ".join(kit.why), Equip.SHOP.name]
 	return ""
 
 func state(area: String) -> Array:
@@ -165,7 +168,25 @@ func inspect() -> Dictionary:
 	var logs := Checks.log_rate(7)
 	score += 0.6 * logs
 	if logs < 0.7: notes.append("Temperature records missing or incomplete")
-	score *= 5.0 / 5.6
+	# the kit: labels, boards, a probe, and the safety equipment the law asks for
+	var kit := 0.6
+	var unl := Equip.unlabelled()
+	if unl > 0:
+		kit -= 0.2
+		notes.append("%d tub%s of food with no date label" % [unl, "" if unl == 1 else "s"])
+	var boards := Equip.board_issues()
+	if boards.size() > 0:
+		kit -= 0.15
+		notes.append("No colour-coded board for the %s" % ", ".join(boards))
+	if Equip.menu_cooks() and not Equip.has("probe"):
+		kit -= 0.15
+		notes.append("No probe thermometer to check cooked food")
+	var safety := Equip.compliance_missing()
+	if safety.size() > 0:
+		kit -= 0.25 * safety.size()
+		notes.append("Missing: " + ", ".join(safety))
+	score += max(kit, -0.6)
+	score *= 5.0 / 6.2
 	var rating := int(clamp(round(score), 0, 5))
 	if p >= 55.0: rating = min(rating, 1)
 	elif p >= 30.0: rating = min(rating, 2)

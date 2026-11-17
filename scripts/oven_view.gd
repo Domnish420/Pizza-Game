@@ -60,6 +60,8 @@ func _down(p: Vector2) -> void:
 	var centre: Vector2 = ov.pos[best.slot]
 	if p.distance_to(centre) < _pizza_r(best.pz) * 0.5:
 		drag = {"pz": best.pz, "o": best, "mode": "move", "pos": p, "start": p}
+	elif not Equip.has("turner"):
+		Kit.main.toast("You need a turning peel to turn pizzas in the oven. Order one from %s." % Equip.SHOP.name, true)
 	else:
 		drag = {"pz": best.pz, "o": best, "mode": "turn", "pos": p, "start": p, "last_ang": (p - centre).angle()}
 

@@ -50,6 +50,13 @@ See `PizzaDraw.draw()`; each layer is a separate block and can be swapped for sh
 
 Pizza spots on the deck are laid out by code (`Oven._init`).
 
+## KitBox, the equipment website (`scripts/shop_page.gd`)
+
+| Key | Size | What it is |
+| --- | --- | --- |
+| `kit.logo` | 150x44 | The KitBox logo for the site header (a fictional catering-supplies site, so make it our own brand) |
+| `kit.<id>` | 84x84 | Product photo on a white or pale background, like a catering catalogue. All 53 ids are in `data/equipment.json`: ladle_1, ladle_2, ladle_3, ladle_4, ladle_6, ladle_8, peel, turner, wheel, rocker, scraper, pin, docker, pan_tin, dough_tray, oven_brush, ir_thermo, serving_board, knife, board_green, board_red, board_yellow, board_blue, board_white, board_brown, board_purple, knife_purple, grater, rotary, blender, colander, fry_pan, saucepan, bowl, jug, scales, probe, gn16, gn13, fridge_thermo, daydots, mop_boh, mop_foh, spray, cloths, plate, cutlery, glass, delivery_bag, first_aid, fire_blanket, extinguisher, handwash |
+
 ## Icons (`scripts/kit.gd`)
 
 | Key | Size | What it is |

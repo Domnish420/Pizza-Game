@@ -1,0 +1,662 @@
+{
+ "_about": "Kitchen equipment and utensils, bought from the catering supplies site. price is per item (per pack when pack > 1). rule says what the game uses it for (see scripts/equip.gd). starters are the kits you begin with. Rename the shop here.",
+ "shop": {
+  "id": "kitbox",
+  "name": "KitBox Catering Supplies",
+  "kind": "Catering equipment",
+  "tagline": "Everything for the professional kitchen. Next working day delivery, free over $50.",
+  "days": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "window": [
+   8.0,
+   13.0
+  ],
+  "late": [
+   0,
+   0,
+   0,
+   0.5
+  ],
+  "late_days": [
+   0.5,
+   0,
+   0,
+   0,
+   0,
+   0,
+   0
+  ],
+  "fee": 4.99,
+  "free_over": 50,
+  "min": 0,
+  "terms": 0,
+  "lvl": 1,
+  "cats": [],
+  "grades": [
+   1,
+   5
+  ],
+  "packs": [
+   0
+  ],
+  "mult": 1.0,
+  "vol": 0.0,
+  "desc": "Pizza tools, prep kit, storage, cleaning, tableware and safety equipment."
+ },
+ "categories": [
+  [
+   "pizza",
+   "Pizza tools"
+  ],
+  [
+   "prep",
+   "Prep and knives"
+  ],
+  [
+   "storage",
+   "Storage and labelling"
+  ],
+  [
+   "cleaning",
+   "Cleaning"
+  ],
+  [
+   "foh",
+   "Front of house and delivery"
+  ],
+  [
+   "safety",
+   "Health and safety"
+  ]
+ ],
+ "items": [
+  {
+   "id": "ladle_1",
+   "name": "Portion ladle, 1 oz",
+   "cat": "pizza",
+   "price": 3.49,
+   "desc": "One scoop is exactly 1 oz of sauce. Everyone saucing at once needs their own.",
+   "rule": "ladle",
+   "oz": 1,
+   "short": "1 oz ladle"
+  },
+  {
+   "id": "ladle_2",
+   "name": "Portion ladle, 2 oz",
+   "cat": "pizza",
+   "price": 3.79,
+   "desc": "One scoop is exactly 2 oz of sauce. Everyone saucing at once needs their own.",
+   "rule": "ladle",
+   "oz": 2,
+   "short": "2 oz ladle"
+  },
+  {
+   "id": "ladle_3",
+   "name": "Portion ladle, 3 oz",
+   "cat": "pizza",
+   "price": 4.19,
+   "desc": "One scoop is exactly 3 oz of sauce. Everyone saucing at once needs their own.",
+   "rule": "ladle",
+   "oz": 3,
+   "short": "3 oz ladle"
+  },
+  {
+   "id": "ladle_4",
+   "name": "Portion ladle, 4 oz",
+   "cat": "pizza",
+   "price": 4.49,
+   "desc": "One scoop is exactly 4 oz of sauce. Everyone saucing at once needs their own.",
+   "rule": "ladle",
+   "oz": 4,
+   "short": "4 oz ladle"
+  },
+  {
+   "id": "ladle_6",
+   "name": "Portion ladle, 6 oz",
+   "cat": "pizza",
+   "price": 5.29,
+   "desc": "One scoop is exactly 6 oz of sauce. Everyone saucing at once needs their own.",
+   "rule": "ladle",
+   "oz": 6,
+   "short": "6 oz ladle"
+  },
+  {
+   "id": "ladle_8",
+   "name": "Portion ladle, 8 oz",
+   "cat": "pizza",
+   "price": 5.99,
+   "desc": "One scoop is exactly 8 oz of sauce. Everyone saucing at once needs their own.",
+   "rule": "ladle",
+   "oz": 8,
+   "short": "8 oz ladle"
+  },
+  {
+   "id": "peel",
+   "name": "Aluminium pizza peel, 12 inch",
+   "cat": "pizza",
+   "price": 24.99,
+   "desc": "Loads pizzas into the oven and takes them out. One per person working the oven.",
+   "rule": "peel",
+   "short": "pizza peel"
+  },
+  {
+   "id": "turner",
+   "name": "Round turning peel, 8 inch",
+   "cat": "pizza",
+   "price": 29.99,
+   "desc": "Turns pizzas in the oven so they colour evenly. Needed to turn in gas and wood ovens.",
+   "rule": "turner",
+   "short": "turning peel"
+  },
+  {
+   "id": "wheel",
+   "name": "Pizza cutter wheel, 4 inch",
+   "cat": "pizza",
+   "price": 7.99,
+   "desc": "Clean slices. Without one you are cutting with a knife and it shows. One per person at the pass.",
+   "rule": "wheel",
+   "short": "pizza wheel"
+  },
+  {
+   "id": "rocker",
+   "name": "Rocking pizza cutter, 20 inch",
+   "cat": "pizza",
+   "price": 24.99,
+   "desc": "One rock through the whole pizza: the cleanest, quickest slices.",
+   "rule": "rocker",
+   "short": "rocking pizza cutter"
+  },
+  {
+   "id": "scraper",
+   "name": "Stainless bench scraper",
+   "cat": "pizza",
+   "price": 6.49,
+   "desc": "Cuts and lifts dough. Without one your dough balls come out uneven.",
+   "rule": "scraper",
+   "short": "bench scraper"
+  },
+  {
+   "id": "pin",
+   "name": "Wooden rolling pin, 18 inch",
+   "cat": "pizza",
+   "price": 9.99,
+   "desc": "Needed to roll thin Roman bases (unless you have a dough sheeter).",
+   "rule": "pin",
+   "short": "rolling pin"
+  },
+  {
+   "id": "docker",
+   "name": "Dough docker",
+   "cat": "pizza",
+   "price": 19.99,
+   "desc": "Pricks rolled bases so they do not bubble up in the oven.",
+   "rule": "docker",
+   "short": "dough docker"
+  },
+  {
+   "id": "pan_tin",
+   "name": "Deep pan pizza tin, 10 inch",
+   "cat": "pizza",
+   "price": 9.49,
+   "desc": "One deep-pan pizza per tin, from the bench to the board.",
+   "rule": "pan_tin",
+   "short": "deep pan pizza tin"
+  },
+  {
+   "id": "dough_tray",
+   "name": "Dough proving tray with lid, 600 x 400",
+   "cat": "pizza",
+   "price": 24.99,
+   "desc": "Holds 12 dough balls while they proof. No tray space, no dough.",
+   "rule": "dough_tray",
+   "holds": 12,
+   "short": "dough proving tray"
+  },
+  {
+   "id": "oven_brush",
+   "name": "Pizza oven brush and scraper",
+   "cat": "pizza",
+   "price": 34.99,
+   "desc": "Sweeps ash off the oven floor. Without it, wood-fired bases pick up ash.",
+   "rule": "oven_brush",
+   "short": "oven brush"
+  },
+  {
+   "id": "ir_thermo",
+   "name": "Infrared thermometer",
+   "cat": "pizza",
+   "price": 34.99,
+   "desc": "Reads the oven floor and the fire, so you know exactly how hot it is.",
+   "rule": "ir_thermo",
+   "short": "infrared thermometer"
+  },
+  {
+   "id": "serving_board",
+   "name": "Wooden pizza serving board, 12 inch",
+   "cat": "pizza",
+   "price": 9.99,
+   "desc": "Pizzas brought to the table on a board look the part. One per seat for dine-in.",
+   "rule": "serving_board",
+   "short": "serving board"
+  },
+  {
+   "id": "knife",
+   "name": "Chef's knife, 8 inch",
+   "cat": "prep",
+   "price": 18.99,
+   "desc": "Needed for any knife prep: slicing, dicing, halving. One per person prepping.",
+   "rule": "knife",
+   "short": "chef's knife"
+  },
+  {
+   "id": "board_green",
+   "name": "Chopping board, green",
+   "cat": "prep",
+   "price": 13.99,
+   "desc": "Colour-coded: salad, veg and herbs only. Prep on the wrong colour and the inspector will notice.",
+   "rule": "board",
+   "colour": "green",
+   "short": "green chopping board"
+  },
+  {
+   "id": "board_red",
+   "name": "Chopping board, red",
+   "cat": "prep",
+   "price": 13.99,
+   "desc": "Colour-coded: raw meat only. Prep on the wrong colour and the inspector will notice.",
+   "rule": "board",
+   "colour": "red",
+   "short": "red chopping board"
+  },
+  {
+   "id": "board_yellow",
+   "name": "Chopping board, yellow",
+   "cat": "prep",
+   "price": 13.99,
+   "desc": "Colour-coded: cooked and cured meat only. Prep on the wrong colour and the inspector will notice.",
+   "rule": "board",
+   "colour": "yellow",
+   "short": "yellow chopping board"
+  },
+  {
+   "id": "board_blue",
+   "name": "Chopping board, blue",
+   "cat": "prep",
+   "price": 13.99,
+   "desc": "Colour-coded: fish only. Prep on the wrong colour and the inspector will notice.",
+   "rule": "board",
+   "colour": "blue",
+   "short": "blue chopping board"
+  },
+  {
+   "id": "board_white",
+   "name": "Chopping board, white",
+   "cat": "prep",
+   "price": 13.99,
+   "desc": "Colour-coded: dairy and bakery only. Prep on the wrong colour and the inspector will notice.",
+   "rule": "board",
+   "colour": "white",
+   "short": "white chopping board"
+  },
+  {
+   "id": "board_brown",
+   "name": "Chopping board, brown",
+   "cat": "prep",
+   "price": 13.99,
+   "desc": "Colour-coded: root veg: onions, potatoes, garlic only. Prep on the wrong colour and the inspector will notice.",
+   "rule": "board",
+   "colour": "brown",
+   "short": "brown chopping board"
+  },
+  {
+   "id": "board_purple",
+   "name": "Allergen chopping board, purple",
+   "cat": "prep",
+   "price": 15.99,
+   "desc": "Allergy orders are prepped on purple. With the purple board and knife, staff rarely get an allergy order wrong.",
+   "rule": "board",
+   "colour": "purple",
+   "short": "purple chopping board"
+  },
+  {
+   "id": "knife_purple",
+   "name": "Allergen knife, purple",
+   "cat": "prep",
+   "price": 12.99,
+   "desc": "Goes with the purple board for allergy orders.",
+   "rule": "knife_purple",
+   "short": "purple allergen knife"
+  },
+  {
+   "id": "grater",
+   "name": "Box grater",
+   "cat": "prep",
+   "price": 7.99,
+   "desc": "Needed to grate cheese.",
+   "rule": "grater",
+   "short": "box grater"
+  },
+  {
+   "id": "rotary",
+   "name": "Bench rotary grater",
+   "cat": "prep",
+   "price": 59.99,
+   "desc": "Grates a kilo of cheese in a fraction of the time.",
+   "rule": "rotary",
+   "short": "rotary grater"
+  },
+  {
+   "id": "blender",
+   "name": "Stick blender, 300 mm",
+   "cat": "prep",
+   "price": 109.99,
+   "desc": "Blitzes tins into sauce. Without one, sauce is crushed by hand and takes far longer.",
+   "rule": "blender",
+   "short": "stick blender"
+  },
+  {
+   "id": "colander",
+   "name": "Stainless colander",
+   "cat": "prep",
+   "price": 11.99,
+   "desc": "Needed to drain tins and wash leaves.",
+   "rule": "colander",
+   "short": "colander"
+  },
+  {
+   "id": "fry_pan",
+   "name": "Aluminium frying pan, 28 cm",
+   "cat": "prep",
+   "price": 16.99,
+   "desc": "Needed to cook sausage, render pancetta, saute greens.",
+   "rule": "pan",
+   "short": "frying pan"
+  },
+  {
+   "id": "saucepan",
+   "name": "Stainless saucepan, 3.5 litre",
+   "cat": "prep",
+   "price": 24.99,
+   "desc": "For white sauce, blanching and defrosting. Counts as a pan for cooking prep.",
+   "rule": "pan",
+   "short": "saucepan"
+  },
+  {
+   "id": "bowl",
+   "name": "Stainless mixing bowl, 5 litre",
+   "cat": "prep",
+   "price": 8.99,
+   "desc": "Needed to mix dough by hand when you have no mixer.",
+   "rule": "bowl",
+   "short": "mixing bowl"
+  },
+  {
+   "id": "jug",
+   "name": "Measuring jug, 2 litre",
+   "cat": "prep",
+   "price": 4.99,
+   "desc": "Measures the water for dough. Without one you are guessing.",
+   "rule": "jug",
+   "short": "measuring jug"
+  },
+  {
+   "id": "scales",
+   "name": "Digital scales, 5 kg",
+   "cat": "prep",
+   "price": 24.99,
+   "desc": "Weighs dough ingredients and toppings to the gram. Without scales you only get rough readings.",
+   "rule": "scales",
+   "short": "set of digital scales"
+  },
+  {
+   "id": "probe",
+   "name": "Probe thermometer",
+   "cat": "prep",
+   "price": 14.99,
+   "desc": "Checks cooked food is hot right through. The inspector expects one if you cook anything.",
+   "rule": "probe",
+   "short": "probe thermometer"
+  },
+  {
+   "id": "gn16",
+   "name": "Gastronorm pan 1/6, 100 mm",
+   "cat": "storage",
+   "price": 6.49,
+   "desc": "Small pan for the counter rail (stainless bench and refrigerated counter).",
+   "rule": "gn",
+   "litres": 1.6,
+   "short": "1/6 gastronorm pan"
+  },
+  {
+   "id": "gn13",
+   "name": "Gastronorm pan 1/3, 100 mm",
+   "cat": "storage",
+   "price": 8.99,
+   "desc": "Large pan for the marble-top pizza counters.",
+   "rule": "gn",
+   "litres": 2.0,
+   "short": "1/3 gastronorm pan"
+  },
+  {
+   "id": "fridge_thermo",
+   "name": "Fridge and freezer thermometer",
+   "cat": "storage",
+   "price": 3.99,
+   "desc": "One in each fridge and freezer. You cannot keep the temperature log without them.",
+   "rule": "fridge_thermo",
+   "short": "fridge thermometer"
+  },
+  {
+   "id": "daydots",
+   "name": "Day-dot labels, roll of 1000",
+   "cat": "storage",
+   "price": 6.99,
+   "desc": "One on every tub you prep, coloured for the day. Unlabelled food fails inspections.",
+   "rule": "daydots",
+   "pack": 1000,
+   "unit": "label",
+   "short": "roll of day-dot labels"
+  },
+  {
+   "id": "mop_boh",
+   "name": "Mop and bucket, red (kitchen)",
+   "cat": "cleaning",
+   "price": 29.99,
+   "desc": "Colour-coded for the kitchen. Without one the kitchen floor never comes clean.",
+   "rule": "mop",
+   "area": "boh",
+   "short": "kitchen mop and bucket"
+  },
+  {
+   "id": "mop_foh",
+   "name": "Mop and bucket, blue (front of house)",
+   "cat": "cleaning",
+   "price": 29.99,
+   "desc": "Colour-coded for the front. Without one the dining room never comes clean.",
+   "rule": "mop",
+   "area": "foh",
+   "short": "front-of-house mop and bucket"
+  },
+  {
+   "id": "spray",
+   "name": "Spray bottle, 750 ml",
+   "cat": "cleaning",
+   "price": 1.99,
+   "desc": "Needed to spray cleaning chemicals.",
+   "rule": "spray",
+   "short": "spray bottle"
+  },
+  {
+   "id": "cloths",
+   "name": "Cleaning cloths, pack of 50",
+   "cat": "cleaning",
+   "price": 9.99,
+   "desc": "Every clean uses a few. No cloths, no proper clean.",
+   "rule": "cloths",
+   "pack": 50,
+   "unit": "cloth",
+   "short": "pack of cleaning cloths"
+  },
+  {
+   "id": "plate",
+   "name": "Pizza plate, 12 inch, pack of 6",
+   "cat": "foh",
+   "price": 25.74,
+   "desc": "One per seated guest. You can only seat as many guests as you have plates, cutlery and glasses.",
+   "rule": "tableware",
+   "pack": 6,
+   "unit": "plate",
+   "short": "plates"
+  },
+  {
+   "id": "cutlery",
+   "name": "Knife and fork sets, pack of 12",
+   "cat": "foh",
+   "price": 17.88,
+   "desc": "One set per seated guest.",
+   "rule": "tableware",
+   "pack": 12,
+   "unit": "set",
+   "short": "cutlery"
+  },
+  {
+   "id": "glass",
+   "name": "Hi-ball glasses, pack of 24",
+   "cat": "foh",
+   "price": 30.96,
+   "desc": "One per seated guest.",
+   "rule": "tableware",
+   "pack": 24,
+   "unit": "glass",
+   "short": "glasses"
+  },
+  {
+   "id": "delivery_bag",
+   "name": "Insulated delivery bag, holds 3 pizzas",
+   "cat": "foh",
+   "price": 34.99,
+   "desc": "One per delivery driver. Without one, deliveries arrive cold.",
+   "rule": "delivery_bag",
+   "short": "delivery bag"
+  },
+  {
+   "id": "first_aid",
+   "name": "Catering first aid kit, blue plasters",
+   "cat": "safety",
+   "price": 19.99,
+   "desc": "Required by law. The inspector checks.",
+   "rule": "compliance",
+   "short": "first aid kit"
+  },
+  {
+   "id": "fire_blanket",
+   "name": "Fire blanket, 1.2 m",
+   "cat": "safety",
+   "price": 14.99,
+   "desc": "Required in every kitchen. The inspector checks.",
+   "rule": "compliance",
+   "short": "fire blanket"
+  },
+  {
+   "id": "extinguisher",
+   "name": "CO2 fire extinguisher, 2 kg",
+   "cat": "safety",
+   "price": 39.99,
+   "desc": "Required by law. The inspector checks.",
+   "rule": "compliance",
+   "short": "fire extinguisher"
+  },
+  {
+   "id": "handwash",
+   "name": "Hand-wash station kit: soap and paper towel dispensers",
+   "cat": "safety",
+   "price": 29.99,
+   "desc": "A proper hand-wash point. The inspector checks.",
+   "rule": "compliance",
+   "short": "hand-wash station"
+  }
+ ],
+ "starters": {
+  "van": {
+   "ladle_2": 1,
+   "peel": 1,
+   "wheel": 1,
+   "scraper": 1,
+   "dough_tray": 2,
+   "knife": 1,
+   "board_green": 1,
+   "board_white": 1,
+   "grater": 1,
+   "colander": 1,
+   "fry_pan": 1,
+   "bowl": 1,
+   "jug": 1,
+   "scales": 1,
+   "fridge_thermo": 1,
+   "daydots": 1000,
+   "mop_boh": 1,
+   "spray": 1,
+   "cloths": 50,
+   "fire_blanket": 1,
+   "extinguisher": 1
+  },
+  "pizzeria": {
+   "ladle_1": 1,
+   "ladle_2": 3,
+   "ladle_3": 1,
+   "ladle_4": 1,
+   "peel": 3,
+   "turner": 2,
+   "wheel": 2,
+   "rocker": 1,
+   "scraper": 3,
+   "pin": 1,
+   "docker": 1,
+   "dough_tray": 14,
+   "oven_brush": 1,
+   "ir_thermo": 1,
+   "serving_board": 48,
+   "knife": 3,
+   "board_green": 1,
+   "board_red": 1,
+   "board_yellow": 1,
+   "board_blue": 1,
+   "board_white": 1,
+   "board_brown": 1,
+   "board_purple": 1,
+   "knife_purple": 1,
+   "grater": 1,
+   "rotary": 1,
+   "blender": 1,
+   "colander": 2,
+   "fry_pan": 2,
+   "saucepan": 2,
+   "bowl": 2,
+   "jug": 2,
+   "scales": 2,
+   "probe": 1,
+   "gn13": 16,
+   "gn16": 4,
+   "fridge_thermo": 3,
+   "daydots": 3000,
+   "mop_boh": 1,
+   "mop_foh": 1,
+   "spray": 4,
+   "cloths": 150,
+   "plate": 60,
+   "cutlery": 60,
+   "glass": 72,
+   "delivery_bag": 2,
+   "first_aid": 1,
+   "fire_blanket": 1,
+   "extinguisher": 2,
+   "handwash": 1,
+   "pan_tin": 6
+  }
+ }
+}

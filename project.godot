@@ -19,6 +19,7 @@ Hygiene="*res://scripts/hygiene.gd"
 Day="*res://scripts/day.gd"
 Checks="*res://scripts/checks.gd"
 Story="*res://scripts/story.gd"
+Equip="*res://scripts/equip.gd"
 Game="*res://scripts/game.gd"
 
 [display]

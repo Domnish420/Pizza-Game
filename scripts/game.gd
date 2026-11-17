@@ -4,7 +4,7 @@ extends Node
 ## Stock lives in `Stock`, buying in `Market`, the clock in `Day`, cleaning and pests in `Hygiene`,
 ## a day's trading in `ServiceScreen`.
 
-const SAVE_PATH := "user://crust_empire_v6.json"
+const SAVE_PATH := "user://crust_empire_v8.json"
 var s := {}
 
 func _ready() -> void:
@@ -25,7 +25,7 @@ func new_game() -> void:
 		"stock": {}, "dough": [], "baskets": {}, "orders": [], "payables": [], "house_grade": 2,
 		"clock": Day.START, "late_start": 0, "staff_left": {}, "dock": [], "prepped": {}, "rail": [], "washup": {"2": 0, "4": 0}, "notes": [],
 		"regulars": [], "critic_next": randi_range(8, 16), "buzz": {"until": 0, "mult": 1.0},
-		"templog": [], "checklog": [], "story": {"stage": "free"},
+		"templog": [], "checklog": [], "story": {"stage": "free"}, "equip": Equip.starter("van"), "kit_orders": [], "kit_basket": {},
 		"vent": {"fridge": 2, "dry": 2}, "clean": {"boh": 85.0, "foh": 85.0},
 		"pests": {"level": 8.0, "laid": 0, "sprung": 0}, "hygiene": {"rating": -1, "day": 0, "notes": [], "next": randi_range(6, 12), "at": -1.0},
 		"book": new_book(), "books": [],
@@ -49,7 +49,7 @@ func save_game() -> void:
 func load_game() -> bool:
 	if not FileAccess.file_exists(SAVE_PATH): return false
 	var d = JSON.parse_string(FileAccess.open(SAVE_PATH, FileAccess.READ).get_as_text())
-	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("templog"): return false
+	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("equip"): return false
 	s = d
 	for k in Data.UPG: s.upg[k] = int(s.upg.get(k, 0))
 	for k in ["day", "level", "venue", "pitch", "tables", "price", "sid", "oid", "cycle_start", "ratings", "xp", "house_grade", "clock", "late_start"]:
@@ -195,9 +195,36 @@ func rotate_menu() -> void:
 	s.off = {}
 	gen_offers()
 
+# ---------- ladles ----------
+func ladles(oz: int) -> int:
+	return Equip.ladles(oz)
+
+## the ladle to use for this much sauce: the exact size if you own one, else the biggest smaller one (used more than once), else the smallest bigger one. 0 if you own none.
+func ladle_for(g: float) -> int:
+	var want := int(round(g / Data.OZ_G))
+	if ladles(want) > 0: return want
+	var best := 0
+	for oz in Data.LADLES:
+		if ladles(oz) > 0 and oz < want: best = oz
+	if best > 0: return best
+	for oz in Data.LADLES:
+		if ladles(oz) > 0 and oz > want: return oz
+	return 0
+
+## the sauce sizes tonight's menu calls for, in oz
+func sauce_sizes() -> Array:
+	var out := []
+	for r in active_recipes():
+		if r.sauce == "": continue
+		var oz := int(round(r.spec[r.sauce] / Data.OZ_G))
+		if not out.has(oz): out.append(oz)
+	out.sort()
+	return out
+
 ## can this pizza be made right now: a dough ball of the right style and most of each topping, prepped
 func can_make(r: Dictionary) -> bool:
 	if Stock.dough_ready(r.base) < 1: return false
+	if Equip.needs_tin(r.base) and not Equip.has("pan_tin"): return false
 	for i in r.spec:
 		if Stock.avail(i) < r.spec[i] * 0.7: return false
 	return true
@@ -307,6 +334,7 @@ func auto_dough() -> int:
 		var per := Stock.dough_parts(st, Stock.flour_per_ball(st))
 		for ing in per:
 			if ing != "water": balls = int(min(balls, floor(Stock.have(ing) / per[ing])))
+		balls = min(balls, Equip.dough_room())
 		if balls <= 0: continue
 		var cost := 0.0
 		var gw := 0.0
@@ -317,7 +345,7 @@ func auto_dough() -> int:
 			cost += t.cost
 			gw += t.g * t.got
 			w += t.got
-		made += Stock.add_dough(st, balls, clamp(52 + sk * 7 + tier("proofer").q, 0, 100), 0, gw / w if w > 0 else 2.0, cost / balls)
+		made += Stock.add_dough(st, balls, clamp(52 + sk * 7 + tier("proofer").q + Equip.dough_q_bonus(), 0, 100), 0, gw / w if w > 0 else 2.0, cost / balls)
 	return made
 
 # ---------- the night ----------

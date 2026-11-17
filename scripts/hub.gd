@@ -1,11 +1,11 @@
 class_name Hub
 extends VBoxContainer
 ## The management screens between services:
-## Today, Jobs, Suppliers, Stores, Dough, Menu, Kitchen, Front, Staff, Property.
+## Today, Jobs, Suppliers, KitBox (the equipment site), Stores, Dough, Menu, Kitchen, Front, Staff, Property.
 ## Morning (from 07:00): deliveries, prep, cleaning, then open. Evening: clean down, make tomorrow's dough,
 ## order tomorrow's stock, lock up. Jobs take time on the clock.
 
-const TABS := [["home", "Today"], ["jobs", "Jobs"], ["suppliers", "Suppliers"], ["stores", "Stores"], ["dough", "Dough"], ["menu", "Menu"],
+const TABS := [["home", "Today"], ["jobs", "Jobs"], ["suppliers", "Suppliers"], ["kit", "KitBox"], ["stores", "Stores"], ["dough", "Dough"], ["menu", "Menu"],
 	["boh", "Kitchen"], ["foh", "Front"], ["staff", "Staff"], ["property", "Property"]]
 var tab := "home"
 var top: HBoxContainer
@@ -63,7 +63,7 @@ func render() -> void:
 		top.add_child(Kit.button("Closed today", _closed_day, "ghost", 22))
 	else:
 		top.add_child(Kit.button(("Start service " if Story.employed() else "Open at ") + Data.hhmm(max(Day.now(), Day.open_time())), _open, "danger", 22))
-	var allowed: Array = {"pizzaiolo": ["home", "jobs", "menu"], "senior": ["home", "jobs", "suppliers", "stores", "dough", "menu"]}.get(Story.role(), [])
+	var allowed: Array = {"pizzaiolo": ["home", "jobs", "menu"], "senior": ["home", "jobs", "suppliers", "kit", "stores", "dough", "menu"]}.get(Story.role(), [])
 	for t in TABS:
 		if allowed.size() > 0 and not allowed.has(t[0]): continue
 		var b := Kit.button(t[1], go.bind(t[0]), "tab_on" if tab == t[0] else "tab", 20)
@@ -91,6 +91,9 @@ func _act(fn: Callable) -> void:
 
 func _page_suppliers() -> void:
 	page.add_child(SuppliersPage.new(self))
+
+func _page_kit() -> void:
+	page.add_child(ShopPage.new(self))
 
 func _page_stores() -> void:
 	page.add_child(StoresPage.new(self))
@@ -188,6 +191,11 @@ func _page_home() -> void:
 	if G.s.cash < 0: lines.append(["bad", "Overdrawn: the bank charges 5% a day."])
 	if int(G.s.upg.drinks) >= 3 and G.staff_of("bartender").is_empty(): lines.append(["warn", "The bar needs a bartender."])
 	if int(G.s.upg.delivery) > 0 and G.staff_of("driver").is_empty(): lines.append(["warn", "Delivery needs a driver."])
+	var miss := Equip.missing()
+	if miss.size() > 0:
+		lines.append(["bad" if miss.any(func(m): return m.have == 0) else "warn", "Kit you are short of: %s. Order from %s (next working day)." % [", ".join(miss.slice(0, 6).map(func(m): return Equip.ITEM[m.id].short)) + (" and %d more" % (miss.size() - 6) if miss.size() > 6 else ""), Equip.SHOP.name]])
+	for o in G.s.get("kit_orders", []):
+		if int(o.due) <= G.s.day + 1: lines.append(["info", "%s parcel arrives %s at about %s." % [Equip.SHOP.name, "today" if int(o.due) == G.s.day else "tomorrow", Data.hhmm(o.eta)]])
 	if Story.role() == "pizzaiolo":       # the boss handles ordering, dough and the stores
 		lines = lines.filter(func(l): return l[1].find("dough balls ready") >= 0 or l[1].find("prep") >= 0 or l[1].find("cover today") >= 0 or l[1].find("Kitchen") == 0)
 	for l in lines:
@@ -289,10 +297,14 @@ func _page_dough() -> void:
 			{"hand": "Pressed out and stretched by hand", "roll": "Rolled with a pin", "press": "Pressed into a pan"}[d.shape], d.size_cm,
 			(", leaving a %s cm rim" % str(d.crust_cm).trim_suffix(".0")) if d.crust_cm > 0 else ", no rim"], 15, Kit.MUTED, true))
 		var can := DoughGame.can_batch(d, 0.5)
-		var b := Kit.button("Make %s dough" % d.name if can else "Not enough flour", func(): Kit.main.modal(DoughGame.new(k), 1040), "primary", 19)
-		b.disabled = not can
+		var why := "" if can else "Not enough flour"
+		if why == "" and not Equip.can_mix(): why = "No mixing bowl (%s)" % Equip.SHOP.name
+		if why == "" and Equip.dough_room() <= 0: why = "Proving trays full (%s)" % Equip.SHOP.name
+		var b := Kit.button("Make %s dough" % d.name if why == "" else why, func(): Kit.main.modal(DoughGame.new(k), 1040), "primary", 19)
+		b.disabled = why != ""
 		cd[1].add_child(b)
 		g.add_child(cd[0])
+	page.add_child(Kit.label("Proving trays: %d, room for %d more dough balls (%d per tray).%s%s" % [Equip.count("dough_tray"), Equip.dough_room(), int(Equip.ITEM.dough_tray.holds), "" if Equip.has("scales") else " No scales: you are weighing by eye.", "" if Equip.has("scraper") else " No bench scraper: your balls come out uneven."], 15, Kit.TOMATO if Equip.dough_room() < 12 or not Equip.has("scales") else Kit.MUTED, true))
 	page.add_child(Kit.label("Mixer: %s (up to %d kg of flour per batch)." % [G.tier("mixer").n, c.batch] + ("  Your prep cook makes tomorrow's dough at close." if G.staff_of("prep").size() > 0 else ""), 15, Kit.MUTED, true))
 
 # ---------- Menu ----------
@@ -427,6 +439,9 @@ func _upg_card(id: String) -> Control:
 	else:
 		cd[1].add_child(Kit.label("Next: " + nx.n, 17, Kit.CHEESE, true))
 		cd[1].add_child(Kit.label(nx.d, 15, Kit.MUTED, true))
+		if id == "prep" and nx.has("rail"):
+			var pid := "gn13" if float(nx.pan) >= 2.0 else "gn16"
+			cd[1].add_child(Kit.label("Takes %d %ss (%s): you own %d." % [int(nx.rail), Equip.ITEM[pid].short, Equip.SHOP.name, Equip.count(pid)], 14, Kit.TOMATO if Equip.count(pid) < int(nx.rail) else Kit.BASIL, true))
 		if G.s.venue < nx.v:
 			cd[1].add_child(_tag("Needs the " + Data.VENUES[int(nx.v)].name))
 		else:
@@ -438,7 +453,26 @@ func _upg_card(id: String) -> Control:
 			cd[1].add_child(b)
 	return cd[0]
 
+## what you own of the small equipment in some KitBox categories, and what is missing
+func _kit_card(cats: Array) -> Control:
+	var kc = Kit.card("Utensils and small equipment")
+	var miss: Array = Equip.missing().filter(func(m): return cats.has(Equip.ITEM[m.id].cat))
+	kc[1].add_child(Kit.label("Every utensil is bought from %s, one at a time or by the pack. Everyone working at once needs their own: a ladle per person saucing, a peel per person at the oven, a knife per person prepping." % Equip.SHOP.name, 15, Kit.MUTED, true))
+	var have := []
+	for it in Equip.ITEMS:
+		if cats.has(it.cat) and Equip.count(it.id) > 0: have.append(Equip.amount(it.id, Equip.count(it.id)))
+	kc[1].add_child(Kit.label("You have: " + ", ".join(have), 14, Kit.INK, true))
+	for m in miss: kc[1].add_child(Kit.label("Short: %s (have %d, need %d)" % [Equip.ITEM[m.id].name, m.have, m.need], 15, Kit.TOMATO, true))
+	var b := Kit.button("Shop at %s" % Equip.SHOP.name, func():
+		ShopPage.cat = "need" if miss.size() > 0 else cats[0]
+		go("kit"), "primary" if miss.size() > 0 else "ghost", 17)
+	b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	kc[1].add_child(b)
+	return kc[0]
+
 func _page_boh() -> void:
+	var G := Game
+	page.add_child(_kit_card(["pizza", "prep", "storage", "cleaning"]))
 	var g := Kit.grid(3)
 	page.add_child(g)
 	for k in Data.UPG:
@@ -447,11 +481,13 @@ func _page_boh() -> void:
 func _page_foh() -> void:
 	var G := Game
 	var v := G.venue()
+	page.add_child(_kit_card(["foh", "safety"]))
 	var g := Kit.grid(3)
 	page.add_child(g)
 	var cd = Kit.card("Tables  %d/%d" % [min(G.s.tables, v.tables), v.tables])
 	if v.tables > 0:
 		cd[1].add_child(Kit.label("Guests are seated, order at the table, eat in and ask for the bill. They tip more and buy drinks. Servers do the running for you.", 15, Kit.MUTED, true))
+		cd[1].add_child(Kit.label("Places you can lay: %d (plates %d, cutlery %d, glasses %d). Nobody is seated without a place." % [Equip.seats(), Equip.count("plate"), Equip.count("cutlery"), Equip.count("glass")], 15, Kit.TOMATO if Equip.seats() < min(G.s.tables, v.tables) * 3 else Kit.INK, true))
 		if G.s.tables < v.tables:
 			var b := Kit.button("Add a table " + Kit.money(G.table_cost()), func(): _act(func():
 				Game.s.cash -= Game.table_cost()

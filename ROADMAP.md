@@ -42,6 +42,11 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [ ] Traps placed on a floor plan where the mice actually come in
 - [ ] Folding and boxing takeaways
 - [x] Fridge and freezer temperature logs (the inspector checks them) and opening/closing checklists
+- [x] Sauce with portion ladles: scoop an exact amount, drop it, spread it; every size bought separately
+- [x] Every utensil and piece of small equipment bought from KitBox, the catering-supplies site, and used in play:
+      peels, turning peels, cutters, scrapers, pins, dockers, tins, proving trays, knives and colour-coded boards,
+      graters, blenders, pans, scales, thermometers, gastronorm pans, day-dots, mops, cloths, tableware, delivery bags,
+      safety equipment
 
 ## 2. Customers as people
 

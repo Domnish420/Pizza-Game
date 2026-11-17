@@ -38,7 +38,9 @@ set the fridge and dry-store vents, wash up the tubs. Every job takes minutes; r
   table, eat and ask for the bill (shop and bigger). Tap anyone with a marker: ORDER, FOOD UP, SEAT, BILL, CLEAR.
 - **Bench**: the marble top of the pizza counter, with the rail of gastro pans above it. Tap a ticket and open the dough ball. Hand-stretched bases: press out with one finger, leaving a rim,
   then spread two fingers to stretch and twist them to turn. Thin bases: roll with the pin. Deep pan: push into the pan.
-  Then top it by weight against the ticket's recipe card, taking each topping from its pan on the rail.
+  Then top it by weight against the ticket's recipe card, taking each topping from its pan on the rail. Sauce goes on
+  with a portion ladle: scoop from the pan (a 2 oz ladle holds exactly 2 oz), drop it in the middle, then spread it
+  out with the back of the ladle in circles. A standard pizza takes 2 oz, a New York one 3 oz.
 - **Oven**: drag the pizza off the shelf onto the deck. Drag its edge to spin it. Drag it out when it is done.
 - **Board**: swipe to slice, add anything that goes on after the oven, send it to the pass.
 - **Prep**: the rail and the tubs. Refill an empty pan from the tubs; when the tubs run out, prep more (you are tied
@@ -98,12 +100,33 @@ and invoices are paid when they fall due.
   keeps the kitchen clean, resets traps), head chef, counter staff, servers (and clean the dining room), drivers,
   host, bartender, general manager (orders tomorrow's stock).
 - **Premises.** Van, market kiosk, takeaway shop, pizzeria, high street restaurant, flagship.
+- **Utensils and small equipment (KitBox).** Every utensil is bought, one at a time or by the pack, from KitBox, the
+  in-game catering-supplies website (`data/equipment.json`, 53 products at typical catering-supplier prices): checkout
+  is paid by card and a courier delivers the next working day, free over $50. You own a count of each, everyone working
+  at once needs their own, and each one matters:
+  portion ladles in every size (1 to 8 oz; see sauce above); a pizza peel to load and pull pizzas (staff wait for one
+  if there are too few); a turning peel to turn pizzas in gas and wood ovens; a pizza wheel or rocking cutter (with
+  only a knife the slices are ragged); a bench scraper (even dough balls); a rolling pin for thin bases unless a sheeter
+  does it; a dough docker (no bubbles in rolled bases); deep pan tins (one per deep-pan pizza from bench to board);
+  proving trays (12 dough balls each: no tray space, no dough); an oven brush (no ash on wood-fired bases); an infrared
+  thermometer (the exact oven heat); serving boards (dine-in pizzas look better).
+  For prep, a chef's knife and the right colour-coded chopping board (green veg, brown roots, white dairy, yellow cooked
+  meat, red raw meat, blue fish; the inspector checks), a box or rotary grater (rotary is much quicker), a colander,
+  a frying pan or saucepan for cooked prep, a stick blender (sauce takes far longer without one), a mixing bowl (mixing
+  dough with no mixer), a measuring jug and scales (without them you weigh by eye), a probe thermometer for cooked food,
+  and the purple allergen board and knife (staff rarely get allergy orders wrong with them).
+  Gastronorm pans for the counter rail (a new counter needs its own size of pan), a thermometer per fridge and freezer
+  (no thermometer, no temperature log), day-dot labels (one per tub; unlabelled tubs fail inspections), mops for the
+  kitchen and dining room, spray bottles and cleaning cloths (used up as you clean). Plates, cutlery and glasses (you
+  can only seat as many guests as you can lay places for; some get broken), insulated delivery bags (one per driver or
+  deliveries arrive cold), and the first aid kit, fire blanket, extinguisher and hand-wash station the inspector checks.
+  The KitBox page has a "What you need" tab worked out from your counter, menu and staff.
 
 ## Code map
 
 | File | What it does |
 | --- | --- |
-| `data/*.json` | All game data: ingredients, suppliers, doughs, pizzas, menus, venues, upgrades and ovens, staff |
+| `data/*.json` | All game data: ingredients, suppliers, doughs, pizzas, menus, venues, upgrades and ovens, staff, equipment (KitBox) |
 | `scripts/data.gd` | Loads the JSON (autoload `Data`) |
 | `scripts/stock.gd` | Lots, rotation, the makeline, the back door, storage and ventilation, dough trays, the books (autoload `Stock`) |
 | `scripts/market.gd` | Supplier catalogues, prices, baskets, orders and arrival times, invoices, par sheet, the manager's ordering (autoload `Market`) |
@@ -122,6 +145,8 @@ and invoices are paid when they fall due.
 | `scripts/orders.gd` | Order notes and allergies turned into a recipe card per ticket |
 | `scripts/checks.gd` | Opening and closing checklists, the temperature log (autoload `Checks`) |
 | `scripts/story.gd` | The career: the employer, the crew, shift reviews, promotions, going solo (autoload `Story`) |
+| `scripts/equip.gd` | Utensils and small equipment: what you own, what each one does, what you need, KitBox orders and parcels (autoload `Equip`) |
+| `scripts/shop_page.gd` | The KitBox catering-supplies website |
 | `scripts/kit.gd`, `main.gd`, `meter.gd` | UI helpers, screen switching, gauges |
 
 `web-prototype/` holds the first HTML version, kept for reference only.

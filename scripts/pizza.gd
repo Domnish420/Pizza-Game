@@ -39,6 +39,8 @@ var floor := 0.0           # doneness of the underside
 var turn := 0.0            # which way it faces in the oven
 var cuts := []             # [{a, b, d: distance of the cut from the centre}]
 var bake_target := 1.0     # 1.15 for "well done"
+var carry := 0.0           # sauce on the back of the ladle mid-stroke
+var inside_n := -1         # how many sauce cells lie on the base (worked out once the base is shaped)
 
 func _init(ticket: Dictionary, dough: Dictionary) -> void:
 	id = _next_id
@@ -127,6 +129,59 @@ func count_of(ing: String) -> int:
 	for tp in tops:
 		if tp.t == ing: n += 1
 	return n
+
+## drop a ladle of sauce (grams already taken off the rail with use()) as a pool centred on p
+func drop_sauce(ing: String, g: float, p: Vector2) -> void:
+	if sauce == "": sauce = ing
+	_pool(g / _g_per_amt(ing), p)
+
+## put `amt` of sauce down as a pool around p: the nearest cells fill up to a thick layer first
+func _pool(amt: float, p: Vector2) -> void:
+	var order := []
+	for i in cells.size():
+		if inside(cells[i]): order.append(i)
+	order.sort_custom(func(a, b): return cells[a].distance_squared_to(p) < cells[b].distance_squared_to(p))
+	for i in order:
+		if amt <= 0.0001: break
+		var room: float = 2.2 - sauce_amt.get(i, 0.0)
+		if room <= 0.0: continue
+		var add: float = min(room, amt)
+		sauce_amt[i] = sauce_amt.get(i, 0.0) + add
+		amt -= add
+
+## spreading with the back of the ladle, from prev to p. It works like a squeegee: where the sauce is thicker than
+## an even layer would be, the ladle picks the excess up and carries it; where it is thinner, the ladle lets some go.
+## Nothing is added or lost. Whatever is still on the ladle at the end of the stroke is left where you lift off.
+func smear(p: Vector2, prev: Vector2, brush: float) -> void:
+	var ln := p.distance_to(prev)
+	if ln < 0.3 or (sauce_amt.is_empty() and carry <= 0.0): return
+	var total := carry
+	for i in sauce_amt: total += sauce_amt[i]
+	var level: float = total / max(1, _inside_n())
+	var k: float = clamp(ln / brush, 0.15, 0.85)
+	for i in cells.size():
+		if cells[i].distance_to(p) > brush or not inside(cells[i]): continue
+		var a: float = sauce_amt.get(i, 0.0)
+		if a > level:
+			var take: float = (a - level) * k
+			sauce_amt[i] = a - take
+			carry += take
+		elif carry > 0.0:
+			var give: float = min(carry, (level - a) * k)
+			sauce_amt[i] = a + give
+			carry -= give
+
+## you lift the ladle off the pizza
+func end_stroke(p: Vector2) -> void:
+	if carry > 0.0001: _pool(carry, p)
+	carry = 0.0
+
+func _inside_n() -> int:
+	if inside_n < 0:
+		inside_n = 0
+		for c in cells:
+			if inside(c): inside_n += 1
+	return inside_n
 
 ## place one piece of a topping. Returns "" if placed, "full" / "close" / "off" if not, "out" when stock has run out.
 func add_top(ing: String, p: Vector2, after_bake: bool) -> String:

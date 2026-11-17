@@ -54,6 +54,7 @@ func start() -> void:
 	Stock.add("tub2", 16, 2, 1.1)
 	Stock.add("sanitiser", 10000, 3, 0.0032)
 	_crew("pizzaiolo")
+	s.equip = Equip.starter("pizzeria")
 	for st in ["fridge", "dry"]: s.vent[st] = int(round(Stock.vent_need(st)))
 	# the boss has stocked up and made today's dough
 	var c := Game.calc()
@@ -89,7 +90,7 @@ func morning() -> Array:
 			var raw: float = min((want - have) / float(Data.ING[id].prep.yield), Stock.have(id))
 			if raw <= 1.0: continue
 			var res := Stock.prep(id, raw, 0.7)
-			done.append("%s %s" % [Data.qty(id, res.made), Data.ING[id].name.to_lower()])
+			if res.made > 0: done.append("%s %s" % [Data.qty(id, res.made), Data.ING[id].name.to_lower()])
 		var set_up := Day.set_up_counter()
 		notes.append("%s came in early and prepped to your list: %s. %s set up the counter (%d pans)." % [JUNIOR, ", ".join(done) if done.size() > 0 else "nothing needed doing", JUNIOR, set_up.filled])
 	elif stage() == "senior" and Game.s.day > int(st.get("promoted", 0)):
@@ -111,6 +112,7 @@ func evening() -> Array:
 		var per := Stock.dough_parts(sty, Stock.flour_per_ball(sty))
 		for ing in per:
 			if ing != "water": balls = int(min(balls, floor(Stock.have(ing) / per[ing])))
+		balls = min(balls, Equip.dough_room())
 		if balls <= 0: continue
 		for ing in per:
 			if ing != "water": Stock.take(ing, per[ing] * balls)

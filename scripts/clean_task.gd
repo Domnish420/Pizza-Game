@@ -87,13 +87,15 @@ func _finish() -> void:
 	var did: float = 1.0 - pad.left()
 	var to: float = level0 + (100.0 - level0) * did
 	if not sprayed: to = min(to, 70.0)
+	var kit := Equip.clean_cap(area)
+	to = min(to, kit.cap)
 	Game.s.clean[area] = clamp(max(level0, to), 0.0, 100.0)
 	var mins: float = ceil(Hygiene.clean_minutes(area) * did)
 	var notes := Day.spend(mins)
 	Game.save_game()
 	Kit.clear(self)
 	add_child(Kit.label("%d%% clean" % Hygiene.level(area), 28, Kit.BASIL if Hygiene.level(area) >= 80 else Kit.CHEESE))
-	add_child(Kit.label("Took %d minutes; it is now %s.%s" % [mins, Data.hhmm(Day.now()), "" if sprayed else " Without chemicals it will not pass an inspection."], 17, Kit.MUTED, true))
+	add_child(Kit.label("Took %d minutes; it is now %s.%s" % [mins, Data.hhmm(Day.now()), ("" if sprayed else " Without chemicals it will not pass an inspection.") + ((" Held back by: " + ", ".join(kit.why) + ".") if kit.why.size() > 0 else "")], 17, Kit.MUTED, true))
 	if notes.size() > 0: add_child(Kit.label("\n".join(notes), 15, Kit.CHEESE, true))
 	add_child(Kit.button("Done", func():
 		Kit.main.close_modal()

@@ -70,7 +70,7 @@ func next_arrival() -> float:
 ## anything due by now arrives at the back door; staff on shift put it away. Returns notes.
 func arrivals(until: float = -1.0) -> Array:
 	var t: float = now() if until < 0 else until
-	var notes := []
+	var notes := Equip.arrivals(t)
 	for o in pending():
 		if o.eta > t: continue
 		Game.s.orders.erase(o)
@@ -127,7 +127,7 @@ func prep_list(day: int = -1) -> Array:
 		var todo: float = max(0.0, need[id] - have)
 		var raw: float = min(todo / float(p.yield), Stock.have(id))
 		var tub_cap: float = Stock.max_prep_raw(id)
-		rows.append({"id": id, "need": need[id], "have": have, "todo": todo, "raw": min(raw, tub_cap), "raw_have": Stock.have(id), "tub_short": raw > tub_cap + 1.0,
+		rows.append({"id": id, "need": need[id], "have": have, "todo": todo, "raw": min(raw, tub_cap), "raw_have": Stock.have(id), "tub_short": raw > tub_cap + 1.0, "block": Equip.prep_block(id),
 			"minutes": Stock.prep_minutes(id, min(raw, tub_cap), prep_mult()) if raw > 0 else 0.0})
 	rows.sort_custom(func(a, b): return Data.ING[a.id].name < Data.ING[b.id].name)
 	return rows
@@ -147,8 +147,12 @@ func staff_prep() -> Array:
 	var sk: float = Game.skill_of("prep") / Game.staff_of("prep").size()
 	var mult: float = prep_mult() * (1.25 - 0.08 * sk)
 	var done := []
+	var cant := []
 	for row in prep_list():
 		if row.raw <= 0.0: continue
+		if row.block != "":
+			cant.append(Data.ING[row.id].name.to_lower())
+			continue
 		var raw: float = row.raw
 		var mins := Stock.prep_minutes(row.id, raw, mult)
 		if mins > left.prep:
@@ -161,6 +165,7 @@ func staff_prep() -> Array:
 		if left.prep <= 0.0: break
 	var notes := []
 	if done.size() > 0: notes.append("Your prep cook prepped the " + ", ".join(done) + ".")
+	if cant.size() > 0: notes.append("Your prep cook could not prep the %s: the kit for it is missing (see %s)." % [", ".join(cant), Equip.SHOP.name])
 	if left.prep > 10.0:
 		var set_up := set_up_counter()
 		left.prep -= set_up.minutes

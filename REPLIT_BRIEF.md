@@ -40,6 +40,11 @@ Read `README.md` for how a day works and a map of the code, and `ART_KEYS.md` fo
 - "I want a fully immersive experience."
 - "Prep is done into tubs (2 L and 4 L), and these are put into gastros on top of the fridge. The pizza counter has a
   marble base, which is the top we need for stretching dough, and the glass counter is where we put our toppings."
+- "Sauce is taken out with a ladle of a specific amount, 1 oz, 2 oz, 4 oz. 2 oz is the amount you need: take the sauce
+  out, drop it onto the pizza, then spread it out. That way you only use the amount needed." Every ladle size is bought
+  separately, and you need several because more than one section uses them.
+- "Make all kitchen utensils like this, we will have a multitude of them", bought from "our own" catering-supplies
+  site (modelled on the big UK catering suppliers). In the game it is KitBox; rename it in `data/equipment.json`.
 - The story mode: start as an employed pizzaiolo making pizzas and prep to a checklist, then senior pizzaiolo running
   the back-of-house checks, ordering and checklists, then go solo in the van and work up to your own restaurant
   (see `ROADMAP.md`).
@@ -58,7 +63,7 @@ sneeze guard. Ask the owner for the photos; the counter, tubs and rail should lo
 
 Art goes in through `Art.tex(key)`: drop a PNG at `assets/<key with dots as dashes>.png` and it replaces the
 placeholder. Start there before touching drawing code. If you change a JSON shape, update `scripts/data.gd` too.
-The save file is `user://crust_empire_v3.json`; changing what is saved means bumping that name.
+The save file is `user://crust_empire_v8.json`; changing what is saved means bumping that name.
 
 ## Work, in priority order
 
@@ -130,6 +135,14 @@ filling up (with frost when the vents are too open and condensation when too clo
 (new stock behind old), a prep bench with knife work for slicing and grating, mops and spray, traps to set by hand.
 The data each scene needs is already there: lots per shelf with dates and the in-front flag, fill level, temperature
 and humidity, cleanliness per area, pest level, traps down and sprung.
+
+### 5a. KitBox, the equipment website
+
+`scripts/shop_page.gd` is a catering-supplies website inside the game: header with the basket and checkout, a category
+bar, product cards, "What you need" and "Your orders". It should feel like browsing a real supplier's site on a phone:
+product photos (`kit.<id>`), a logo, a basket badge, a delivery banner. The utensils also deserve to be seen in use:
+the peel sliding under a pizza, the wheel or rocker slicing, the ladle pooling and spreading sauce, the colour-coded
+boards at the prep station, day-dots on the tubs. What each item does in the rules is in `scripts/equip.gd`.
 
 ### 6. Screens and UI
 

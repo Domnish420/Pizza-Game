@@ -47,6 +47,9 @@ var prepping := {}               # ingredient id -> who is prepping it
 var mouse := {}                  # a mouse running across the front: {pos, vel, t}
 var mouse_until := -1.0          # minute until which customers are still talking about the mouse
 var gm := 1.0                    # game minutes per second of play
+var ladle_oz := 2                # the ladle in your hand: 1, 2 or 4 oz
+var ladle_g := 0.0               # sauce in it right now
+var ladle_ing := ""
 var phones := []                 # calls ringing: {n, until}
 var critic_at := -1.0            # when the food critic walks in today (-1: not today)
 var critic_in := false
@@ -103,6 +106,7 @@ func _ready() -> void:
 	for role in ["prep", "porter"]:
 		for x in G.staff_of(role): crew.append({"s": x, "role": role, "job": "", "left": 0.0, "fn": Callable()})
 	var missing := Stock.assign_rail(Day.line_ids())
+	if Equip.rail_size() < int(G.tier("prep").rail): r.notes.append("The counter takes %d gastronorm pans and you own %d, so you worked out of %d slots. Order more from %s." % [int(G.tier("prep").rail), Equip.count(Equip.rail_pan_id()), Equip.rail_size(), Equip.SHOP.name])
 	if missing.size() > 0: r.notes.append("No room on the rail for: " + ", ".join(missing.map(func(i): return Data.ING[i].name.to_lower())) + ".")
 	_layout()
 	_build_ui()
@@ -361,6 +365,7 @@ func _pending() -> Dictionary:
 
 func can_promise(rec: Dictionary, pend: Dictionary) -> bool:
 	if eighty6.has(rec.id): return false
+	if Equip.needs_tin(rec.base) and not Equip.has("pan_tin"): return false      # no tins, no deep pan
 	if Stock.dough_ready(rec.base) - pend.get("d:" + rec.base, 0.0) < 1: return false
 	for i in rec.spec:
 		if Stock.potential(i) - pend.get(i, 0.0) < rec.spec[i] * 0.7: return false
@@ -423,9 +428,20 @@ func free_table():
 		if tb.party == null and not tb.dirty: return tb
 	return null
 
+## guests sitting down right now
+func seated() -> int:
+	var n := 0
+	for tb in tables:
+		if tb.party != null: n += int(tb.party.n)
+	return n
+
+## a place is a plate, a knife and fork and a glass
+func places_free(n: int) -> bool:
+	return seated() + n <= Equip.seats()
+
 func act_seat(p: Dictionary) -> bool:
 	var tb = free_table()
-	if tb == null: return false
+	if tb == null or not places_free(int(p.n)): return false
 	door.erase(p)
 	tb.party = p
 	p.table = tb.i
@@ -468,6 +484,9 @@ func act_bill(p: Dictionary, by_player: bool = false) -> void:
 ## the party leaves; a table they sat at needs clearing
 func _depart(p: Dictionary) -> void:
 	var tb = tables[p.table] if p.table >= 0 else null
+	if p.type == "dine":
+		if not r.has("broken"): r.broken = {}
+		Equip.breakage(int(p.n), r.broken)
 	leave(p)
 	if tb != null: tb.dirty = true
 
@@ -518,8 +537,12 @@ func _verdict(p: Dictionary, walked: bool) -> Dictionary:
 	var n: int = p.items.size()
 	var expect: float = [1.6, 2.4, 3.4][G.s.price]     # ingredient grade people expect at this price level
 	var v := {"n": n, "paid": 0.0, "look": 0.0, "taste": 0.0, "grade": 0.0, "notes": [], "allergy": false, "walked": walked, "bad": false}
+	var cold: bool = p.type == "deliv" and randf() > Equip.bag_share()       # went out without a hot bag
+	var boards: bool = p.type == "dine" and randf() < float(Equip.count("serving_board")) / max(1, seated() + int(p.n))
+	if cold: v.notes.append("Arrived cold")
 	for it in p.items:
-		var tt: float = clamp(it.taste + (it.grade - expect) * 7.0, 0.0, 100.0)
+		var tt: float = clamp(it.taste + (it.grade - expect) * 7.0 - (15.0 if cold else 0.0), 0.0, 100.0)
+		if boards: it.look = min(100.0, it.look + 4.0)
 		v.look += it.look / n
 		v.taste += tt / n
 		v.grade += it.grade / n
@@ -826,7 +849,7 @@ func actionables() -> Array:
 	if queue.size() > 0 and queue[0].pos.distance_to(q_pos(0)) < 6: out.append({"kind": "order", "p": queue[0], "pos": queue[0].pos})
 	for p in waiters:
 		if ready_tks(p).size() > 0: out.append({"kind": "food", "p": p, "pos": p.pos})
-	if door.size() > 0 and free_table() != null and door[0].pos.distance_to(d_pos(0)) < 6: out.append({"kind": "seat", "p": door[0], "pos": door[0].pos})
+	if door.size() > 0 and free_table() != null and places_free(int(door[0].n)) and door[0].pos.distance_to(d_pos(0)) < 6: out.append({"kind": "seat", "p": door[0], "pos": door[0].pos})
 	for p in parties:
 		if p.state == "complain": out.append({"kind": "complaint", "p": p, "pos": tables[p.table].pos if p.table >= 0 else p.pos})
 	for tb in tables:
@@ -1003,12 +1026,14 @@ func step(dt: float) -> void:
 		if w.job == null:
 			for tk in tickets:
 				if tk.state != "new" or tk.owner != "" or tk.age <= 1.2: continue
-				if G.can_make(tk.rec):
+				if G.can_make(tk.rec) and tin_free(tk.rec.base):
 					tk.made = staff_make(w.s, tk.rec)
 					tk.owner = w.s.name
 					tk.state = "make"
 					w.job = tk
-					w.left = 10.0 * (1.25 - 0.1 * w.s.skill) / c.prep_speed
+					w.left = 10.0 * (1.25 - 0.1 * w.s.skill) / c.prep_speed + tk.made.get("extra", 0.0) + 3.0 * (1.0 - Equip.peel_share())   # waiting for a peel
+					w.ladle = tk.made.get("ladle", 0)
+					w.ladle_free = w.left * 0.75
 					dirty = true
 					break
 				# a pan has run out: refill it from the tubs, or (with no prep cook on) prep more
@@ -1039,22 +1064,47 @@ func step(dt: float) -> void:
 	elif tickets.is_empty() and not anyone and t >= DAY + 20.0 and busy.is_empty(): finish(false)     # only pizzas nobody is waiting for are left: they are binned
 	elif idle and t > 5 and not anyone and busy.is_empty() and not G.active_recipes().any(func(rc): return sellable(rc)): finish(true)
 
+## how a pizzaiolo gets the sauce on: {g grams, secs extra time, oz ladle held (0 = none)}.
+## The right ladle if one is free; otherwise a smaller one more than once (slower), a bigger one (too much), or a spoon.
+func _staff_sauce(want_g: float) -> Dictionary:
+	var want := int(round(want_g / Data.OZ_G))
+	var busy_with := {}
+	for w in workers:
+		if w.job != null and w.get("ladle", 0) > 0 and w.left > w.get("ladle_free", 0.0): busy_with[w.ladle] = busy_with.get(w.ladle, 0) + 1
+	if bench != null and bench.stage == "top" and bench.rec.sauce != "": busy_with[ladle_oz] = busy_with.get(ladle_oz, 0) + 1
+	var free := func(oz: int) -> bool: return Game.ladles(oz) - int(busy_with.get(oz, 0)) > 0
+	if free.call(want): return {"g": want_g, "secs": 0.0, "oz": want}
+	for oz in [3, 2, 1]:
+		if oz < want and free.call(oz) and want % oz == 0: return {"g": want_g, "secs": 1.5 * (want / oz - 1), "oz": oz}
+	for oz in Data.LADLES:
+		if oz > want and free.call(oz): return {"g": oz * Data.OZ_G, "secs": 0.0, "oz": oz}
+	if Game.ladles(want) > 0: return {"g": want_g, "secs": 2.0, "oz": 0}     # waited for a colleague's ladle
+	return {"g": want_g * randf_range(0.75, 1.35), "secs": 3.0, "oz": 0}
+
 ## a pizzaiolo takes the dough and weighs out the toppings. Less skilled cooks are heavier-handed.
 func staff_make(x: Dictionary, rec: Dictionary) -> Dictionary:
 	var dq := Stock.take_dough(rec.base)
 	var over: float = max(0.0, 0.16 - 0.03 * x.skill - c.chef * 0.004) + randf_range(-0.02, 0.03)
-	var spec: Dictionary = rec.spec
+	var spec: Dictionary = rec.spec.duplicate()
 	var ignored := false
-	if rec.get("mods", []).size() > 0 and randf() < max(0.02, 0.14 - 0.03 * x.skill):
-		spec = Data.REC[rec.id].spec
+	var slip: float = max(0.02, 0.14 - 0.03 * x.skill)
+	if rec.get("allergy", "") != "" and Equip.allergen_kit(): slip *= 0.25      # made on the purple board with the purple knife
+	if rec.get("mods", []).size() > 0 and randf() < slip:
+		spec = Data.REC[rec.id].spec.duplicate()
 		ignored = true
 	var m := {"skill": x.skill, "dough_q": dq.q, "use": {"dough:" + rec.base: 1.0}, "spec": rec.spec.duplicate(), "cost": dq.cost, "spec_cost": dq.cost, "short": 0,
 		"ignored": ignored, "allergy": ignored and rec.get("allergy", "") != ""}
 	m.spec["dough:" + rec.base] = 1.0
 	var gw: float = Data.DOUGHS[rec.base].ball * 0.4
 	var gsum: float = dq.g * gw
+	m.extra = 0.0
+	if rec.sauce != "" and spec.has(rec.sauce):
+		var sauce := _staff_sauce(spec[rec.sauce])
+		spec[rec.sauce] = sauce.g
+		m.extra = sauce.secs
+		m.ladle = sauce.oz
 	for id in spec:
-		var got := Stock.take_use(id, spec[id] * (1.0 + over))
+		var got := Stock.take_use(id, spec[id] * (1.0 + (0.0 if Data.ING[id].kind == "sauce" else over)))
 		m.use[id] = got.got
 		m.cost += got.cost
 		m.spec_cost += spec[id] * (got.cost / got.got if got.got > 0 else 0.0)
@@ -1076,6 +1126,7 @@ func staff_result(tk: Dictionary) -> Dictionary:
 	if m.allergy:
 		a.allergy = true
 		a.notes.push_front("ALLERGY: it had %s on it" % Data.ING[tk.rec.allergy].name.to_lower())
+	Equip.adjust(a, tk.rec, true)
 	return a
 
 func to_pass(tk: Dictionary, res: Dictionary) -> void:
@@ -1093,6 +1144,21 @@ func to_pass(tk: Dictionary, res: Dictionary) -> void:
 		r.mine_cost = r.get("mine_cost", 0.0) + res.cost
 		r.mine_spec = r.get("mine_spec", 0.0) + res.spec_cost
 
+## deep-pan bases go in a tin from the bench until they come out of the oven: is one free?
+func tin_free(style: String) -> bool:
+	if not Equip.needs_tin(style): return true
+	var used := 0
+	var pzs: Array = board.duplicate()
+	pzs.append_array(oven.shelf)
+	if bench != null: pzs.append(bench)
+	for pz in pzs:
+		if Equip.needs_tin(pz.rec.base): used += 1
+	for o in oven.items:
+		if Equip.needs_tin(o.pz.rec.base if o.owner == "me" else o.tk.rec.base): used += 1
+	for w in workers:
+		if w.job != null and Equip.needs_tin(w.job.rec.base): used += 1
+	return used < Equip.count("pan_tin")
+
 # ---------- your bench ----------
 func claim(tk: Dictionary) -> void:
 	if tk.state != "new" or tk.owner != "": return
@@ -1100,13 +1166,20 @@ func claim(tk: Dictionary) -> void:
 	if bench != null:
 		Kit.main.toast("Finish the pizza on your bench first", true)
 		return
+	if not tin_free(tk.rec.base):
+		Kit.main.toast("Every pizza tin is in use. Buy more tins from %s." % Equip.SHOP.name if Equip.has("pan_tin") else "Deep pan needs a pizza tin. Order some from %s." % Equip.SHOP.name, true)
+		return
 	var dq := Stock.take_dough(tk.rec.base)
 	if dq.is_empty():
 		Kit.main.toast("No %s dough balls left" % Data.DOUGHS[tk.rec.base].name, true)
 		return
 	tk.owner = "me"
 	tk.state = "make"
+	ladle_g = 0.0
 	bench = Pizza.new(tk, dq)
+	if bench.rec.sauce != "":
+		var lo := Game.ladle_for(bench.rec.spec[bench.rec.sauce])
+		if lo > 0: ladle_oz = lo
 	tool = ""
 	set_view("bench")
 	Art.sfx("tap")
@@ -1126,6 +1199,7 @@ func next() -> void:
 		bench.stage = "top"
 		tool = _first_tool(bench)
 	else:
+		_drop_ladle()
 		if c.fornaio:
 			var slot := oven.free_slot()
 			if slot < 0:
@@ -1174,6 +1248,22 @@ func apply_tool(p: Vector2, prev) -> void:
 		return
 	if on_board: return
 	var brush: float = 17.0 + c.brush
+	if it.kind == "sauce":
+		if ladle_g > 0.0:
+			pz.drop_sauce(ladle_ing, ladle_g, p)
+			ladle_g = 0.0
+			dirty = true
+			Art.sfx("tap")
+			return
+		if prev == null:
+			if pz.sauce == "": Kit.main.toast("Pick a ladle and scoop the sauce first")
+			return
+		var a: Vector2 = prev
+		var n: int = max(1, int(ceil(a.distance_to(p) / (brush * 0.4))))
+		for i in n:
+			var q: Vector2 = a.lerp(p, float(i + 1) / n)
+			pz.smear(q, a.lerp(p, float(i) / n), brush)
+		return
 	var from: Vector2 = p if prev == null else prev
 	var dist := from.distance_to(p)
 	var steps: int = max(1, int(ceil(dist / (brush * 0.6))))
@@ -1181,6 +1271,47 @@ func apply_tool(p: Vector2, prev) -> void:
 		if not pz.spread(tool, from.lerp(p, float(i + 1) / steps), (dist / steps) if prev != null else brush, brush):
 			_ran_out()
 			break
+
+## take one ladle of sauce out of its pan on the rail: exactly the ladle's size, no more
+func scoop() -> void:
+	if bench == null or bench.stage != "top" or view != "bench" or not is_free(): return
+	if Game.ladles(ladle_oz) <= 0:
+		var lo := Game.ladle_for(bench.spec_of(bench.rec.sauce))
+		if lo == 0:
+			Kit.main.toast("You have no ladles. Order some from KitBox.", true)
+			return
+		ladle_oz = lo
+	if ladle_g > 0.0:
+		Kit.main.toast("Drop what is in the ladle onto the pizza first")
+		return
+	var id: String = tool if tool != "" and Data.ING[tool].kind == "sauce" else bench.rec.sauce
+	if id == "":
+		Kit.main.toast("This pizza has no sauce")
+		return
+	var want: float = ladle_oz * Data.OZ_G
+	if Stock.rail_have(id) < want * 0.5:
+		var sl := Stock.rail_slot(id)
+		if sl >= 0: rail_tap(sl)
+		return
+	var got := bench.use(id, want)
+	if got <= 0.0:
+		_ran_out()
+		return
+	ladle_g = got
+	ladle_ing = id
+	tool = id
+	dirty = true
+	Art.sfx("tap")
+	if got < want * 0.95: Kit.main.toast("The pan only had %s left. Refill it." % Data.oz_text(got), true)
+
+## you lift your finger off the bench
+func stroke_end(p: Vector2) -> void:
+	if view == "bench" and bench != null and bench.stage == "top": bench.end_stroke(p)
+
+## anything still in the ladle goes in the middle
+func _drop_ladle() -> void:
+	if ladle_g > 0.0 and bench != null: bench.drop_sauce(ladle_ing, ladle_g, Vector2.ZERO)
+	ladle_g = 0.0
 
 func _ran_out() -> void:
 	Kit.main.toast("You have run out of " + Data.ING[tool].name.to_lower(), true)
@@ -1193,7 +1324,15 @@ func cut(a: Vector2, b: Vector2) -> void:
 	var pz: Pizza = board[0]
 	var ln := a.distance_to(b)
 	if ln < pz.base.R * 1.2: return
+	var cutter := Equip.cutter()
+	if cutter == "":
+		Kit.main.toast("You have nothing to cut with. Order a pizza wheel from %s." % Equip.SHOP.name, true)
+		return
 	var dd: float = abs(a.x * b.y - a.y * b.x) / ln
+	if cutter == "rocker": dd *= 0.6                 # one rock straight through the middle
+	elif cutter == "knife":
+		dd = min(dd + pz.base.R * 0.12, pz.base.R * 0.34)      # a knife drags and tears the cheese
+		if pz.cuts.is_empty(): Kit.main.toast("No pizza wheel: cutting with a knife leaves ragged slices")
 	if dd < pz.base.R * 0.35 and pz.cuts.size() < 4:
 		pz.cuts.append({"a": a, "b": b, "d": dd})
 		Art.sfx("tap")
@@ -1203,12 +1342,18 @@ func cut(a: Vector2, b: Vector2) -> void:
 # ---------- your oven ----------
 func oven_load(pz: Pizza, slot: int) -> void:
 	if not is_free(): return
+	if not Equip.has("peel"):
+		Kit.main.toast("You need a pizza peel to get it in the oven. Order one from %s." % Equip.SHOP.name, true)
+		return
 	oven.load_pizza(pz, slot, false)
 	pz.tk.state = "oven"
 	dirty = true
 	Art.sfx("tap")
 
 func oven_pull(o: Dictionary) -> void:
+	if not Equip.has("peel") and not o.auto:
+		Kit.main.toast("You need a pizza peel to get it out", true)
+		return
 	oven.items.erase(o)
 	o.pz.stage = "board"
 	if not o.pz.tk.gone: o.pz.tk.state = "board"
@@ -1238,6 +1383,7 @@ func serve() -> void:
 		alt.owner = "me"
 		pz.tk = alt
 	var a := pz.assess(c)
+	Equip.adjust(a, pz.rec, false)
 	a.mine = true
 	to_pass(pz.tk, a)
 	board.pop_front()
@@ -1373,6 +1519,10 @@ func _gram_row(pz: Pizza, id: String) -> void:
 		var g: float = pz.grams.get(id, 0.0)
 		var ratio := pz.portion(id)
 		var col := Kit.INK if ratio < 0.85 else (Kit.BASIL if ratio <= 1.2 else Kit.TOMATO)
+		if Data.ING[id].kind == "sauce":
+			return ["%s   %s of %s (%s)" % [Data.ING[id].name, Data.oz_text(g), Data.oz_text(pz.spec_of(id)), Data.qty(id, pz.spec_of(id))], col]
+		if Data.ING[id].unit == "g" and not Equip.has("scales"):      # no scales on the counter: you are judging by eye
+			return ["%s   %s of %s (no scales)" % [Data.ING[id].name, Equip.weigh(g), Data.qty(id, pz.spec_of(id))], Kit.INK]
 		return ["%s   %s of %s" % [Data.ING[id].name, Data.qty(id, g), Data.qty(id, pz.spec_of(id))], col])
 
 func _tool_button(id: String, need: bool) -> Button:
@@ -1472,6 +1622,27 @@ func _build_side() -> void:
 			_gram_row(pz, id)
 	_info(func(): return ["On the pizza so far: %s" % Kit.cents(pz.cost), Kit.MUTED], 15)
 	info.add_child(Kit.label("Tap a pan on the rail to pick up that topping, then spread or place it on the pizza." + ((" In your hand: " + Data.ING[tool].name.to_lower() + ".") if tool != "" else ""), 15, Kit.CHEESE if tool == "" else Kit.MUTED, true))
+	if pz.rec.sauce != "":
+		var lh := Kit.hbox(6)
+		lh.add_child(Kit.label("Ladle:", 16, Kit.MUTED))
+		for oz in Data.LADLES:
+			if Game.ladles(oz) <= 0: continue
+			lh.add_child(Kit.button("%d oz" % oz, func():
+				if ladle_g > 0.0:
+					Kit.main.toast("Drop what is in the ladle first")
+					return
+				ladle_oz = oz
+				dirty = true, "primary" if ladle_oz == oz else "ghost", 15))
+		var sb := Kit.button("Scoop", scoop, "danger", 15)
+		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		lh.add_child(sb)
+		palette.add_child(lh)
+		_info(func():
+			if ladle_g > 0.0: return ["Ladle: %s of %s. Tap the middle of the pizza to drop it." % [Data.oz_text(ladle_g), Data.ING[ladle_ing].name.to_lower()], Kit.CHEESE]
+			var want_oz := int(round(pz.spec_of(pz.rec.sauce) / Data.OZ_G))
+			if pz.sauce == "" and Game.ladles(want_oz) == 0: return ["You have no %d oz ladle. Use a smaller one more than once, or order one from KitBox." % want_oz, Kit.TOMATO]
+			if pz.sauce == "": return ["Scoop %s of %s, drop it in the middle, then spread it out to the rim with the back of the ladle." % [Data.oz_text(pz.spec_of(pz.rec.sauce)), Data.ING[pz.rec.sauce].name.to_lower()], Kit.INK]
+			return ["Spread the sauce out evenly to the rim: drag the back of the ladle round in a spiral (%d%% covered)." % (pz.cov(pz.sauce_amt) * 100), Kit.MUTED], 15)
 
 func _side_oven() -> void:
 	info.add_child(Kit.label(oven.tier.n, 20))
@@ -1481,7 +1652,8 @@ func _side_oven() -> void:
 		_info(func():
 			var f := oven.fire
 			var word := "dying" if f < 0.6 else ("low" if f < 0.85 else ("just right" if f <= 1.15 else "fierce"))
-			return ["Fire: %s (%d%%)" % [word, f * 100], Kit.BASIL if f >= 0.85 and f <= 1.15 else Kit.CHEESE], 19)
+			if Equip.has("ir_thermo"): return ["Fire: %s · floor %d °C (infrared)" % [word, 180 + 250 * f], Kit.BASIL if f >= 0.85 and f <= 1.15 else Kit.CHEESE]
+			return ["Fire: looks %s (no infrared thermometer)" % ("low" if f < 0.85 else ("about right" if f <= 1.2 else "fierce")), Kit.MUTED], 19)
 		var lb := Kit.button("", add_log, "primary", 18)
 		palette.add_child(lb)
 		info_rows.append([lb, func(): return ["Add a log (%d left)" % int(Stock.have("wood")), Kit.DARK]])
@@ -1529,7 +1701,7 @@ func line_job(id: String, may_prep: bool, mult: float) -> Dictionary:
 	var slot := Stock.rail_slot(id)
 	if slot < 0: return {}
 	if Stock.refill_source(id) > 0.5: return {"kind": "refill", "raw": 0.0, "minutes": 1.0}
-	if may_prep and Data.needs_prep(id) and Stock.have(id) > 0:
+	if may_prep and Data.needs_prep(id) and Stock.have(id) > 0 and Equip.prep_block(id) == "":
 		var raw := batch_raw(id)
 		if raw > 10.0: return {"kind": "prep", "raw": raw, "minutes": Stock.prep_minutes(id, raw, mult) + 1.0}
 	return {}
@@ -1555,6 +1727,13 @@ func rail_tap(i: int) -> void:
 	if pan.q > 0.5:
 		var it: Dictionary = Data.ING[id]
 		if view == "bench" and bench != null and bench.stage == "top" and not it.after:
+			if it.kind == "sauce":
+				tool = id
+				scoop()
+				return
+			if ladle_g > 0.0:
+				_drop_ladle()
+				Kit.main.toast("The sauce in the ladle went in the middle")
 			tool = id
 			dirty = true
 		elif view == "board" and it.after:
@@ -1581,6 +1760,9 @@ func refill_now(i: int) -> void:
 ## you prep something: you are tied up until it is done, then you fill the pan with it
 func prep_now(id: String, raw: float) -> void:
 	if raw <= 0.0 or not is_free(): return
+	if Equip.prep_block(id) != "":
+		Kit.main.toast(Equip.prep_block(id), true)
+		return
 	var p = Data.ING[id].prep
 	var mins := Stock.prep_minutes(id, raw, Day.prep_mult()) + 1.0
 	prepping[id] = "you"
@@ -1722,7 +1904,9 @@ func _build_prep() -> void:
 		if slot >= 0 and not prepping.has(id):
 			if Stock.refill_source(id) > 0.5 and Stock.rail_have(id) < Stock.pan_cap(id) * 0.7:
 				h.add_child(Kit.button("Refill pan · 1 min", refill_now.bind(slot), "primary", 15))
-			if Data.needs_prep(id) and Stock.have(id) > 0:
+			if Data.needs_prep(id) and Stock.have(id) > 0 and Equip.prep_block(id) != "":
+				h.add_child(Kit.label(Equip.prep_block(id), 14, Kit.TOMATO, true))
+			elif Data.needs_prep(id) and Stock.have(id) > 0:
 				var small := batch_raw(id, 10)
 				var rest := batch_raw(id)
 				if small > 10.0: h.add_child(Kit.button("Prep 10 pizzas · %d min" % ceil(Stock.prep_minutes(id, small, Day.prep_mult()) + 1), prep_now.bind(id, small), "ghost", 15))
@@ -1809,6 +1993,10 @@ func finish(sold_out: bool) -> void:
 	r.boh1 = Hygiene.level("boh")
 	r.foh1 = Hygiene.level("foh")
 	G.s.phase = "evening"
+	if not r.get("broken", {}).is_empty():
+		var broke := []
+		for k in r.broken: broke.append("%d %s%s" % [r.broken[k], k, ("" if r.broken[k] == 1 else ("es" if k == "glass" else "s"))])
+		r.notes.append("Broken in service: %s. You can lay %d places now." % [", ".join(broke), Equip.seats()])
 	r.notes.append_array(Day.start_evening())
 	G.s.last = r
 	G.save_game()

@@ -180,7 +180,7 @@ func max_prep_raw(id: String) -> float:
 func prep_minutes(id: String, raw_g: float, mult: float = 1.0) -> float:
 	var p = Data.ING[id].prep
 	if p == null: return 0.0
-	return max(1.0, raw_g / 1000.0 * float(p.min_kg) * mult)
+	return max(1.0, raw_g / 1000.0 * float(p.min_kg) * mult * Equip.prep_mult(id))
 
 ## prep raw_g of raw stock into tubs. quality 0..1 is how well it was done: it sets the yield and how good it looks.
 ## Returns {raw, made, tubs: [sizes used], short: true if there were not enough clean tubs}
@@ -189,8 +189,10 @@ func prep(id: String, raw_g: float, quality: float = 0.8) -> Dictionary:
 	var yld: float = float(p.yield) * (0.9 + 0.1 * clamp(quality, 0.0, 1.0))
 	var cap_raw: float = tub_litres() / float(p.vol) * 1000.0 / yld
 	var short: bool = raw_g > cap_raw + 1.0
+	var block := Equip.prep_block(id)
+	if block != "": return {"raw": 0.0, "made": 0.0, "tubs": [], "short": false, "block": block, "unlabelled": 0}
 	var t := take(id, min(raw_g, cap_raw))
-	var out := {"raw": t.got, "made": 0.0, "tubs": [], "short": short}
+	var out := {"raw": t.got, "made": 0.0, "tubs": [], "short": short, "block": "", "unlabelled": 0}
 	if t.got <= 0: return out
 	var made: float = t.got * yld
 	out.made = made
@@ -203,7 +205,9 @@ func prep(id: String, raw_g: float, quality: float = 0.8) -> Dictionary:
 		if clean_tubs(size) == 0: break
 		take("tub%d" % size, 1)
 		var fit: float = min(left, size / float(p.vol) * 1000.0)
-		prepped_lots(id).append({"q": fit, "x": x, "g": t.g, "c": unit_c, "size": size, "made": Game.s.day, "pq": quality})
+		var lab := Equip.label_tub()
+		if not lab: out.unlabelled += 1
+		prepped_lots(id).append({"q": fit, "x": x, "g": t.g, "c": unit_c, "size": size, "made": Game.s.day, "pq": quality, "lab": lab})
 		out.tubs.append(size)
 		left -= fit
 		litres -= fit / 1000.0 * float(p.vol)
@@ -212,11 +216,22 @@ func prep(id: String, raw_g: float, quality: float = 0.8) -> Dictionary:
 	return out
 
 # ---------- the rail of gastro pans on the counter ----------
+## the pans on the counter: as many as the counter holds and you own gastronorm pans for (Equip.rail_size())
 func rail() -> Array:
-	var n: int = int(Game.tier("prep").rail)
+	var n: int = Equip.rail_size()
 	var r: Array = Game.s.rail
 	while r.size() < n: r.append({"ing": "", "q": 0.0, "x": 0.0, "g": 2.0, "c": 0.0, "pq": 0.8})
+	if r.size() > n: _shrink_rail(n)
 	return r
+
+## fewer pans than slots (a new counter that takes a different size of pan): what was in the extra pans goes back
+func _shrink_rail(n: int) -> void:
+	var r: Array = Game.s.rail
+	while r.size() > n:
+		var pan: Dictionary = r.pop_back()
+		if pan.ing == "" or pan.q <= 0.5: continue
+		if Data.needs_prep(pan.ing): prepped_lots(pan.ing).append({"q": pan.q, "x": pan.x, "g": pan.g, "c": pan.c, "size": 4, "made": Game.s.day, "pq": pan.get("pq", 0.8), "lab": true})
+		else: add(pan.ing, pan.q, int(round(pan.g)), pan.c, pan.x)
 
 func rail_chilled() -> bool:
 	return bool(Game.tier("prep").chilled)
@@ -342,7 +357,7 @@ func close_rail() -> Array:
 				notes.append("No clean tub for the %s left on the counter: binned." % Data.ING[id].name.to_lower())
 			else:
 				take("tub%d" % size, 1)
-				prepped_lots(id).append({"q": pan.q, "x": pan.x, "g": pan.g, "c": pan.c, "size": size, "made": Game.s.day, "pq": pan.get("pq", 0.8)})
+				prepped_lots(id).append({"q": pan.q, "x": pan.x, "g": pan.g, "c": pan.c, "size": size, "made": Game.s.day, "pq": pan.get("pq", 0.8), "lab": Equip.label_tub()})
 				prepped_lots(id).sort_custom(func(a, b): return a.x < b.x)
 		else:
 			add(id, pan.q, int(round(pan.g)), pan.c, pan.x)
@@ -525,6 +540,7 @@ func take_dough(style: String) -> Dictionary:
 ## put a tray in the fridge; returns how many balls fitted
 func add_dough(style: String, n: int, q: float, speed: int, grade: float, ball_cost: float) -> int:
 	n = int(min(n, floor(max(0.0, store_free("fridge")) / DOUGH_LITRES)))
+	n = min(n, Equip.dough_room())
 	if n > 0:
 		Game.s.dough.append({"style": style, "n": n, "q": int(round(q)), "d": Game.s.day, "speed": speed, "g": grade, "c": ball_cost})
 	return n

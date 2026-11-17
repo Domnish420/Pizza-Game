@@ -93,6 +93,9 @@ func _init() -> void:
 	var u := _read("upgrades")
 	UPG = u.tracks
 	OVENS = u.ovens
+	var eq := _read("equipment")
+	for it in eq.items:
+		if it.rule == "ladle": LADLES.append(int(it.oz))
 	var st := _read("staff")
 	ROLES = st.roles
 	NAMES = st.names
@@ -102,6 +105,14 @@ func _init() -> void:
 func hhmm(m: float) -> String:
 	var mi := int(round(m))
 	return "%02d:%02d" % [(mi / 60) % 24, mi % 60]
+
+const OZ_G := 30.0      # one fluid ounce of sauce, in grams (ml for oils)
+var LADLES := []        # portion ladle sizes sold on the equipment site, in oz (see data/equipment.json)
+
+## "2 oz" for an amount of sauce
+func oz_text(g: float) -> String:
+	var oz: float = g / OZ_G
+	return ("%d oz" % round(oz)) if abs(oz - round(oz)) < 0.08 else ("%.1f oz" % oz)
 
 func needs_prep(id: String) -> bool:
 	return ING[id].prep != null

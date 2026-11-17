@@ -115,11 +115,21 @@ func _move(prev: Vector2, p: Vector2) -> void:
 	match pz.base.method:
 		"hand": pz.base.press(p)
 		"roll":
-			pz.base.roll(p, p - prev)
+			if _pin(): pz.base.roll(p, p - prev)
 			pin_at = p
 		_: pz.base.pan(p, p - prev)
 
+## a rolled base needs the rolling pin (or the sheeter button)
+var _pin_warned := false
+func _pin() -> bool:
+	if Equip.can_roll(): return true
+	if not _pin_warned:
+		_pin_warned = true
+		Kit.main.toast("You have no rolling pin. Order one from %s, or press it out by hand (it will not be even)." % Equip.SHOP.name, true)
+	return false
+
 func _up(p: Vector2) -> void:
+	svc.stroke_end(p)
 	if cut_from != null:
 		svc.cut(cut_from, p)
 	cut_from = null
@@ -140,7 +150,7 @@ func _two(index: int, prev: Vector2, p: Vector2) -> void:
 				pz.base.rotate(angle_difference((prev - other).angle(), (p - other).angle()) * 0.5)
 		"roll":
 			var mid: Vector2 = (p + other) / 2.0 if other != null else p
-			pz.base.roll(mid, (p - prev) / 2.0)
+			if _pin(): pz.base.roll(mid, (p - prev) / 2.0)
 			pin_at = mid
 		_: pz.base.pan(p, p - prev)
 
@@ -155,7 +165,7 @@ func _mirror(prev: Vector2, p: Vector2) -> void:
 			if prev.length() > 12.0 and p.length() > 12.0:
 				pz.base.rotate(angle_difference(prev.angle(), p.angle()))
 		"roll":
-			pz.base.roll(Vector2.ZERO, p - prev)
+			if _pin(): pz.base.roll(Vector2.ZERO, p - prev)
 			pin_at = Vector2.ZERO
 		_: pz.base.pan(p, p - prev)
 

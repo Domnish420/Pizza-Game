@@ -25,6 +25,7 @@ static func roll(rec: Dictionary, on_rail: Array, chance: float) -> Array:
 			"extra":
 				var pool: Array = tops.duplicate()
 				if rec.cheese != "": pool.append(rec.cheese)
+				if rec.sauce != "" and randf() < 0.3: pool = [rec.sauce]
 				if pool.size() > 0: mods.append({"kind": "extra", "ing": pool.pick_random()})
 			"add":
 				var extras: Array = on_rail.filter(func(i): return not rec.spec.has(i) and Data.ING[i].kind == "top")
@@ -61,7 +62,8 @@ static func build(rec: Dictionary, mods: Array) -> Dictionary:
 				if m.kind == "allergy": r.allergy = ing
 			"extra":
 				if r.spec.has(ing):
-					r.spec[ing] = round(r.spec[ing] * EXTRA)
+					if Data.ING[ing].kind == "sauce": r.spec[ing] += Data.OZ_G      # one more ladle
+					else: r.spec[ing] = round(r.spec[ing] * EXTRA)
 					r.price += EXTRA_PRICE
 			"add":
 				r.tops.append(ing)

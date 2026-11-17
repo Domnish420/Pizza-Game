@@ -85,7 +85,8 @@ func _ready() -> void:
 				Kit.main.toast("%s: %.1f °C written in the log%s" % [Data.STORE_NAME[st], t, "" if st == "freezer" or (t >= 1.0 and t <= 5.0) else ". OUT OF RANGE: adjust the vents"], st == "fridge" and (t < 1.0 or t > 5.0))
 				if notes.size() > 0: Kit.main.message("Meanwhile", "\n".join(notes), "OK")
 				hub.render(), "ghost", 15)
-			b.disabled = Checks.logged(st)
+			b.disabled = Checks.logged(st) or not Equip.thermo_for(st)
+			if not Equip.thermo_for(st): b.text = "No thermometer in the %s" % Data.STORE_NAME[st].to_lower()
 			th.add_child(b)
 		lc[1].add_child(th)
 		lc[1].add_child(Kit.label("Temperature log, last 7 days: %d%% of readings taken. Inspectors check it." % (Checks.log_rate(7) * 100), 14, Kit.MUTED))
@@ -162,6 +163,11 @@ func _ready() -> void:
 		var h := _row(pc[1], it.name, sub, Kit.BASIL if row.todo <= 0.5 else (Kit.TOMATO if row.raw_have <= 0 else Kit.INK))
 		if row.todo <= 0.5:
 			h.add_child(Kit.label("Done", 15, Kit.BASIL))
+		elif row.block != "":
+			h.add_child(Kit.label(row.block, 14, Kit.TOMATO, true))
+			h.add_child(Kit.button(Equip.SHOP.name, func():
+				ShopPage.cat = "need"
+				hub.go("kit"), "ghost", 15))
 		elif row.raw <= 0:
 			var at_door := false
 			for e in G.s.dock:
@@ -170,6 +176,7 @@ func _ready() -> void:
 			h.add_child(Kit.label("Put the delivery away first" if at_door else ("Due in at %s" % Data.hhmm(_due(row.id)) if _due(row.id) >= 0 else "Nothing to prep it from"), 15, Kit.CHEESE if at_door or _due(row.id) >= 0 else Kit.TOMATO))
 		else:
 			total += row.minutes * 1.25
+			if Equip.count("daydots") <= 0: h.add_child(Kit.label("No day-dot labels left", 14, Kit.TOMATO))
 			h.add_child(Kit.button("Prep by hand", func():
 				var t := PrepTask.new(row.id, row.raw)
 				t.finished.connect(hub.render)
@@ -182,7 +189,7 @@ func _ready() -> void:
 		pc[1].add_child(Kit.button("Quick-prep everything · %d min" % ceil(total), func():
 			_do(ceil(total), func():
 				for row in Day.prep_list(day):
-					if row.raw > 0: Stock.prep(row.id, row.raw, 0.55), "Prep done"), "ghost", 16))
+					if row.raw > 0 and row.block == "": Stock.prep(row.id, row.raw, 0.55), "Prep done"), "ghost", 16))
 	pc[1].add_child(Kit.label("Clean tubs: %d x 4 L, %d x 2 L. Waiting to be washed: %d." % [Stock.clean_tubs(4), Stock.clean_tubs(2), Stock.dirty_tubs()], 14, Kit.TOMATO if Stock.clean_tubs(4) + Stock.clean_tubs(2) < 3 else Kit.MUTED))
 	if Stock.dirty_tubs() > 0:
 		var wb := Kit.button("Wash up the tubs · %d min" % Stock.wash_minutes(), func(): _do(Stock.wash_minutes(), func(): Stock.wash_all(), "Tubs washed"), "ghost", 15)
@@ -223,7 +230,7 @@ func _ready() -> void:
 		var nm: String = "Kitchen" if area == "boh" else ("Hatch and counter" if G.venue().tables == 0 else "Dining room")
 		var hs := Hygiene.state(area)
 		var mins := Hygiene.clean_minutes(area)
-		var h := _row(cc[1], "%s: %s (%d%%)" % [nm, hs[0].to_lower(), Hygiene.level(area)], "Uses about %s of cleaning chemicals" % Data.qty("sanitiser", Hygiene.chem_needed(area)), {"ok": Kit.BASIL, "warn": Kit.CHEESE, "bad": Kit.TOMATO}[hs[1]])
+		var h := _row(cc[1], "%s: %s (%d%%)" % [nm, hs[0].to_lower(), Hygiene.level(area)], "Uses about %s of cleaning chemicals and %d cloths%s" % [Data.qty("sanitiser", Hygiene.chem_needed(area)), Equip.cloths_needed(area), ("" if not Equip.needs_mop(area) or Equip.has(Equip.mop_for(area)) else ". NO MOP: it will not come properly clean")], {"ok": Kit.BASIL, "warn": Kit.CHEESE, "bad": Kit.TOMATO}[hs[1]])
 		if Hygiene.level(area) < 99.0:
 			h.add_child(Kit.button("Clean by hand", func():
 				var t := CleanTask.new(area)
@@ -233,7 +240,7 @@ func _ready() -> void:
 				var msg := ""
 				_do(mins, func(): msg = Hygiene.clean(area))
 				if msg != "": Kit.main.toast(msg, true), "ghost", 15))
-	cc[1].add_child(Kit.label("Cleaning chemicals in stock: %s." % Data.qty("sanitiser", Stock.have("sanitiser")), 14, Kit.TOMATO if Stock.have("sanitiser") < Hygiene.chem_needed("boh") else Kit.MUTED))
+	cc[1].add_child(Kit.label("Cleaning chemicals in stock: %s. Cloths: %d. Spray bottles: %d." % [Data.qty("sanitiser", Stock.have("sanitiser")), Equip.count("cloths"), Equip.count("spray")], 14, Kit.TOMATO if Stock.have("sanitiser") < Hygiene.chem_needed("boh") or Equip.count("cloths") < Equip.cloths_needed("boh") or not Equip.has("spray") else Kit.MUTED))
 	add_child(cc[0])
 
 	# pests

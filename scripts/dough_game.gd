@@ -127,7 +127,9 @@ func _build_measure() -> void:
 		b.button_up.connect(_stop_pour)
 		h.add_child(b)
 		add_child(h)
-		rows[ing] = {"meter": m, "val": val, "target": tg[ing]}
+		# without scales (or a jug for the water) you are judging by eye: the reading is off by a steady amount
+		var tool := "jug" if ing == "water" else "scales"
+		rows[ing] = {"meter": m, "val": val, "target": tg[ing], "tool": tool, "bias": 0.0 if Equip.has(tool) else randf_range(-0.09, 0.09)}
 	var foot := Kit.hbox(10)
 	total_lbl = Kit.label("", 19, Kit.CHEESE)
 	total_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -147,8 +149,9 @@ func _refresh_measure() -> void:
 	var total := 0.0
 	for ing in rows:
 		var e: Dictionary = rows[ing]
-		e.meter.set_value(added[ing] / (e.target * 1.5))
-		e.val.text = "%s / %s %s" % [_fmt(added[ing], e.target), _fmt(e.target, e.target), _unit(ing)]
+		e.meter.set_value(added[ing] / (e.target * 1.5) * (1.0 + e.bias))
+		if Equip.has(e.tool): e.val.text = "%s / %s %s" % [_fmt(added[ing], e.target), _fmt(e.target, e.target), _unit(ing)]
+		else: e.val.text = "%s? (no %s)" % [Equip.weigh(added[ing] * (1.0 + e.bias), e.tool).replace(" g", " " + _unit(ing)), "scales" if e.tool == "scales" else "jug"]
 	for k in added: total += added[k]
 	if total_lbl: total_lbl.text = "On the scale: %s  ·  makes about %d balls of %d g" % [("%.2f kg" % (total / 1000.0)) if total >= 1000 else "%d g" % int(total), int(total / d.ball), d.ball]
 
@@ -257,7 +260,7 @@ func _build_knead() -> void:
 # ---------- 3. cut and ball ----------
 func _build_cut() -> void:
 	add_child(Kit.label("%s dough · 3 of 3 · Scale and ball" % d.name, 26))
-	add_child(Kit.label("Cut the dough into %d g pieces. Hit Cut when the marker is in the green: three test cuts set how even your dough balls are." % d.ball, 17, Kit.MUTED, true))
+	add_child(Kit.label("Cut the dough into %d g pieces%s. Hit Cut when the marker is in the green: three test cuts set how even your dough balls are." % [d.ball, " with your bench scraper" if Equip.has("scraper") else " (no bench scraper: you are tearing it by hand)"], 17, Kit.MUTED, true))
 	cut_meter = Meter.new(0.43, 0.57, 40)
 	cut_meter.marker = true
 	add_child(cut_meter)
@@ -270,12 +273,13 @@ func _build_cut() -> void:
 
 func _finish() -> void:
 	var cut_s: float = (cuts[0] + cuts[1] + cuts[2]) / 3.0
-	var q: float = clamp(scores.measure * 0.5 + scores.knead * 0.3 + cut_s * 0.2 + c.proof_q, 0, 100)
+	var q: float = clamp(scores.measure * 0.5 + scores.knead * 0.3 + cut_s * 0.2 + c.proof_q + Equip.dough_q_bonus(), 0, 100)
 	var total := 0.0
 	for k in added: total += added[k]
 	var balls := int(total / d.ball)
 	var grade: float = gsum / gw if gw > 0 else 2.0
 	var per_ball: float = _spent_total() / max(1, balls)
+	var tray_room := Equip.dough_room()
 	var fitted := Stock.add_dough(style, balls, q, speed, grade, per_ball)
 	var mins: float = ceil(15.0 + 6.0 * kg / c.knead)
 	var notes := Day.spend(mins)
@@ -294,7 +298,8 @@ func _finish() -> void:
 	if speed > 0: note = "Heavy on the yeast: it will be ready tomorrow but overproofs a day early."
 	elif speed < 0: note = "Light on the yeast: it needs two nights before it is ready."
 	add_child(Kit.label(note, 20, Kit.INK, true))
-	if fitted < balls: add_child(Kit.label("The fridge was full: %d balls had nowhere to go and were binned." % (balls - fitted), 19, Kit.TOMATO, true))
+	if fitted < balls: add_child(Kit.label(("Your proving trays were full: %d balls had nowhere to go and were binned. Order more trays from %s." % [balls - fitted, Equip.SHOP.name]) if tray_room < balls else ("The fridge was full: %d balls had nowhere to go and were binned." % (balls - fitted)), 19, Kit.TOMATO, true))
+	if not Equip.has("scraper"): add_child(Kit.label("No bench scraper: the balls came out uneven (quality -8).", 16, Kit.CHEESE, true))
 	add_child(Kit.button("Done", _cancel))
 
 func _want(ing: String) -> float:
