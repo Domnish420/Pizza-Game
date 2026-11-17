@@ -1,0 +1,127 @@
+class_name PizzaDraw
+## Draws a Pizza on any CanvasItem, in pizza-local units around `origin`, scaled by k and turned by pizza.turn.
+## This is placeholder rendering built from simple shapes. To art it up, replace one layer at a time:
+## base, sauce, cheese, toppings (Art key "top.<ingredient id>"), browning, cuts.
+
+const CRUST := Color("d9c08c")
+const CRUMB := Color("f1dfb6")
+
+## the browning overlay for a doneness value: nothing, golden, brown, black
+static func tint(p: float) -> Color:
+	if p <= 0.0: return Color(0.72, 0.45, 0.12, 0.0)
+	if p < 1.0: return Color(0.72, 0.45, 0.12, 0.32 * p)
+	if p < 1.4: return Color(0.72, 0.45, 0.12, 0.32).lerp(Color(0.25, 0.12, 0.04, 0.72), (p - 1.0) / 0.4)
+	return Color(0.25, 0.12, 0.04, 0.72).lerp(Color(0.05, 0.03, 0.02, 0.93), clamp((p - 1.4) / 0.4, 0.0, 1.0))
+
+## a filled shape that is star-shaped about (0,0): one centre colour, one colour per rim point
+static func _fan(ci: CanvasItem, ring: PackedVector2Array, centre: Color, rim: PackedColorArray) -> void:
+	var pts := PackedVector2Array([Vector2.ZERO])
+	var cols := PackedColorArray([centre])
+	pts.append_array(ring)
+	cols.append_array(rim)
+	var idx := PackedInt32Array()
+	var n := ring.size()
+	for i in n:
+		idx.append(0)
+		idx.append(1 + i)
+		idx.append(1 + (i + 1) % n)
+	RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), idx, pts, cols)
+
+static func _flat(n: int, col: Color) -> PackedColorArray:
+	var a := PackedColorArray()
+	a.resize(n)
+	a.fill(col)
+	return a
+
+static func bake_at(pz: Pizza, ang: float) -> float:
+	var f := fposmod(ang / TAU, 1.0) * Pizza.NSEC
+	var i := int(f) % Pizza.NSEC
+	var k: float = f - floor(f)
+	return pz.bake[i] * (1.0 - k) + pz.bake[(i + 1) % Pizza.NSEC] * k
+
+static func draw(ci: CanvasItem, pz: Pizza, origin: Vector2, k: float) -> void:
+	var rot := pz.turn
+	var b := pz.base
+	var baked: bool = pz.stage == "oven" or pz.stage == "board"
+	ci.draw_set_transform(origin, rot, Vector2(k, k))
+	# base: crust, then the flattened middle
+	var ring := b.outline(1.0, 0.0, 48)
+	_fan(ci, ring, CRUST, _flat(ring.size(), CRUST))
+	if b.mean_rim() < b.mean_r() - 3.0:
+		var inner := b.outline(1.0, 1.0, 48)
+		_fan(ci, inner, CRUMB, _flat(inner.size(), CRUMB))
+	# sauce: thicker where more was laid
+	if pz.sauce != "":
+		var sc := Color(Data.ING[pz.sauce].col)
+		for i in pz.sauce_amt:
+			var a: float = pz.sauce_amt[i]
+			if a < 0.12: continue
+			ci.draw_circle(pz.cells[i], 9.5, Color(sc.darkened(0.18) if a > 1.5 else sc, clamp(0.35 + a * 0.65, 0.0, 1.0)))
+	# cheese: shreds when raw, pools once it has melted
+	if pz.cheese != "":
+		var cc := Color(Data.ING[pz.cheese].col)
+		var melted: bool = baked and pz.bake_avg() > 0.45
+		for i in pz.cheese_amt:
+			var a: float = pz.cheese_amt[i]
+			if a < 0.12: continue
+			var cl: Vector2 = pz.cells[i]
+			if melted:
+				ci.draw_circle(cl, 6.0 + min(a, 2.0) * 2.4, Color(cc.lightened(0.15), 0.92))
+			else:
+				for j in int(clamp(round(a * 3.0), 1, 6)):
+					var h := float((i * 73 + j * 191) % 628) / 100.0
+					var o := Vector2.from_angle(h * 2.3) * float((i * 31 + j * 17) % 7)
+					var dir := Vector2.from_angle(h) * 6.0
+					ci.draw_line(cl + o - dir, cl + o + dir, cc.lightened(0.25) if j % 2 == 0 else cc.lightened(0.45), 3.4)
+	for tp in pz.tops:
+		ci.draw_set_transform(origin + Vector2(tp.x, tp.y).rotated(rot) * k, rot + tp.a, Vector2(k, k))
+		topping(ci, tp.t)
+	ci.draw_set_transform(origin, rot, Vector2(k, k))
+	# browning: each part of the edge by how much heat it has had, the middle by the average
+	if baked:
+		var cols := PackedColorArray()
+		for i in ring.size(): cols.append(tint(bake_at(pz, i * TAU / ring.size())))
+		_fan(ci, ring, tint(pz.bake_avg() * 0.8), cols)
+	for ct in pz.cuts:
+		ci.draw_line(ct.a, ct.b, Color(1, 0.98, 0.92, 0.95), 2.5)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+## one piece of a topping, centred on (0,0)
+static func topping(ci: CanvasItem, id: String) -> void:
+	var t = Art.tex("top." + id)
+	if t != null:
+		ci.draw_texture_rect(t, Rect2(-12, -12, 24, 24), false)
+		return
+	var it: Dictionary = Data.ING[id]
+	var col := Color(it.col)
+	match it.shape:
+		"disc":
+			ci.draw_circle(Vector2.ZERO, 9, col)
+			ci.draw_circle(Vector2(-3, -2), 1.5, col.darkened(0.3))
+			ci.draw_circle(Vector2(3, 3), 1.5, col.darkened(0.3))
+		"leaf":
+			ci.draw_colored_polygon(PackedVector2Array([Vector2(-10, 0), Vector2(-3, -5), Vector2(6, -4), Vector2(10, 0), Vector2(6, 4), Vector2(-3, 5)]), col)
+			ci.draw_line(Vector2(-9, 0), Vector2(9, 0), col.darkened(0.3), 1.0)
+		"cap":
+			ci.draw_colored_polygon(PackedVector2Array([Vector2(-8, 0), Vector2(-6, -5), Vector2(0, -8), Vector2(6, -5), Vector2(8, 0)]), col)
+			ci.draw_rect(Rect2(-2.5, 0, 5, 6), col.darkened(0.12))
+		"arc": ci.draw_arc(Vector2.ZERO, 7.5, 0.4, 4.2, 12, col, 3.5)
+		"ring":
+			ci.draw_arc(Vector2.ZERO, 8, 0, TAU, 16, col, 2.0)
+			ci.draw_arc(Vector2.ZERO, 5, 0, TAU, 12, col.lightened(0.5), 1.5)
+		"dot":
+			ci.draw_circle(Vector2.ZERO, 6, col)
+			ci.draw_circle(Vector2.ZERO, 2.2, Color("b9442b"))
+		"grain":
+			ci.draw_circle(Vector2(-3, -1), 2.2, col)
+			ci.draw_circle(Vector2(3, 0), 2.2, col)
+			ci.draw_circle(Vector2(0, 3), 2.2, col)
+		"square":
+			ci.draw_rect(Rect2(-7, -5.5, 14, 11), col)
+			ci.draw_rect(Rect2(-7, -5.5, 14, 11), col.darkened(0.2), false, 1.0)
+		"tri": ci.draw_colored_polygon(PackedVector2Array([Vector2(0, -7), Vector2(8, 6), Vector2(-8, 6)]), col)
+		"blob":
+			ci.draw_circle(Vector2(-2, 0), 5.5, col)
+			ci.draw_circle(Vector2(3, 1), 5, col)
+		_:
+			ci.draw_colored_polygon(PackedVector2Array([Vector2(-12, -2), Vector2(0, -5), Vector2(12, -2), Vector2(12, 3), Vector2(0, 5), Vector2(-12, 3)]), col)

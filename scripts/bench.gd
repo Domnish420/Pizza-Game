@@ -1,20 +1,32 @@
 class_name Bench
 extends Control
-## Draws the pizza on the bench or the cutting board (320 x 320 game units) and reads the player's strokes:
-## stretching / rolling / pressing the base, saucing, cheesing, placing toppings, slicing.
-## All artwork is requested through Art.tex(key); the shapes drawn here are placeholders.
+## The prep bench and the cutting board (320 x 320 units): draws the pizza being worked on and reads your hands.
+##
+## Opening a hand-stretched base:
+##   one finger    presses the dough out with your fingertips (leave the edge alone to keep a rim)
+##   two fingers   spread them apart to stretch the dough along that line; twist them to turn the dough
+## Rolled bases: drag one finger (or two, like two hands on the pin) to roll. Pan bases: rub the dough outward.
+## On a computer the left mouse button is one finger; the right button (or Shift + left) is two fingers
+## spread either side of the middle.
+##
+## Topping: drag to spread sauce and cheese, tap or drag to place toppings. Cutting board: swipe to slice.
 
 const S := 320.0
+const C := Vector2(160, 160)     # where the pizza's centre sits
+
 var svc: ServiceScreen
 var font: Font
-var prev = null
-var start = null
-var cur = null
+var touches := {}                # finger index -> last position, pizza-local
+var mouse := ""                  # "" / "one" / "two"
+var mouse_at := Vector2.ZERO
+var cut_from = null
+var cut_to = null
+var pin_at = null
+var last_touch := 0
 
 func _init(service: ServiceScreen) -> void:
 	svc = service
-	size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	set_anchors_preset(Control.PRESET_FULL_RECT)
 	font = ThemeDB.fallback_font
 	clip_contents = true
 
@@ -24,124 +36,169 @@ func _k() -> float:
 func _off() -> Vector2:
 	return (size - Vector2(S, S) * _k()) / 2.0
 
+func _local(pos: Vector2) -> Vector2:
+	return (pos - _off()) / _k() - C
+
+# ---------- input ----------
 func _gui_input(e: InputEvent) -> void:
-	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
-		var p: Vector2 = (e.position - _off()) / _k()
+	if e is InputEventScreenTouch:
+		last_touch = Time.get_ticks_msec()
+		var p := _local(e.position)
 		if e.pressed:
-			prev = p
-			start = p
-			cur = p
-			svc.bench_drag(p, null)
+			touches[e.index] = p
+			if touches.size() == 1: _down(p)
 		else:
-			if start != null: svc.board_cut(start, p)
-			prev = null
-			start = null
-	elif e is InputEventMouseMotion and prev != null:
-		var p: Vector2 = (e.position - _off()) / _k()
-		svc.bench_drag(p, prev)
-		prev = p
-		cur = p
+			touches.erase(e.index)
+			if touches.is_empty(): _up(p)
+		accept_event()
+	elif e is InputEventScreenDrag:
+		last_touch = Time.get_ticks_msec()
+		if touches.has(e.index):
+			var p := _local(e.position)
+			var prev: Vector2 = touches[e.index]
+			touches[e.index] = p
+			if touches.size() >= 2: _two(e.index, prev, p)
+			else: _move(prev, p)
+		accept_event()
+	elif e is InputEventMouseButton:
+		if e.device == InputEvent.DEVICE_ID_EMULATION or Time.get_ticks_msec() - last_touch < 500: return
+		var p := _local(e.position)
+		if e.pressed:
+			mouse = "two" if (e.button_index == MOUSE_BUTTON_RIGHT or e.shift_pressed) else "one"
+			mouse_at = p
+			if mouse == "one": _down(p)
+		else:
+			if mouse == "one": _up(p)
+			mouse = ""
+	elif e is InputEventMouseMotion and mouse != "":
+		if e.device == InputEvent.DEVICE_ID_EMULATION: return
+		var p := _local(e.position)
+		if mouse == "one": _move(mouse_at, p)
+		else: _mirror(mouse_at, p)
+		mouse_at = p
 
-func _outline(pz: Dictionary, k: float) -> PackedVector2Array:
-	var pts := PackedVector2Array()
-	for i in 72:
-		var a := i * TAU / 72
-		pts.append(ServiceScreen.BC + Vector2.from_angle(a) * svc.rad_at(pz, a) * k)
-	return pts
+func _shaping():
+	var pz = svc.bench
+	return pz if (svc.view == "bench" and pz != null and pz.stage == "shape") else null
 
+## one finger goes down
+func _down(p: Vector2) -> void:
+	if svc.view == "board":
+		if svc.tool == "":
+			cut_from = p
+			cut_to = p
+		else:
+			svc.apply_tool(p, null)
+		return
+	var pz = _shaping()
+	if pz == null:
+		svc.apply_tool(p, null)
+	elif pz.base.method == "hand":
+		pz.base.press(p)
+	elif pz.base.method == "roll":
+		pin_at = p
+
+## one finger moves
+func _move(prev: Vector2, p: Vector2) -> void:
+	if svc.view == "board":
+		if svc.tool == "": cut_to = p
+		else: svc.apply_tool(p, prev)
+		return
+	var pz = _shaping()
+	if pz == null:
+		svc.apply_tool(p, prev)
+		return
+	match pz.base.method:
+		"hand": pz.base.press(p)
+		"roll":
+			pz.base.roll(p, p - prev)
+			pin_at = p
+		_: pz.base.pan(p, p - prev)
+
+func _up(p: Vector2) -> void:
+	if cut_from != null:
+		svc.cut(cut_from, p)
+	cut_from = null
+	cut_to = null
+	pin_at = null
+
+## one of two (or more) fingers moves
+func _two(index: int, prev: Vector2, p: Vector2) -> void:
+	var pz = _shaping()
+	if pz == null: return
+	var other = null
+	for i in touches:
+		if i != index: other = touches[i]
+	match pz.base.method:
+		"hand":
+			pz.base.stretch(prev, p)
+			if other != null:
+				pz.base.rotate(angle_difference((prev - other).angle(), (p - other).angle()) * 0.5)
+		"roll":
+			var mid: Vector2 = (p + other) / 2.0 if other != null else p
+			pz.base.roll(mid, (p - prev) / 2.0)
+			pin_at = mid
+		_: pz.base.pan(p, p - prev)
+
+## mouse stand-in for two fingers: the second finger mirrors the first through the middle of the dough
+func _mirror(prev: Vector2, p: Vector2) -> void:
+	var pz = _shaping()
+	if pz == null: return
+	match pz.base.method:
+		"hand":
+			pz.base.stretch(prev, p)
+			pz.base.stretch(-prev, -p)
+			if prev.length() > 12.0 and p.length() > 12.0:
+				pz.base.rotate(angle_difference(prev.angle(), p.angle()))
+		"roll":
+			pz.base.roll(Vector2.ZERO, p - prev)
+			pin_at = Vector2.ZERO
+		_: pz.base.pan(p, p - prev)
+
+# ---------- drawing ----------
 func _text(pos: Vector2, text: String, px: int, col: Color) -> void:
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	draw_string(font, pos - Vector2(w / 2.0, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, col)
 
-func _topping(tp: Dictionary) -> void:
-	var pos := Vector2(tp.x, tp.y)
-	var t = Art.tex("top." + tp.t)
-	draw_set_transform(_off() + pos * _k(), tp.a, Vector2(_k(), _k()))
-	if t != null:
-		draw_texture_rect(t, Rect2(-12, -12, 24, 24), false)
-	else:
-		var i = Data.ING[tp.t]
-		var col := Color(i.col)
-		match i.shape:
-			"disc":
-				draw_circle(Vector2.ZERO, 9, col)
-				draw_circle(Vector2(-3, -2), 1.5, col.darkened(0.3))
-				draw_circle(Vector2(3, 3), 1.5, col.darkened(0.3))
-			"leaf":
-				draw_colored_polygon(PackedVector2Array([Vector2(-10, 0), Vector2(-3, -5), Vector2(6, -4), Vector2(10, 0), Vector2(6, 4), Vector2(-3, 5)]), col)
-				draw_line(Vector2(-9, 0), Vector2(9, 0), col.darkened(0.3), 1.0)
-			"cap":
-				draw_colored_polygon(PackedVector2Array([Vector2(-8, 0), Vector2(-6, -5), Vector2(0, -8), Vector2(6, -5), Vector2(8, 0)]), col)
-				draw_rect(Rect2(-2.5, 0, 5, 6), col.darkened(0.12))
-			"arc": draw_arc(Vector2.ZERO, 7.5, 0.4, 4.2, 12, col, 3.5)
-			"ring":
-				draw_arc(Vector2.ZERO, 8, 0, TAU, 16, col, 2.0)
-				draw_arc(Vector2.ZERO, 5, 0, TAU, 12, col.lightened(0.5), 1.5)
-			"dot":
-				draw_circle(Vector2.ZERO, 6, col)
-				draw_circle(Vector2.ZERO, 2.2, Color("b9442b"))
-			"square":
-				draw_rect(Rect2(-7, -5.5, 14, 11), col)
-				draw_rect(Rect2(-7, -5.5, 14, 11), col.darkened(0.2), false, 1.0)
-			"tri": draw_colored_polygon(PackedVector2Array([Vector2(0, -7), Vector2(8, 6), Vector2(-8, 6)]), col)
-			"blob":
-				draw_circle(Vector2(-2, 0), 5.5, col)
-				draw_circle(Vector2(3, 1), 5, col)
-			"strip":
-				draw_colored_polygon(PackedVector2Array([Vector2(-12, -2), Vector2(0, -5), Vector2(12, -2), Vector2(12, 3), Vector2(0, 5), Vector2(-12, 3)]), col)
-	draw_set_transform(_off(), 0, Vector2(_k(), _k()))
-
 func _draw() -> void:
 	var k := _k()
-	draw_set_transform(_off(), 0, Vector2(k, k))
-	var on_board := svc.view == "board"
-	var C := ServiceScreen.BC
+	var off := _off()
+	draw_set_transform(off, 0, Vector2(k, k))
+	var on_board: bool = svc.view == "board"
 	var t = Art.tex("board.bg" if on_board else "bench.bg")
 	if t != null: draw_texture_rect(t, Rect2(0, 0, S, S), false)
 	elif on_board:
 		draw_rect(Rect2(0, 0, S, S), Color("6b4a2b"))
-		draw_circle(C, 150, Color("c69a62"))
+		draw_circle(C, 152, Color("c69a62"))
 	else:
 		draw_rect(Rect2(0, 0, S, S), Color("8a8f8a"))
-	var pz = svc.board[0] if (on_board and svc.board.size() > 0) else (svc.bench if not on_board else null)
+	var pz = (svc.board[0] if svc.board.size() > 0 else null) if on_board else svc.bench
 	if pz == null:
-		_text(C + Vector2(0, -4), "Board is empty" if on_board else "Tap an order to start a pizza", 15, Color(0.08, 0.12, 0.1, 0.8))
+		_text(C + Vector2(0, -4), "Nothing on the board" if on_board else "Tap an order to start a pizza", 15, Color(0.08, 0.12, 0.1, 0.8))
 		return
 	var shaping: bool = pz.stage == "shape"
-	if pz.d.shape == "press":
+	if pz.base.method == "press":
 		var pt = Art.tex("pan")
-		if pt != null: draw_texture_rect(pt, Rect2(C - Vector2(pz.R + 12, pz.R + 12), Vector2(pz.R + 12, pz.R + 12) * 2), false)
+		if pt != null: draw_texture_rect(pt, Rect2(C - Vector2.ONE * (pz.base.R + 12), Vector2.ONE * (pz.base.R + 12) * 2), false)
 		else:
-			draw_circle(C, pz.R + 10, Color("2b2b2b"))
-			draw_circle(C, pz.R + 3, Color("3d3d3d"))
+			draw_circle(C, pz.base.R + 10, Color("2b2b2b"))
+			draw_circle(C, pz.base.R + 3, Color("3d3d3d"))
 	elif shaping:
-		draw_arc(C, pz.R, 0, TAU, 64, Color(1, 1, 1, 0.85), 2.0)
-		draw_arc(C, pz.R * 0.96, 0, TAU, 64, Color(1, 1, 1, 0.25), 1.0)
-	# base: crust then crumb
-	var crust: float = pz.d.crust
-	draw_colored_polygon(_outline(pz, 1.0), Color("d9c08c"))
-	draw_colored_polygon(_outline(pz, 1.0 - crust / pz.R * (0.5 if shaping else 1.0)), Color("f1dfb6"))
-	# sauce and cheese are stored as covered cells
-	if pz.sauce != "":
-		var sc := Color(Data.ING[pz.sauce].col)
-		for i in pz.sauce_cells: draw_circle(pz.cells[i], 9.5, sc)
-	for i in pz.cheese_cells:
-		var cl: Vector2 = pz.cells[i]
-		for j in 3:
-			var h := float((i * 73 + j * 191) % 628) / 100.0
-			var o := Vector2.from_angle(h * 2.3) * float((i * 31 + j * 17) % 7)
-			var dir := Vector2.from_angle(h) * 6.0
-			draw_line(cl + o - dir, cl + o + dir, Color("fdeeb5") if j != 1 else Color("fff6d6"), 3.6)
-	for tp in pz.tops: _topping(tp)
-	if on_board:
-		var b: float = pz.bake
-		draw_colored_polygon(_outline(pz, 1.0), Color(0.63, 0.35, 0.08, 0.28 * min(b, 1.1)))
-		if b > 1.12: draw_colored_polygon(_outline(pz, 1.0), Color(0.1, 0.05, 0.02, clamp((b - 1.12) / 0.5, 0, 0.85)))
-		for ct in pz.cuts: draw_line(ct.a, ct.b, Color(1, 0.98, 0.92, 0.95), 2.5)
-		if start != null and cur != null: draw_dashed_line(start, cur, Color(1, 1, 1, 0.7), 2.0, 6.0)
-	elif shaping and pz.d.shape == "roll" and prev != null:
+		draw_arc(C, pz.base.R, 0, TAU, 64, Color(1, 1, 1, 0.85), 2.0)
+		if pz.base.crust >= 1.0: draw_arc(C, pz.base.R - pz.base.crust, 0, TAU, 64, Color(1, 1, 1, 0.3), 1.0)
+	PizzaDraw.draw(self, pz, off + C * k, k)
+	draw_set_transform(off, 0, Vector2(k, k))
+	if on_board and cut_from != null and cut_to != null:
+		draw_dashed_line(C + cut_from, C + cut_to, Color(1, 1, 1, 0.75), 2.0, 6.0)
+	if shaping and pin_at != null:
 		var pin = Art.tex("pin")
-		if pin != null: draw_texture_rect(pin, Rect2(prev - Vector2(75, 13), Vector2(150, 26)), false)
+		if pin != null: draw_texture_rect(pin, Rect2(C + pin_at - Vector2(75, 13), Vector2(150, 26)), false)
 		else:
-			draw_rect(Rect2(prev.x - 60, prev.y - 9, 120, 18), Color("b98a55"))
-			draw_rect(Rect2(prev.x - 78, prev.y - 4, 156, 8), Color("8c6238"))
+			draw_rect(Rect2(C.x + pin_at.x - 60, C.y + pin_at.y - 9, 120, 18), Color("b98a55"))
+			draw_rect(Rect2(C.x + pin_at.x - 78, C.y + pin_at.y - 4, 156, 8), Color("8c6238"))
+	# show where your fingers are, so a two-finger hold is easy to see
+	if shaping:
+		for i in touches: draw_circle(C + touches[i], 15, Color(1, 1, 1, 0.22))
+		if mouse == "two":
+			draw_circle(C + mouse_at, 15, Color(1, 1, 1, 0.22))
+			draw_circle(C - mouse_at, 15, Color(1, 1, 1, 0.22))

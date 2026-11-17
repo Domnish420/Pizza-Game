@@ -1,0 +1,20 @@
+{
+ "_about": "Menus run for menu_days days. buzz = extra customers a fresh menu brings. The player books the next one in advance.",
+ "menu_days": 14,
+ "menus": [
+  {"id": "classics", "name": "House Classics", "lvl": 1, "cost": 0, "buzz": 0, "items": ["margherita", "pepperoni", "funghi"], "desc": "The three everyone knows. Always available, never exciting."},
+  {"id": "street", "name": "Street Slice", "lvl": 2, "cost": 60, "buzz": 0.06, "items": ["nycheese", "hawaiian", "bacon", "veggie", "margherita"], "desc": "New York dough joins the line-up. Two doughs to keep proofing."},
+  {"id": "napoli", "name": "Tutto Napoli", "lvl": 3, "cost": 100, "buzz": 0.08, "items": ["margherita", "marinara", "napoli", "tonno", "garlicbread"], "desc": "The old Naples menu. Mostly tins and jars, so little goes off."},
+  {"id": "garden", "name": "Garden Fortnight", "lvl": 3, "cost": 100, "buzz": 0.08, "items": ["margherita", "ortolana", "regina", "patate"], "desc": "Veg-led and cheap to stock in summer, but fresh veg does not keep."},
+  {"id": "roman", "name": "Roman Holiday", "lvl": 4, "cost": 140, "buzz": 0.1, "items": ["romana", "capricciosa", "cacio", "caprino", "margherita"], "desc": "Thin rolled bases. You will need the rolling pin."},
+  {"id": "tiki", "name": "Tiki Fortnight", "lvl": 6, "cost": 200, "buzz": 0.12, "items": ["hawaiian", "bbqchicken", "texmex", "nycheese"], "desc": "Sweet and smoky on New York bases. Chicken and meatballs need a freezer."},
+  {"id": "fuoco", "name": "Fuoco", "lvl": 7, "cost": 260, "buzz": 0.13, "items": ["diavola", "nduja", "hothoney", "gamberi"], "desc": "All heat, across three doughs. Prawns need a freezer."},
+  {"id": "butcher", "name": "Butcher's Block", "lvl": 8, "cost": 320, "buzz": 0.14, "items": ["brooklyn", "meatball", "meatfeast", "deepdish", "crudo"], "desc": "Three doughs and a lot of meat. Prosciutto goes on after the oven."},
+  {"id": "wholesome", "name": "Wholesome", "lvl": 9, "cost": 380, "buzz": 0.15, "items": ["verde", "contadina", "gfmargherita", "gfpepperoni", "fiorentina"], "desc": "Wholemeal and gluten-free bases. New flours, new dough recipes."},
+  {"id": "bianche", "name": "Le Bianche", "lvl": 10, "cost": 420, "buzz": 0.16, "items": ["quattro", "patate", "speck", "whitepie", "salsiccia"], "desc": "White pizzas with no tomato. A fridge-heavy menu."},
+  {"id": "riviera", "name": "Riviera", "lvl": 12, "cost": 600, "buzz": 0.18, "items": ["crudo", "salmone", "mare", "gamberi", "pestopizza"], "desc": "Seafood and cured ham. Premium prices, short shelf lives."},
+  {"id": "trattoria", "name": "Trattoria Classics", "lvl": 13, "cost": 750, "buzz": 0.2, "items": ["carbonara", "amatriciana", "capricciosa", "mortadella", "margherita"], "desc": "Roman pasta sauces as pizzas, and mortadella with burrata."},
+  {"id": "autunno", "name": "Autunno", "lvl": 16, "cost": 950, "buzz": 0.22, "items": ["porcini", "tartufo", "boscaiola", "salsiccia", "quattro"], "desc": "Mushrooms and truffle. Glorious in autumn, ruinous out of season."},
+  {"id": "grand", "name": "Grand Tour", "lvl": 18, "cost": 1300, "buzz": 0.25, "items": ["margherita", "brooklyn", "capricciosa", "supreme", "crudo", "tartufo"], "desc": "One of everything: four doughs, every store, every technique."}
+ ]
+}

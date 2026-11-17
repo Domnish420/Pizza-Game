@@ -27,12 +27,6 @@ static func money(n: float) -> String:
 static func cents(n: float) -> String:
 	return "$%.2f" % n
 
-static func qty(id: String, q: float) -> String:
-	var u: String = Data.ING[id].unit
-	if u == "portion": return str(int(round(q)))
-	if q >= 1000: return ("%.2f" % (q / 1000.0)).trim_suffix("0").trim_suffix("0").trim_suffix(".") + (" kg" if u == "g" else " l")
-	return str(int(round(q))) + " " + u
-
 static func box(col: Color, radius: int = 12, pad: int = 10, border: Color = Color(0, 0, 0, 0), bw: int = 0) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = col

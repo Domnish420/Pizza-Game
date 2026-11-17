@@ -13,6 +13,8 @@ config/icon="res://icon.svg"
 
 Data="*res://scripts/data.gd"
 Art="*res://scripts/art.gd"
+Stock="*res://scripts/stock.gd"
+Market="*res://scripts/market.gd"
 Game="*res://scripts/game.gd"
 
 [display]

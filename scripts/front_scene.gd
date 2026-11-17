@@ -81,6 +81,7 @@ func _draw() -> void:
 				draw_circle(Vector2(60, 242), 20, Color("1c1c1c"))
 				draw_circle(Vector2(180, 242), 20, Color("1c1c1c"))
 			_text(Vector2(120, 92), svc.c.v.name.to_upper(), 11, Kit.INK)
+			if Game.pitch() != null: _text(Vector2(420, 24), Game.pitch().name, 13, Kit.MUTED)
 			_text(Vector2(188, 136), "YOU", 12, Kit.MUTED)
 	# ready pizzas on the pass
 	var ready := svc.tickets.filter(func(tk): return tk.state == "pass").size()
@@ -115,6 +116,16 @@ func _draw() -> void:
 		if a.has("p"): frac = a.p.pat / max(1.0, a.p.max)
 		_bubble(a.pos + (Vector2(0, 30) if a.has("tb") or (a.has("p") and a.p.table >= 0) else Vector2.ZERO), a.kind, frac)
 	for f in svc.floats:
-		_text(f.pos + Vector2(0, -50), f.text, 14, Color(f.col, clamp(f.t, 0, 1)))
+		_text(Vector2(clamp(f.pos.x, 90, W - 90), f.pos.y - 50), f.text, 13, Color(f.col, clamp(f.t, 0, 1)))
 	if svc.parties.is_empty() and svc.t < 6:
 		_text(Vector2(W / 2 + 60, 40), "Customers are on their way. Tap anyone with a marker over their head.", 13, Kit.INK)
+	# the latest reviews, newest at the top
+	var shown := 0
+	for i in range(svc.reviews.size() - 1, -1, -1):
+		var rv: Dictionary = svc.reviews[i]
+		if svc.t - rv.t > 14.0 or shown >= 2: break
+		var txt := "%.1f stars: %s" % [rv.stars, rv.text]
+		var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+		draw_rect(Rect2(W - w - 22, 8 + shown * 22, w + 14, 19), Color(0, 0, 0, 0.55))
+		draw_string(font, Vector2(W - w - 15, 22 + shown * 22), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Kit.BASIL if rv.stars >= 4.0 else (Kit.CHEESE if rv.stars >= 3.0 else Kit.TOMATO))
+		shown += 1
