@@ -53,6 +53,7 @@ var ladle_ing := ""
 var phones := []                 # calls ringing: {n, until}
 var tablet := []                 # delivery-app orders pinging on the tablet: {n, until}
 var app_acc := 0.0
+var carried: Pizza = null        # the pizza you took from the bench to the oven and have not loaded yet
 var spiked := []                 # tickets that have just gone (walked out, collected): {tk, why, until (msec)} - they stay on the rail a moment
 var critic_at := -1.0            # when the food critic walks in today (-1: not today)
 var critic_in := false
@@ -411,10 +412,17 @@ func stop_busy() -> void:
 	dirty = true
 
 func set_view(v: String) -> void:
+	# turning to the oven, the pizza on the bench comes with you on the peel; turn back without loading it and it
+	# goes back on the bench
+	if v == "oven" and view != "oven" and bench != null and busy.is_empty(): carried = _carry_to_oven(false)
+	elif v == "bench" and view == "oven" and bench == null and carried != null and oven.shelf.has(carried):
+		oven.shelf.erase(carried)
+		carried.stage = "shape"
+		bench = carried
+		carried = null
 	view = v
 	if v != "board" and v != "bench": tool = ""
 	if v == "board": tool = ""
-	elif v == "bench" and bench != null and bench.stage == "top" and tool == "": tool = _first_tool(bench)
 	dirty = true
 
 func _speed() -> void:
@@ -1434,7 +1442,7 @@ func _staff_sauce(want_g: float) -> Dictionary:
 	var busy_with := {}
 	for w in workers:
 		if w.job != null and w.get("ladle", 0) > 0 and w.left > w.get("ladle_free", 0.0): busy_with[w.ladle] = busy_with.get(w.ladle, 0) + 1
-	if bench != null and bench.stage == "top" and bench.rec.sauce != "": busy_with[ladle_oz] = busy_with.get(ladle_oz, 0) + 1
+	if bench != null and tool != "" and Data.ING[tool].kind == "sauce": busy_with[ladle_oz] = busy_with.get(ladle_oz, 0) + 1
 	var free := func(oz: int) -> bool: return Game.ladles(oz) - int(busy_with.get(oz, 0)) > 0
 	if free.call(want): return {"g": want_g, "secs": 0.0, "oz": want}
 	for oz in [3, 2, 1]:
@@ -1559,9 +1567,8 @@ func claim(tk: Dictionary) -> void:
 	if tk.rec.get("make", "") in ["cold", "bar"]:
 		make_quick(tk)
 		return
-	if bench != null:
-		Kit.main.toast("Finish the pizza on your bench first", true)
-		return
+	if bench != null and _carry_to_oven(true) == null: return       # the one on the bench goes to the oven first
+	carried = null
 	if not tin_free(tk.rec.base):
 		Kit.main.toast("Every pizza tin is in use. Buy more tins from %s." % Equip.SHOP.name if Equip.has("pan_tin") else "Deep pan needs a pizza tin. Order some from %s." % Equip.SHOP.name, true)
 		return
@@ -1585,36 +1592,40 @@ func _first_tool(pz: Pizza) -> String:
 		if id != "" and not Data.ING[id].after and Stock.have(id) > 0: return id
 	return ""
 
+## the classic layout's one button: on the board it sends the pizza to the pass; on the bench it takes the pizza to
+## the oven. (In 3D there is no button: you tap the pass, and you turn to the oven.)
 func next() -> void:
 	if not is_free(): return
 	if view == "board":
 		serve()
 		return
 	if bench == null: return
-	if bench.stage == "shape":
-		bench.stage = "top"
-		tool = _first_tool(bench)
+	if _carry_to_oven(true) != null and not c.fornaio: set_view("oven")
+
+## the pizza on the bench goes to the oven: onto the shelf by the mouth (or straight in, if an oven tender is
+## loading for you). Returns the pizza, or null if there was no room.
+func _carry_to_oven(say: bool) -> Pizza:
+	if bench == null: return null
+	_drop_ladle(bench)
+	var pz: Pizza = bench
+	if c.fornaio:
+		var slot := oven.free_slot()
+		if slot < 0:
+			if say: Kit.main.toast("The oven is full", true)
+			return null
+		oven.load_pizza(pz, slot, true)
+		pz.tk.state = "oven"
 	else:
-		_drop_ladle()
-		if c.fornaio:
-			var slot := oven.free_slot()
-			if slot < 0:
-				Kit.main.toast("The oven is full", true)
-				return
-			oven.load_pizza(bench, slot, true)
-			bench.tk.state = "oven"
-			bench = null
-			tool = ""
-		else:
-			if oven.shelf.size() >= Oven.SHELF:
-				Kit.main.toast("The shelf is full. Put those pizzas in the oven first", true)
-				return
-			bench.stage = "shelf"
-			oven.shelf.append(bench)
-			bench = null
-			set_view("oven")
+		if oven.shelf.size() >= Oven.SHELF:
+			if say: Kit.main.toast("The shelf by the oven is full. Put those pizzas in first", true)
+			return null
+		pz.stage = "shelf"
+		oven.shelf.append(pz)
+	bench = null
+	tool = ""
 	dirty = true
 	Art.sfx("tap")
+	return pz
 
 func bin() -> void:
 	var pz: Pizza = (board.pop_front() if board.size() > 0 else null) if view == "board" else bench
@@ -1628,6 +1639,10 @@ func bin() -> void:
 	tool = ""
 	dirty = true
 
+## a pizza left on the shelf by the oven while you start the next one is not coming back to the bench
+func _forget_carried() -> void:
+	carried = null
+
 func sheeter() -> void:
 	if bench == null or bench.stage != "shape" or bench.base.method != "roll" or c.roll_auto <= 0: return
 	bench.base.sheet(c.roll_auto)
@@ -1637,12 +1652,17 @@ func apply_tool(p: Vector2, prev) -> void:
 	if not busy.is_empty(): return
 	var on_board: bool = view == "board"
 	var pz: Pizza = (board[0] if board.size() > 0 else null) if on_board else bench
-	if pz == null or tool == "" or (not on_board and pz.stage != "top"): return
+	if pz == null or tool == "": return
 	var it: Dictionary = Data.ING[tool]
 	if it.kind == "top":
 		if pz.add_top(tool, p, on_board) == "out": _ran_out()
 		return
-	if on_board: return
+	var g0: float = pz.grams.get(tool, 0.0)
+	_apply_spread(pz, it, p, prev)
+	if on_board: pz.late[tool] = pz.late.get(tool, 0.0) + pz.grams.get(tool, 0.0) - g0      # sauce or cheese after the oven
+
+## sauce from the ladle or cheese by hand, spread where your finger goes
+func _apply_spread(pz: Pizza, it: Dictionary, p: Vector2, prev) -> void:
 	var brush: float = 17.0 + c.brush
 	if it.kind == "sauce":
 		if ladle_g > 0.0:
@@ -1669,10 +1689,15 @@ func apply_tool(p: Vector2, prev) -> void:
 			break
 
 ## take one ladle of sauce out of its pan on the rail: exactly the ladle's size, no more
+## the pizza in front of you: the one on the bench, or the one on the board when you are at the board
+func _target() -> Pizza:
+	return (board[0] if board.size() > 0 else null) if view == "board" else bench
+
 func scoop() -> void:
-	if bench == null or bench.stage != "top" or view != "bench" or not is_free(): return
+	var pz := _target()
+	if pz == null or not is_free(): return
 	if Game.ladles(ladle_oz) <= 0:
-		var lo := Game.ladle_for(bench.spec_of(bench.rec.sauce))
+		var lo := Game.ladle_for(pz.spec_of(pz.rec.sauce))
 		if lo == 0:
 			Kit.main.toast("You have no ladles. Order some from KitBox.", true)
 			return
@@ -1680,7 +1705,7 @@ func scoop() -> void:
 	if ladle_g > 0.0:
 		Kit.main.toast("Drop what is in the ladle onto the pizza first")
 		return
-	var id: String = tool if tool != "" and Data.ING[tool].kind == "sauce" else bench.rec.sauce
+	var id: String = tool if tool != "" and Data.ING[tool].kind == "sauce" else pz.rec.sauce
 	if id == "":
 		Kit.main.toast("This pizza has no sauce")
 		return
@@ -1689,7 +1714,7 @@ func scoop() -> void:
 		var sl := Stock.rail_slot(id)
 		if sl >= 0: rail_tap(sl)
 		return
-	var got := bench.use(id, want)
+	var got := pz.use(id, want)
 	if got <= 0.0:
 		_ran_out()
 		return
@@ -1702,11 +1727,12 @@ func scoop() -> void:
 
 ## you lift your finger off the bench
 func stroke_end(p: Vector2) -> void:
-	if view == "bench" and bench != null and bench.stage == "top": bench.end_stroke(p)
+	if _target() != null: _target().end_stroke(p)
 
 ## anything still in the ladle goes in the middle
-func _drop_ladle() -> void:
-	if ladle_g > 0.0 and bench != null: bench.drop_sauce(ladle_ing, ladle_g, Vector2.ZERO)
+func _drop_ladle(into: Pizza = null) -> void:
+	var pz: Pizza = into if into != null else (_target() if _target() != null else bench)
+	if ladle_g > 0.0 and pz != null: pz.drop_sauce(ladle_ing, ladle_g, Vector2.ZERO)
 	ladle_g = 0.0
 
 func _ran_out() -> void:
@@ -1987,10 +2013,10 @@ func _build_side() -> void:
 	var pz: Pizza = null
 	if view == "board" and board.size() > 0: pz = board[0]
 	elif view == "bench": pz = bench
-	btn_row.visible = view != "oven" and view != "prep"
-	next_btn.visible = pz != null
+	btn_row.visible = not fp_mode and view != "oven" and view != "prep"        # in 3D: the pass, the bin and the sheeter are in the room
+	next_btn.visible = pz != null and view == "board"
 	bin_btn.visible = pz != null
-	auto_btn.visible = pz != null and view == "bench" and pz.stage == "shape" and pz.base.method == "roll" and c.roll_auto > 0
+	auto_btn.visible = pz != null and view == "bench" and pz.base.method == "roll" and c.roll_auto > 0
 	mini_panel.visible = view != "oven" and oven.mine().size() + oven.shelf.size() > 0
 	if mini_panel.visible:
 		mini_box.add_child(Kit.label("IN THE OVEN", 14, Kit.MUTED))
@@ -2014,10 +2040,10 @@ func _build_side() -> void:
 	if view == "board":
 		next_btn.text = "Send to the pass"
 		var finishing: Array = pz.rec.tops.filter(func(id): return Data.ING[id].after)
-		info.add_child(Kit.label("Swipe across the pizza to slice it: three cuts through the middle." + ("  Then add the toppings that go on after the oven." if finishing.size() > 0 else ""), 16, Kit.MUTED, true))
+		info.add_child(Kit.label("Hand empty: swipe across the pizza to slice it, three cuts through the middle. Anything you pick up goes on wherever you put it." + ("  The finishing toppings go on now." if finishing.size() > 0 else "") + ("  Tap the pass to send it out." if fp_mode else ""), 16, Kit.MUTED, true))
 		_info(func(): return ["Cuts: %d of 3" % pz.cuts.size(), Kit.BASIL if pz.cuts.size() >= 3 else Kit.INK])
 		for id in finishing: _gram_row(pz, id)
-		if finishing.size() > 0:
+		if finishing.size() > 0 and not fp_mode:
 			var g := Kit.grid(2, 5)
 			var wheel := Kit.button("Pizza wheel", func():
 				tool = ""
@@ -2027,23 +2053,17 @@ func _build_side() -> void:
 			palette.add_child(g)
 			palette.add_child(Kit.label("For the finishing toppings, tap their pan on the rail.", 14, Kit.MUTED, true))
 		return
-	if pz.stage == "shape":
-		next_btn.text = "Base is ready"
-		var b := pz.base
-		var how: String = {
-			"hand": "1. Press the ball out from the middle with one finger. Stop short of the edge to leave a rim.\n2. Put two fingers on the dough and spread them to stretch it out to the ring. Twist them to turn the dough.",
-			"roll": "Roll the pin back and forth across the dough with a finger. Keep changing direction or it goes oval. No rim on this one.",
-			"press": "Rub the dough outward until it reaches the wall of the pan all the way round."}[b.method]
-		info.add_child(Kit.label(how, 15, Kit.MUTED, true))
-		if b.method == "hand" and not DisplayServer.is_touchscreen_available():
-			info.add_child(Kit.label("With a mouse: left button is one finger, right button is two.", 14, Kit.MUTED, true))
-		_info(func(): return ["Size %.1f cm of %d cm" % [b.diameter_cm(), pz.d.size_cm], Kit.BASIL if abs(b.diameter_cm() - pz.d.size_cm) < pz.d.size_cm * 0.06 else Kit.INK])
-		_info(func(): return ["Thickness %.1f mm (aim for %.1f)" % [b.thickness_mm(), b.target_thickness_mm()], Kit.INK])
-		_info(func(): return ["Rim %.1f cm (aim for %.1f)" % [b.crust_cm(), pz.d.crust_cm], Kit.BASIL if abs(b.crust_cm() - pz.d.crust_cm) < 0.6 else Kit.INK])
-		_info(func(): return ["%s base: %d%%" % [pz.d.name, b.score().total * 100], Kit.CHEESE], 19)
-		return
+	# the bench: no steps. Shape it, top it, take it to the oven, in whatever order you like.
+	var b := pz.base
+	var how: String = {
+		"hand": "Hand empty: one finger presses the dough out (leave a rim), two fingers stretch it and twist it.",
+		"roll": "Hand empty: roll the pin across the dough with a finger, changing direction so it stays round.",
+		"press": "Hand empty: rub the dough outward to the wall of the pan."}[b.method]
+	info.add_child(Kit.label(how + " Tap a pan to pick up a topping (tap it again to put it back); one finger then puts it on. %s" % ("Turn to the oven and the pizza comes with you on the peel." if fp_mode else "Go to the Oven tab and the pizza comes with you."), 14, Kit.MUTED, true))
+	if b.method == "hand" and not DisplayServer.is_touchscreen_available():
+		info.add_child(Kit.label("With a mouse: left button is one finger, right button is two.", 13, Kit.MUTED, true))
+	_info(func(): return ["Size %.1f of %d cm · rim %.1f (aim %.1f) · %d%%" % [b.diameter_cm(), pz.d.size_cm, b.crust_cm(), pz.d.crust_cm, b.score().total * 100], Kit.BASIL if b.score().total >= 0.8 else Kit.CHEESE], 16)
 	next_btn.text = "To the oven"
-	info.add_child(Kit.label("Recipe card: grams on the pizza against grams allowed.", 14, Kit.MUTED, true))
 	for id in [pz.rec.sauce, pz.rec.cheese] + pz.rec.tops:
 		if id == "": continue
 		if Data.ING[id].after:
@@ -2052,7 +2072,7 @@ func _build_side() -> void:
 			_gram_row(pz, id)
 	_info(func(): return ["On the pizza so far: %s" % Kit.cents(pz.cost), Kit.MUTED], 15)
 	info.add_child(Kit.label("Tap a pan on the rail to pick up that topping, then spread or place it on the pizza." + ((" In your hand: " + Data.ING[tool].name.to_lower() + ".") if tool != "" else ""), 15, Kit.CHEESE if tool == "" else Kit.MUTED, true))
-	if pz.rec.sauce != "":
+	if pz.rec.sauce != "" and not fp_mode:          # in 3D the ladles hang on their rack and you tap the sauce pan to scoop
 		var lh := Kit.hbox(6)
 		lh.add_child(Kit.label("Ladle:", 16, Kit.MUTED))
 		for oz in Data.LADLES:
@@ -2067,11 +2087,12 @@ func _build_side() -> void:
 		sb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		lh.add_child(sb)
 		palette.add_child(lh)
+	if pz.rec.sauce != "":
 		_info(func():
 			if ladle_g > 0.0: return ["Ladle: %s of %s. Tap the middle of the pizza to drop it." % [Data.oz_text(ladle_g), Data.ING[ladle_ing].name.to_lower()], Kit.CHEESE]
 			var want_oz := int(round(pz.spec_of(pz.rec.sauce) / Data.OZ_G))
 			if pz.sauce == "" and Game.ladles(want_oz) == 0: return ["You have no %d oz ladle. Use a smaller one more than once, or order one from KitBox." % want_oz, Kit.TOMATO]
-			if pz.sauce == "": return ["Scoop %s of %s, drop it in the middle, then spread it out to the rim with the back of the ladle." % [Data.oz_text(pz.spec_of(pz.rec.sauce)), Data.ING[pz.rec.sauce].name.to_lower()], Kit.INK]
+			if pz.sauce == "": return ["%s %s of %s, drop it in the middle, then spread it out to the rim with the back of the ladle." % ["Tap the sauce pan to scoop" if fp_mode else "Scoop", Data.oz_text(pz.spec_of(pz.rec.sauce)), Data.ING[pz.rec.sauce].name.to_lower()], Kit.INK]
 			return ["Spread the sauce out evenly to the rim: drag the back of the ladle round in a spiral (%d%% covered)." % (pz.cov(pz.sauce_amt) * 100), Kit.MUTED], 15)
 
 func _side_oven() -> void:
@@ -2084,9 +2105,10 @@ func _side_oven() -> void:
 			var word := "dying" if f < 0.6 else ("low" if f < 0.85 else ("just right" if f <= 1.15 else "fierce"))
 			if Equip.has("ir_thermo"): return ["Fire: %s · floor %d °C (infrared)" % [word, 180 + 250 * f], Kit.BASIL if f >= 0.85 and f <= 1.15 else Kit.CHEESE]
 			return ["Fire: looks %s (no infrared thermometer)" % ("low" if f < 0.85 else ("about right" if f <= 1.2 else "fierce")), Kit.MUTED], 19)
-		var lb := Kit.button("", add_log, "primary", 18)
-		palette.add_child(lb)
-		info_rows.append([lb, func(): return ["Add a log (%d left)" % int(Stock.have("wood")), Kit.DARK]])
+		if not fp_mode:                         # in 3D the logs are stacked beside the oven mouth
+			var lb := Kit.button("", add_log, "primary", 18)
+			palette.add_child(lb)
+			info_rows.append([lb, func(): return ["Add a log (%d left)" % int(Stock.have("wood")), Kit.DARK]])
 	for o in oven.mine():
 		_info(func():
 			var rng: Array = o.pz.bake_range()
@@ -2156,21 +2178,19 @@ func rail_tap(i: int) -> void:
 		return
 	if pan.q > 0.5:
 		var it: Dictionary = Data.ING[id]
-		if view == "bench" and bench != null and bench.stage == "top" and not it.after:
-			if it.kind == "sauce":
-				tool = id
-				scoop()
-				return
-			if ladle_g > 0.0:
-				_drop_ladle()
-				Kit.main.toast("The sauce in the ladle went in the middle")
-			tool = id
+		if tool == id and it.kind != "sauce":          # tapping what you are holding puts it back: hands free
+			tool = ""
 			dirty = true
-		elif view == "board" and it.after:
+			return
+		if it.kind == "sauce" and _target() != null:
 			tool = id
-			dirty = true
-		else:
-			Kit.main.toast("%s goes on %s" % [it.name, "after the oven, on the board" if it.after else "before the oven"])
+			scoop()
+			return
+		if ladle_g > 0.0:
+			_drop_ladle()
+			Kit.main.toast("The sauce in the ladle went in the middle")
+		tool = id                                       # whatever you pick up goes on wherever you put it, whenever
+		dirty = true
 		return
 	if Stock.refill_source(id) > 0.5: refill_now(i)
 	elif Data.needs_prep(id) and Stock.have(id) > 0:

@@ -99,7 +99,12 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   - Pizzas on the oven deck can become real meshes, and the shelf a real peel.
   - Keep the touch mapping: either keep the quad as an invisible hit plane (`FPSurface.to_px`), or raycast onto the new
     mesh and convert to the same bench coordinates.
-- **Tappable 3D objects**: the gastro pans on the rail (fill level, the topping in your hand highlighted), the portion
+- **No step buttons.** The owner wants the pizza free: "Don't need the base is ready button, get rid of the buttons.
+  The dough is ready to go in the oven the moment the dough touches the table. Ingredients can be put on whenever,
+  wherever." So the pizza has no stages. Empty hand shapes, two fingers always stretch, a held topping goes on where
+  your finger goes, turning to the oven carries the pizza on the peel, and the pass, bin, sheeter and log stack are
+  objects in the room. Keep it that way: no buttons for steps.
+- **Tappable 3D objects**: the pass, the bin, the dough sheeter and the logs beside a wood oven; the gastro pans on the rail (fill level, the topping in your hand highlighted), the portion
   ladles on their rack, the paper tickets on the ticket rail (with a patience strip), customers with their markers,
   tables, delivery-app riders and the delivery crates by the back door. Each is a StaticBody3D with an `act` meta;
   keep that when you swap in a model.

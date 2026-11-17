@@ -51,13 +51,25 @@ you. The classic 2D layout can be switched back on from the Today page.
 The stations (the same in both layouts):
 - **Front**: customers walk up to the hatch and queue (van, kiosk), or wait at the door to be seated, order at the
   table, eat and ask for the bill (shop and bigger). Tap anyone with a marker: ORDER, FOOD UP, SEAT, BILL, CLEAR.
-- **Bench**: the marble top of the pizza counter, with the rail of gastro pans above it. Tap a ticket and open the dough ball. Hand-stretched bases: press out with one finger, leaving a rim,
-  then spread two fingers to stretch and twist them to turn. Thin bases: roll with the pin. Deep pan: push into the pan.
-  Then top it by weight against the ticket's recipe card, taking each topping from its pan on the rail. Sauce goes on
-  with a portion ladle: scoop from the pan (a 2 oz ladle holds exactly 2 oz), drop it in the middle, then spread it
-  out with the back of the ladle in circles. A standard pizza takes 2 oz, a New York one 3 oz.
-- **Oven**: drag the pizza off the shelf onto the deck. Drag its edge to spin it. Drag it out when it is done.
-- **Board**: swipe to slice, add anything that goes on after the oven, send it to the pass.
+- **Bench**: the marble top of the pizza counter, with the rail of gastro pans above it. Tap a ticket and the dough ball
+  is on the bench. There are no steps and no "base is ready" button: shape it, top it and take it to the oven in
+  whatever order you like.
+  - With an empty hand, one finger presses the dough out (leave a rim) and two fingers stretch and twist it. Thin
+    bases: roll with the pin (or tap the sheeter). Deep pan: push into the pan. Two fingers always stretch, even
+    while you hold a topping.
+  - Tap a pan on the rail to pick that topping up; one finger then puts it on, anywhere, any time. Tap the pan again
+    to put it back and have your hands free.
+  - Sauce goes on with a portion ladle: tap the sauce pan to scoop (a 2 oz ladle holds exactly 2 oz), drop it in the
+    middle, spread it out with the back of the ladle in circles. Pick the size on the ladle rack; tap the ladle you
+    hold to hang it back. A standard pizza takes 2 oz, a New York one 3 oz.
+  - The moment the dough is on the bench it can go in the oven: turn to the oven and it comes with you on the peel
+    (turn back without loading it and it comes back). Starting the next ticket sends the one on the bench to the shelf
+    by the oven.
+- **Oven**: drag the pizza off the shelf onto the deck. Drag its edge to spin it. Drag it out when it is done. Wood
+  ovens: tap the stack of logs beside the mouth to feed the fire.
+- **Board**: swipe across with an empty hand to slice; anything you pick up goes on wherever you put it (sauce or
+  cheese after the oven is judged as uncooked; finishing toppings belong here). Tap the pass behind the board to send
+  it out. The bin is at the end of the counter.
 - **Prep**: the rail and the tubs. Refill an empty pan from the tubs; when the tubs run out, prep more (you are tied
   up while you do it), let a prep cook or pizzaiolo do it, or 86 the pizzas that need it. Deliveries that turn up
   mid-shift wait here at the back door.

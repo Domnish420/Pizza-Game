@@ -9,7 +9,9 @@ extends Control
 ## On a computer the left mouse button is one finger; the right button (or Shift + left) is two fingers
 ## spread either side of the middle.
 ##
-## Topping: drag to spread sauce and cheese, tap or drag to place toppings. Cutting board: swipe to slice.
+## There are no steps: the moment the dough is on the bench you can shape it, top it (pick a topping up from its pan
+## and one finger puts it on; two fingers still stretch) or take it to the oven. Cutting board: swipe to slice with an
+## empty hand; anything picked up goes on wherever you put it.
 
 const S := 320.0
 const C := Vector2(160, 160)     # where the pizza's centre sits
@@ -86,9 +88,11 @@ func _gui_input(e: InputEvent) -> void:
 		else: _mirror(mouse_at, p)
 		mouse_at = p
 
-func _shaping():
+## the dough on the bench, if your fingers are working it: two fingers always stretch it; one finger presses it out
+## when your hand is empty (holding a topping or the ladle, one finger puts that on instead)
+func _shaping(two: bool = false):
 	var pz = svc.bench
-	return pz if (_v() == "bench" and pz != null and pz.stage == "shape") else null
+	return pz if (_v() == "bench" and pz != null and pz.stage == "shape" and (two or svc.tool == "")) else null
 
 ## one finger goes down
 func _down(p: Vector2) -> void:
@@ -143,7 +147,7 @@ func _up(p: Vector2) -> void:
 
 ## one of two (or more) fingers moves
 func _two(index: int, prev: Vector2, p: Vector2) -> void:
-	var pz = _shaping()
+	var pz = _shaping(true)
 	if pz == null: return
 	var other = null
 	for i in touches:
@@ -161,7 +165,7 @@ func _two(index: int, prev: Vector2, p: Vector2) -> void:
 
 ## mouse stand-in for two fingers: the second finger mirrors the first through the middle of the dough
 func _mirror(prev: Vector2, p: Vector2) -> void:
-	var pz = _shaping()
+	var pz = _shaping(true)
 	if pz == null: return
 	match pz.base.method:
 		"hand":

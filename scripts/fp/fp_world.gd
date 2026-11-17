@@ -68,6 +68,7 @@ var crates: Node3D
 var mouse_node: Node3D
 var float_labels := []
 var hands := []                        # [{node, rest, target}]
+var held: MeshInstance3D               # what is in your right hand
 var ptr := {}                          # pointer index -> what it is doing
 var touch_seen := false
 var _mats := {}
@@ -230,6 +231,17 @@ func _mk_room(r: Node3D) -> void:
 ## the pizza counter: marble top, the bench, the rail of pans behind it, the ticket rail above
 func _counter() -> void:
 	_prop("counter", Vector3.ZERO, _mk_counter)
+	# what used to be buttons: the pass you send pizzas out on, the bin, the dough sheeter
+	var pass_n := _prop("pass", Vector3(1.47, 0.92, -1.0), _mk_pass)
+	_tappable(pass_n, Vector3(0.32, 0.16, 0.24), Vector3(0, 0.06, 0), {"kind": "pass"})
+	job_labels.pass = _small_label("Pass", Vector3(0, 0.2, 0), pass_n)
+	var bin_n := _prop("bin", Vector3(-0.62, 0.92, -0.78), _mk_bin)
+	_tappable(bin_n, Vector3(0.18, 0.2, 0.18), Vector3(0, 0.08, 0), {"kind": "bin"})
+	job_labels.bin = _small_label("Bin", Vector3(0, 0.22, 0), bin_n)
+	if float(Game.tier("roller").auto) > 0.0:
+		var sh := _prop("sheeter", Vector3(-0.62, 0.92, -0.45), _mk_sheeter)
+		_tappable(sh, Vector3(0.3, 0.3, 0.3), Vector3(0, 0.12, 0), {"kind": "sheeter"})
+		job_labels.sheeter = _small_label("Sheeter", Vector3(0, 0.36, 0), sh)
 	if svc == null: return
 	var s := FPSurface.new()
 	s.setup("bench", ctrls.bench, Vector2i(640, 640), Vector2(0.6, 0.6), true, true)
@@ -245,6 +257,30 @@ func _mk_counter(r: Node3D) -> void:
 	var glass := _box(Vector3(1.6, 0.01, 0.2), Vector3(0, 1.12, -1.0), Color(0.85, 0.95, 1.0, 0.08), r, 0.05)
 	glass.rotation_degrees.x = 25                                                                   # sneeze guard
 	_box(Vector3(1.7, 0.02, 0.03), Vector3(0, 1.96, -1.06), Color("8d969b"), r, 0.3, 0.8)         # ticket rail
+
+func _small_label(text: String, at: Vector3, parent: Node3D) -> Label3D:
+	var l := _label(text, at, 34, Color.WHITE, parent, true, 0.0009)
+	l.fixed_size = true
+	l.no_depth_test = false
+	return l
+
+func _mk_logs(r: Node3D) -> void:
+	for i in 5:
+		var lg := _cyl(0.035, 0.24, Vector3(-0.04 + (i % 3) * 0.04, 0.04 + (i / 3) * 0.07, 0), Color("6b4a2b"), r)
+		lg.rotation_degrees.z = 90
+
+func _mk_pass(r: Node3D) -> void:
+	_box(Vector3(0.3, 0.06, 0.22), Vector3(0, 0.03, 0), Color("c3c9cc"), r, 0.25, 0.85)          # the heated pass shelf
+	_box(Vector3(0.27, 0.005, 0.19), Vector3(0, 0.063, 0), Color(1.0, 0.55, 0.3), r)            # glowing top
+
+func _mk_bin(r: Node3D) -> void:
+	_cyl(0.07, 0.14, Vector3(0, 0.07, 0), Color("4a4a4a"), r)
+	_cyl(0.075, 0.015, Vector3(0, 0.145, 0), Color("333333"), r)
+
+func _mk_sheeter(r: Node3D) -> void:
+	_box(Vector3(0.28, 0.16, 0.26), Vector3(0, 0.08, 0), Color("d9dcdc"), r, 0.3, 0.5)
+	var roller := _cyl(0.03, 0.26, Vector3(0, 0.2, 0), Color("c3c9cc"), r, 0.8)
+	roller.rotation_degrees.z = 90
 
 func _board_counter() -> void:
 	_prop("counter.side", Vector3.ZERO, _mk_side)
@@ -264,6 +300,10 @@ func _mk_side(r: Node3D) -> void:
 func _oven() -> void:
 	var kind: String = Game.tier("oven").type
 	_prop("oven." + kind, Vector3.ZERO, _mk_oven.bind(kind))
+	if Game.tier("oven").type == "wood":       # the logs, stacked beside the mouth
+		var logs := _prop("logs", Vector3(1.08, 0.62, 0.74), _mk_logs)
+		_tappable(logs, Vector3(0.2, 0.3, 0.26), Vector3(0, 0.15, 0), {"kind": "log"})
+		job_labels.logs = _small_label("Logs", Vector3(0, 0.38, 0), logs)
 	if svc == null:                         # between services: the oven door, closed
 		_box(Vector3(0.02, 0.5, 0.7), Vector3(1.04, 1.1, 0.2), Color("2b2b2b"), self, 0.5, 0.6)
 		_tappable(self, Vector3(0.1, 0.8, 1.2), Vector3(1.1, 1.1, 0.2), {"kind": "job", "job": "oven"})
@@ -399,7 +439,7 @@ func _back_of_house() -> void:
 	var trap := _prop("trapbox", Vector3(-1.3, 0, 1.12), _mk_trapbox)
 	_job("traps", trap, Vector3(0.35, 0.3, 0.3), Vector3(0, 0.12, 0), Vector3(0, 0.45, 0))
 	# pizza boxes on the shelf above the side counter: flat ones, and the folded stack
-	var bx := _prop("boxes", Vector3(1.32, 1.42, -0.98), _mk_boxshelf)
+	var bx := _prop("boxes", Vector3(1.32, 1.8, -1.0), _mk_boxshelf)
 	_job("boxes", bx, Vector3(0.62, 0.4, 0.4), Vector3(0, 0.15, 0), Vector3(0, 0.55, 0))
 	# the sink, with the dirty tubs in it
 	var sink := Node3D.new()
@@ -542,9 +582,16 @@ func _sync_jobs() -> void:
 	elif morning: L.open.text = "OPEN AT\n%s" % Data.hhmm(max(Day.now(), Day.open_time()))
 	else: L.open.text = "LOCK UP"
 	L.open.modulate = Color("f4c64f") if svc == null else Kit.BASIL
+	if L.has("logs"): L.logs.text = "Logs (%d) · tap to feed the fire" % int(Stock.have("wood")) if svc != null else "Logs (%d)" % int(Stock.have("wood"))
+	if L.has("pass"):
+		var on_pass: int = svc.tickets.filter(func(tk): return tk.state == "pass").size() if svc != null else 0
+		L.pass.text = ("Pass · tap to send it out" if svc != null and svc.board.size() > 0 else "Pass") + ((" · %d ready" % on_pass) if on_pass > 0 else "")
+		L.pass.modulate = Kit.CHEESE if svc != null and svc.board.size() > 0 else Color.WHITE
 	var here: Array = JOBS_AT.get(cur_view(), [])
 	for j in L:
-		if j == "open": continue
+		if j in ["open", "pass", "bin", "sheeter", "logs"]:
+			L[j].visible = svc != null or j == "open"
+			continue
 		if svc != null: L[j].visible = j == "crates" and G.s.dock.size() > 0       # during service only a delivery needs you
 		else: L[j].visible = here.has(j) and (j != "crates" or G.s.dock.size() > 0)
 
@@ -564,6 +611,15 @@ func _camera() -> void:
 		var rest := Vector3(0.22 * side, -0.27, -0.46)
 		h.position = rest
 		hands.append({"node": h, "rest": rest, "target": null})
+	# what you are holding: a handful of the topping, or the ladle
+	held = MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.035
+	sm.height = 0.05
+	held.mesh = sm
+	held.position = Vector3(0, 0.03, -0.06)
+	held.visible = false
+	hands[0].node.add_child(held)
 
 func _mk_hand(r: Node3D) -> void:
 	var arm := _cyl(0.04, 0.38, Vector3(0, 0, 0.19), Color("d9a77f"), r)
@@ -851,6 +907,12 @@ func _sync_misc(dt: float) -> void:
 		else: l.visible = false
 
 func _sync_hands(dt: float) -> void:
+	var tool: String = svc.tool if svc != null else ""
+	held.visible = tool != ""
+	if tool != "":
+		var sauce: bool = Data.ING[tool].kind == "sauce"
+		held.material_override = _mat(Color(Data.ING[tool].col) if not sauce or svc.ladle_g > 0.0 else Color("c3c9cc"), 0.6, 0.8 if sauce and svc.ladle_g <= 0.0 else 0.0)
+		held.scale = Vector3(1.4, 0.7, 1.4) if sauce else Vector3.ONE
 	for i in hands.size():
 		var h: Dictionary = hands[i]
 		var goal: Vector3 = h.rest
@@ -962,12 +1024,37 @@ func _tap(act: Dictionary) -> void:
 		else: Kit.main.toast("That can wait until after service")
 		return
 	match act.kind:
+		"pass":
+			if svc.board.is_empty():
+				Kit.main.toast("Nothing on the board to send out. Pull it from the oven and slice it first")
+				return
+			svc.serve()
+		"bin":
+			var pz = (svc.board[0] if svc.board.size() > 0 else null) if svc.view == "board" else svc.bench
+			if pz == null:
+				Kit.main.toast("Nothing to bin")
+				return
+			Kit.main.confirm("Bin it?", "The %s goes in the bin and its ticket goes back on the rail." % pz.rec.name, "Bin it", svc.bin)
+		"log":
+			svc.add_log()
+			Art.sfx("tap")
+		"sheeter":
+			if svc.bench == null or svc.bench.base.method != "roll":
+				Kit.main.toast("The sheeter rolls thin bases: put a Roman ball on the bench first")
+				return
+			svc.set_view("bench")
+			svc.sheeter()
+			Art.sfx("tap")
 		"pan":
 			if svc.view in ["front", "oven", "prep"]: svc.set_view("bench")
 			svc.rail_tap(int(act.i))
 		"ladle":
 			if svc.ladle_g > 0.0:
 				Kit.main.toast("Drop what is in the ladle first")
+				return
+			if svc.tool != "" and Data.ING[svc.tool].kind == "sauce" and int(act.oz) == svc.ladle_oz:
+				svc.tool = ""                    # hang the ladle back up: hands free
+				svc.dirty = true
 				return
 			svc.ladle_oz = int(act.oz)
 			if svc.bench != null and svc.bench.rec.sauce != "": svc.tool = svc.bench.rec.sauce

@@ -31,6 +31,10 @@ coordinates; small props are placed at their own position, so model them around 
 | `fp.ticket` | A paper order ticket, 0.19 x 0.26 m, hanging from its top; the text is drawn by code |
 | `fp.hand.right`, `fp.hand.left` | Forearm and hand, attached to the camera, pointing forward (-Z), fingertips at the origin |
 | `fp.mouse` | A mouse running across the floor |
+| `fp.pass` | The heated pass shelf behind the cutting board where finished pizzas go out (tap target) |
+| `fp.bin` | The scraps bin at the left end of the counter |
+| `fp.sheeter` | A tabletop dough sheeter (only with the sheeter upgrade) |
+| `fp.logs` | Logs stacked beside a wood oven's mouth |
 | `fp.fridge` | Upright fridge against the back wall, door facing -Z (placed at -0.62, 0, 0.97) |
 | `fp.thermometer` | The fridge thermometer on the door |
 | `fp.freezer` | Chest freezer (only when the premises has one) |

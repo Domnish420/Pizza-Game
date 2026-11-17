@@ -38,6 +38,7 @@ var bake := []             # doneness of each edge sector (1.0 = done)
 var floor := 0.0           # doneness of the underside
 var turn := 0.0            # which way it faces in the oven
 var cuts := []             # [{a, b, d: distance of the cut from the centre}]
+var late := {}             # sauce or cheese put on after the oven: ingredient -> grams
 var bake_target := 1.0     # 1.15 for "well done"
 var carry := 0.0           # sauce on the back of the ladle mid-stroke
 var inside_n := -1         # how many sauce cells lie on the base (worked out once the base is shaped)
@@ -296,6 +297,13 @@ func assess(c: Dictionary) -> Dictionary:
 		even.append(evenness(cheese_amt))
 		parts.append(portion_score(portion(rec.cheese)) if ok else 0.0)
 		_portion_note(a.notes, rec.cheese)
+	# sauce or cheese that went on after the oven never cooked
+	for id in [rec.sauce, rec.cheese]:
+		if id == "" or not late.has(id): continue
+		var share: float = late[id] / max(1.0, grams.get(id, 0.0))
+		if share > 0.25:
+			parts.append(1.0 - share)
+			a.notes.append("The %s went on after the oven" % Data.ING[id].name.to_lower())
 	var lay := []
 	for t in rec.tops:
 		var ti := top_info(t)
