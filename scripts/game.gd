@@ -4,12 +4,13 @@ extends Node
 ## Stock lives in `Stock`, buying in `Market`, the clock in `Day`, cleaning and pests in `Hygiene`,
 ## a day's trading in `ServiceScreen`.
 
-const SAVE_PATH := "user://crust_empire_v5.json"
+const SAVE_PATH := "user://crust_empire_v6.json"
 var s := {}
 
 func _ready() -> void:
 	if not load_game():
 		new_game()
+		s.fresh = true
 
 # ---------- save ----------
 func new_book() -> Dictionary:
@@ -24,6 +25,7 @@ func new_game() -> void:
 		"stock": {}, "dough": [], "baskets": {}, "orders": [], "payables": [], "house_grade": 2,
 		"clock": Day.START, "late_start": 0, "staff_left": {}, "dock": [], "prepped": {}, "rail": [], "washup": {"2": 0, "4": 0}, "notes": [],
 		"regulars": [], "critic_next": randi_range(8, 16), "buzz": {"until": 0, "mult": 1.0},
+		"templog": [], "checklog": [], "story": {"stage": "free"},
 		"vent": {"fridge": 2, "dry": 2}, "clean": {"boh": 85.0, "foh": 85.0},
 		"pests": {"level": 8.0, "laid": 0, "sprung": 0}, "hygiene": {"rating": -1, "day": 0, "notes": [], "next": randi_range(6, 12), "at": -1.0},
 		"book": new_book(), "books": [],
@@ -47,7 +49,7 @@ func save_game() -> void:
 func load_game() -> bool:
 	if not FileAccess.file_exists(SAVE_PATH): return false
 	var d = JSON.parse_string(FileAccess.open(SAVE_PATH, FileAccess.READ).get_as_text())
-	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("rail"): return false
+	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("templog"): return false
 	s = d
 	for k in Data.UPG: s.upg[k] = int(s.upg.get(k, 0))
 	for k in ["day", "level", "venue", "pitch", "tables", "price", "sid", "oid", "cycle_start", "ratings", "xp", "house_grade", "clock", "late_start"]:
@@ -219,7 +221,7 @@ func delivery_covers(day: int = -1) -> int:
 
 ## pizzas you can expect to sell on a given day
 func covers(day: int = -1) -> int:
-	return int(round(venue().traffic * traffic_mult() * day_factor(day) * Hygiene.footfall())) + delivery_covers(day)
+	return int(round(venue().traffic * traffic_mult() * day_factor(day) * Hygiene.footfall() * Story.traffic())) + delivery_covers(day)
 
 func calc() -> Dictionary:
 	var v := venue()
@@ -245,7 +247,7 @@ func calc() -> Dictionary:
 	c.rep_mult = 0.4 + s.rep * 0.22
 	c.day_factor = day_factor()
 	c.delivery = delivery_covers()
-	c.customers = int(round(v.traffic * traffic_mult() * c.day_factor * Hygiene.footfall()))
+	c.customers = int(round(v.traffic * traffic_mult() * c.day_factor * Hygiene.footfall() * Story.traffic()))
 	c.open = Day.open_time()
 	c.close = Day.close_time()
 	c.total = c.customers + c.delivery

@@ -162,6 +162,10 @@ func inspect() -> Dictionary:
 	else: notes.append("Poor stock rotation: new stock in front of old")
 	if Game.s.pests.laid >= traps_wanted(): score += 0.4
 	else: notes.append("Not enough pest control in place")
+	var logs := Checks.log_rate(7)
+	score += 0.6 * logs
+	if logs < 0.7: notes.append("Temperature records missing or incomplete")
+	score *= 5.0 / 5.6
 	var rating := int(clamp(round(score), 0, 5))
 	if p >= 55.0: rating = min(rating, 1)
 	elif p >= 30.0: rating = min(rating, 2)

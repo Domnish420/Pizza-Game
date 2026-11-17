@@ -65,6 +65,64 @@ func _ready() -> void:
 		hc[1].add_child(Kit.label("\n".join(G.s.notes), 15, Kit.MUTED, true))
 	add_child(hc[0])
 
+	# the checklist and the temperature log
+	var kind := "open" if morning else "close"
+	var lc = Kit.card(("Opening" if morning else "Closing") + " checklist" + ((" (set by %s)" % Story.BOSS) if Story.role() == "pizzaiolo" else ""))
+	var items := Checks.items(kind)
+	var done_n := 0
+	for it in items:
+		if it.done: done_n += 1
+	for it in items:
+		lc[1].add_child(Kit.label(("[x] " if it.done else "[ ] ") + it.text + ("" if it.done else "   ->  " + it.hint), 16, Kit.BASIL if it.done else Kit.INK, true))
+	lc[1].add_child(Kit.label("%d of %d done." % [done_n, items.size()], 14, Kit.MUTED))
+	if Story.role() != "pizzaiolo":
+		var th := Kit.hbox(8)
+		for st in Checks.stores_to_log():
+			var b := Kit.button("Record %s temperature · 1 min" % Data.STORE_NAME[st].to_lower(), func():
+				var t := Checks.record(st)
+				var notes := Day.spend(1)
+				Game.save_game()
+				Kit.main.toast("%s: %.1f °C written in the log%s" % [Data.STORE_NAME[st], t, "" if st == "freezer" or (t >= 1.0 and t <= 5.0) else ". OUT OF RANGE: adjust the vents"], st == "fridge" and (t < 1.0 or t > 5.0))
+				if notes.size() > 0: Kit.main.message("Meanwhile", "\n".join(notes), "OK")
+				hub.render(), "ghost", 15)
+			b.disabled = Checks.logged(st)
+			th.add_child(b)
+		lc[1].add_child(th)
+		lc[1].add_child(Kit.label("Temperature log, last 7 days: %d%% of readings taken. Inspectors check it." % (Checks.log_rate(7) * 100), 14, Kit.MUTED))
+	add_child(lc[0])
+
+	# senior: tomorrow's prep list for the junior
+	if Story.role() == "senior" and not morning:
+		var sc = Kit.card("Tomorrow's prep list for %s" % Story.JUNIOR)
+		sc[1].add_child(Kit.label("%s comes in at 7 and preps exactly this, into tubs, then sets up the counter. Too little and you are prepping in the rush; too much and it goes in the bin." % Story.JUNIOR, 14, Kit.MUTED, true))
+		var sheet: Dictionary = Game.s.story.sheet if int(Game.s.story.get("sheet_day", -1)) == G.s.day + 1 else {}
+		var draft: Dictionary = sheet.duplicate()
+		if draft.is_empty():
+			for row in Day.prep_list(G.s.day + 1): draft[row.id] = snapped(row.need, 50.0)
+		for id in draft:
+			var h := Kit.hbox(8)
+			var nm := Kit.label(Data.ING[id].name, 17)
+			nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			h.add_child(nm)
+			var ql := Kit.label(Data.qty(id, draft[id]) + " " + Data.ING[id].prep.as, 17, Kit.CHEESE)
+			ql.custom_minimum_size.x = 160
+			var stp: float = 50.0 if draft[id] < 1000.0 else 250.0
+			for step in [-stp, stp]:
+				var bb := Kit.button(("-" if step < 0 else "+") + "%d g" % stp, func():
+					draft[id] = max(0.0, draft[id] + step)
+					ql.text = Data.qty(id, draft[id]) + " " + Data.ING[id].prep.as, "ghost", 14)
+				if step < 0: h.add_child(bb)
+				else:
+					h.add_child(ql)
+					h.add_child(bb)
+			sc[1].add_child(h)
+		sc[1].add_child(Kit.button("Leave this list for %s" % Story.JUNIOR if sheet.is_empty() else "Update the list", func():
+			Story.set_sheet(draft)
+			Game.save_game()
+			Kit.main.toast("Prep list left on the board for %s" % Story.JUNIOR)
+			hub.render(), "primary", 16))
+		add_child(sc[0])
+
 	# the back door
 	if G.s.dock.size() > 0:
 		var dc = Kit.card("At the back door")

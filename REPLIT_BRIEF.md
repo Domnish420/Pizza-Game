@@ -107,6 +107,13 @@ every customer (`parties[].pos` and `.target`), seats them, and tracks waiting, 
 venue (van on a street, kiosk in a market, then dining rooms), walking, sitting and eating animations, speech
 bubbles, the hatch, and the pizza being handed over. Layout rules for the backgrounds are in `ART_KEYS.md`.
 
+### 4a. Story mode
+
+`scripts/story.gd` runs the career: pizzaiolo at Bella Napoli (fictional), senior pizzaiolo, then your own van.
+The boss is Marco and the crew are Luca, Sofia, Tom, Aisha and Kofi (all fictional). Right now they speak through
+text in dialogs and on the Today page. They need faces, a few lines of personality, and small scenes for the
+moments that matter: the first morning, each shift review, the promotion, and handing in your notice.
+
 ### 4b. The counter and the hands-on jobs
 
 The bench is the marble top of the pizza counter, with the rail of gastro pans above it (`scripts/rail_view.gd`).

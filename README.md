@@ -14,6 +14,13 @@ Every system is built and playable. All artwork is placeholder shapes: see `ART_
 
 The project is 1280x720, landscape, Compatibility renderer, so it exports to Android, iOS and the web.
 
+## Story or free play
+
+The game opens on a choice. **Story** starts you as a pizzaiolo at Bella Napoli: the boss sets your checklist, you
+prep, set up the counter and make pizzas, and each shift is reviewed and paid into your savings. Promotion to senior
+pizzaiolo hands you the back of house (temperature logs, deliveries, rotation, cleaning down, dough, ordering and the
+junior's prep list). Then your savings buy a van and you go it alone. **Free play** starts straight away in the van.
+
 ## A day
 
 The day runs on a clock. You start at 07:00 and the venue opens at its opening time (11:30 for the van).
@@ -113,6 +120,8 @@ and invoices are paid when they fall due.
 | `scripts/prep_task.gd`, `clean_task.gd`, `shelf_task.gd` | Prepping, cleaning and unpacking by hand |
 | `scripts/rail_view.gd` | The rail of gastro pans above the bench |
 | `scripts/orders.gd` | Order notes and allergies turned into a recipe card per ticket |
+| `scripts/checks.gd` | Opening and closing checklists, the temperature log (autoload `Checks`) |
+| `scripts/story.gd` | The career: the employer, the crew, shift reviews, promotions, going solo (autoload `Story`) |
 | `scripts/kit.gd`, `main.gd`, `meter.gd` | UI helpers, screen switching, gauges |
 
 `web-prototype/` holds the first HTML version, kept for reference only.

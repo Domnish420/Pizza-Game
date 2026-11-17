@@ -104,7 +104,7 @@ func spread(ing: String, p: Vector2, seg: float, brush: float) -> bool:
 			cheese = ing
 		elif cheese != ing: return true
 	var amt: Dictionary = sauce_amt if is_sauce else cheese_amt
-	var dep: float = clamp(seg / (2.0 * brush), 0.04, 0.6)
+	var dep: float = clamp(seg / (2.0 * brush), 0.04, 0.6) * 17.0 / brush     # a bigger ladle covers faster, not thicker
 	var adds := []
 	var want := 0.0
 	for i in cells.size():

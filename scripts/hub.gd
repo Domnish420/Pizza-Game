@@ -46,7 +46,7 @@ func render() -> void:
 	Kit.clear(rail)
 	Kit.clear(page)
 	var v := G.venue()
-	var name_l := Kit.label(v.name, 26)
+	var name_l := Kit.label(Story.EMPLOYER if Story.employed() else v.name, 26)
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_l.clip_text = true
 	top.add_child(name_l)
@@ -55,14 +55,17 @@ func render() -> void:
 	top.add_child(Kit.chip(Data.hhmm(Day.now()) + (("  ·  opens " + Data.hhmm(Day.open_time())) if G.s.phase == "morning" else "  ·  evening"), Kit.TOMATO if late else Kit.PANEL, Color.WHITE if late else Kit.CHEESE, 17))
 	top.add_child(Kit.chip("%.1f / 5" % G.s.rep, Kit.PANEL, Kit.INK, 17))
 	top.add_child(Kit.chip("Level %d  (%d / %d)" % [G.s.level, G.s.xp, G.xp_need(G.s.level)], Kit.PANEL, Kit.INK, 17))
-	top.add_child(Kit.label(Kit.money(G.s.cash), 28, Kit.TOMATO if G.s.cash < 0 else Kit.CHEESE))
+	if Story.employed(): top.add_child(Kit.label("Savings " + Kit.money(G.s.story.savings), 24, Kit.CHEESE))
+	else: top.add_child(Kit.label(Kit.money(G.s.cash), 28, Kit.TOMATO if G.s.cash < 0 else Kit.CHEESE))
 	if G.s.phase == "evening":
-		top.add_child(Kit.button("Lock up & sleep", _sleep, "primary", 22))
+		top.add_child(Kit.button("Clock off" if Story.employed() else "Lock up & sleep", _sleep, "primary", 22))
 	elif G.s.hygiene.get("closed_day", -1) == G.s.day:
 		top.add_child(Kit.button("Closed today", _closed_day, "ghost", 22))
 	else:
-		top.add_child(Kit.button("Open at " + Data.hhmm(max(Day.now(), Day.open_time())), _open, "danger", 22))
+		top.add_child(Kit.button(("Start service " if Story.employed() else "Open at ") + Data.hhmm(max(Day.now(), Day.open_time())), _open, "danger", 22))
+	var allowed: Array = {"pizzaiolo": ["home", "jobs", "menu"], "senior": ["home", "jobs", "suppliers", "stores", "dough", "menu"]}.get(Story.role(), [])
 	for t in TABS:
+		if allowed.size() > 0 and not allowed.has(t[0]): continue
 		var b := Kit.button(t[1], go.bind(t[0]), "tab_on" if tab == t[0] else "tab", 20)
 		b.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		rail.add_child(b)
@@ -96,10 +99,29 @@ func _page_jobs() -> void:
 	page.add_child(JobsPage.new(self))
 
 # ---------- Today ----------
+func _story_card() -> void:
+	var G := Game
+	var st: Dictionary = G.s.story
+	var title := "Your career"
+	if Story.employed(): title = "%s at %s" % ["Pizzaiolo" if Story.role() == "pizzaiolo" else "Senior pizzaiolo", Story.EMPLOYER]
+	var sc = Kit.card(title)
+	if G.s.notes.size() > 0 and G.s.phase == "morning":
+		sc[1].add_child(Kit.label("\n".join(G.s.notes), 16, Kit.INK, true))
+	var revs: Array = st.get("reviews", [])
+	if revs.size() > 0 and Story.employed():
+		var last: Dictionary = revs[-1]
+		sc[1].add_child(Kit.label("Last shift: %d / 100. %s: \"%s\"" % [last.score, Story.BOSS, " ".join(last.lines)], 15, Kit.MUTED, true))
+	sc[1].add_child(Kit.label("Next promotion:" if Story.employed() else "Goals:", 17, Kit.CHEESE))
+	for gl in Story.goals():
+		sc[1].add_child(Kit.label(("Done: " if gl[1] else "To do: ") + gl[0], 16, Kit.BASIL if gl[1] else Kit.INK, true))
+	if Story.employed(): sc[1].add_child(Kit.label("Wage %s a shift, paid into your savings. You will need them for your own van one day." % Kit.money(Story.WAGE[Story.role()]), 14, Kit.MUTED, true))
+	page.add_child(sc[0])
+
 func _page_home() -> void:
 	var G := Game
 	var c := G.calc()
 	var v := G.venue()
+	if Story.stage() != "free": _story_card()
 	var g := Kit.grid(2)
 	page.add_child(g)
 	var hero = Kit.card(G.date_text())
@@ -166,13 +188,21 @@ func _page_home() -> void:
 	if G.s.cash < 0: lines.append(["bad", "Overdrawn: the bank charges 5% a day."])
 	if int(G.s.upg.drinks) >= 3 and G.staff_of("bartender").is_empty(): lines.append(["warn", "The bar needs a bartender."])
 	if int(G.s.upg.delivery) > 0 and G.staff_of("driver").is_empty(): lines.append(["warn", "Delivery needs a driver."])
+	if Story.role() == "pizzaiolo":       # the boss handles ordering, dough and the stores
+		lines = lines.filter(func(l): return l[1].find("dough balls ready") >= 0 or l[1].find("prep") >= 0 or l[1].find("cover today") >= 0 or l[1].find("Kitchen") == 0)
 	for l in lines:
 		var col: Color = {"ok": Kit.BASIL, "warn": Kit.CHEESE, "bad": Kit.TOMATO, "info": Kit.MUTED}[l[0]]
 		todo[1].add_child(Kit.label(l[1], 17, col, true))
-	if G.s.day == 1 and G.s.phase == "morning":
+	if G.s.day == 1 and G.s.phase == "morning" and Story.stage() == "free":
 		todo[1].add_child(Kit.label("First day: the last owner left a tray of dough and some stock. Open up, take orders at the hatch, make each pizza to its recipe card. Tonight, make dough and order for tomorrow.", 15, Kit.MUTED, true))
 	g.add_child(todo[0])
 
+	if Story.employed():
+		var kc = Kit.card("Today's checklist")
+		for it in Checks.items("open" if G.s.phase == "morning" else "close"):
+			kc[1].add_child(Kit.label(("Done: " if it.done else "To do: ") + it.text + ("" if it.done else "  (" + it.hint + ")"), 16, Kit.BASIL if it.done else Kit.INK, true))
+		g.add_child(kc[0])
+		return
 	# where the van trades
 	if v.has("pitches"):
 		var pc = Kit.card("Today's pitch")
@@ -208,9 +238,9 @@ func _page_home() -> void:
 	else:
 		nc[1].add_child(Kit.label("You run the best pizzeria in town. Keep the ovens hot.", 18, Kit.MUTED, true))
 	nc[1].add_child(Kit.label("%d pizzas sold · %s taken all-time" % [G.s.pizzas, Kit.money(G.s.earned)], 15, Kit.MUTED))
-	var reset := Kit.button("Start over", func(): Kit.main.confirm("Start over?", "This wipes your save and puts you back in the van on day 1.", "Wipe my save", func():
+	var reset := Kit.button("Start over", func(): Kit.main.confirm("Start over?", "This wipes your save and takes you back to the start.", "Wipe my save", func():
 		Game.new_game()
-		Kit.main.show_hub()), "ghost", 15)
+		Kit.main.show_start()), "ghost", 15)
 	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	nc[1].add_child(reset)
 	g.add_child(nc[0])
@@ -326,6 +356,18 @@ func _page_menu() -> void:
 	var m := G.menu_now()
 	var g := Kit.grid(2)
 	page.add_child(g)
+	if Story.employed():
+		var ec = Kit.card("Tonight's menu: " + m.name)
+		ec[1].add_child(Kit.label("Learn the recipe cards: every gram over is the boss's money, every gram under is a customer who notices.", 15, Kit.MUTED, true))
+		for id in m.items:
+			var rr: Dictionary = Data.REC[id]
+			var h := Kit.hbox(8)
+			var nm := Kit.label("%s · %s" % [rr.name, ", ".join(rr.spec.keys().map(func(i): return "%s %s" % [Data.qty(i, rr.spec[i]), Data.ING[i].name.to_lower()]))], 17, Kit.INK, true)
+			h.add_child(nm)
+			h.add_child(Kit.button("Recipe card", recipe_card.bind(rr), "ghost", 15))
+			ec[1].add_child(h)
+		page.add_child(ec[0])
+		return
 	var cur = Kit.card("Now serving: " + m.name)
 	cur[1].add_child(Kit.label("%d day%s left on this menu. The percentage is food cost: what the recipe costs against what it sells for." % [G.cycle_left(), "" if G.cycle_left() == 1 else "s"], 15, Kit.CHEESE if G.cycle_left() <= 3 else Kit.MUTED, true))
 	_menu_lines(cur[1], m, true)
@@ -544,6 +586,7 @@ func _open() -> void:
 	_go_open()
 
 func _go_open() -> void:
+	Checks.note("open")
 	var notes := Day.wait_until(Day.open_time())
 	if Hygiene.level("boh") > 0: pass
 	var at: float = Game.s.hygiene.get("at", -1.0)
@@ -566,7 +609,7 @@ func _sleep() -> void:
 	var plan := G.dough_plan()
 	var short := 0
 	for k in plan: short += plan[k]
-	if short > 0 and G.staff_of("prep").is_empty():
+	if short > 0 and G.staff_of("prep").is_empty() and Story.role() != "pizzaiolo":
 		Kit.main.confirm("Go to bed without enough dough?", "Tomorrow needs about %d more dough balls. Dough must be made the day before." % short, "Sleep anyway", _do_sleep)
 	else:
 		_do_sleep()
@@ -574,6 +617,13 @@ func _sleep() -> void:
 func _do_sleep() -> void:
 	var G := Game
 	var lines := []
+	Checks.note("close")
+	var rev := {}
+	if Story.employed() and int(G.s.last.get("day", 0)) == G.s.day:
+		rev = Story.review(G.s.last)
+		G.s.story.reviews.append({"day": G.s.day, "score": rev.score, "lines": rev.lines})
+		while G.s.story.reviews.size() > 10: G.s.story.reviews.pop_front()
+	lines.append_array(Story.evening())
 	var made := G.auto_dough()
 	if made > 0: lines.append("Your prep cook made %d dough balls for tomorrow." % made)
 	if G.calc().manager:
@@ -596,5 +646,19 @@ func _do_sleep() -> void:
 	if n.pitch_reset: lines.append("Your pitch does not trade today, so you are back on the High Street.")
 	lines.append_array(n.morning)
 	if lines.is_empty(): lines.append("A quiet night. Nothing spoiled.")
+	G.s.notes = n.morning
+	G.save_game()
 	Kit.main.show_hub("home")
-	Kit.main.message(G.date_text(), "\n".join(lines), "Good morning")
+	if not rev.is_empty():
+		var txt := "%s gave your shift %d / 100.\n\n\"%s\"\n\nYou were paid %s. Savings: %s." % [Story.BOSS, rev.score, " ".join(rev.lines), Kit.money(rev.pay), Kit.money(G.s.story.savings)]
+		Kit.main.message("Your shift", txt, "Next", func():
+			Kit.main.message(G.date_text(), "\n".join(lines), "Good morning", func(): _maybe_promote(rev)))
+	else:
+		Kit.main.message(G.date_text(), "\n".join(lines), "Good morning")
+
+func _maybe_promote(rev: Dictionary) -> void:
+	if rev.get("promoted", "") == "": return
+	var title := "Promoted!" if rev.promoted == "senior" else "Going solo"
+	var text := Story.promote()
+	Kit.main.show_hub("home")
+	Kit.main.message(title, text, "Let's go")

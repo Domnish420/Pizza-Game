@@ -17,8 +17,18 @@ The game starts as a job in someone else's pizzeria and works up to running your
    yourself.
 4. **Your own restaurant.** Kiosk, shop, pizzeria, high street restaurant, flagship.
 
-Each stage has goals to pass before promotion (pizzas to standard, checklists completed, a clean inspection,
-a profitable week) and a boss who checks your work. The checklists reuse the jobs below.
+Each stage has goals to pass before promotion and a boss who checks your work. The checklists reuse the jobs below.
+
+- [x] Start screen: Story or Free play
+- [x] Pizzaiolo at Bella Napoli: the boss's opening and closing checklist, prep and counter, making pizzas;
+      the boss makes the dough, orders and keeps the temperature log; a wage into your savings every shift
+- [x] Shift reviews from the boss (pizzas, portions against the recipe cards, checklists) and promotion goals
+      (5 shifts averaging 70)
+- [x] Senior pizzaiolo: the full opening and closing checklists, temperature logs, deliveries, rotation, cleaning down,
+      dough, ordering, and tomorrow's prep list that the junior preps before you get in; reviewed on checklists,
+      waste, customers and hygiene; promotion needs 6 good shifts and a hygiene inspection of 3 or better
+- [x] Going solo: your savings buy the van, your level comes with you, career goals up to the flagship
+- [ ] Cut scenes and character art for the boss and crew; more story beats between promotions
 
 ## 1. Hands-on jobs
 
@@ -31,7 +41,7 @@ a profitable week) and a boss who checks your work. The checklists reuse the job
 - [x] Putting deliveries away by hand: each line behind or in front of the old stock
 - [ ] Traps placed on a floor plan where the mice actually come in
 - [ ] Folding and boxing takeaways
-- [ ] Fridge temperature logs and opening/closing checklists (needed for story mode)
+- [x] Fridge and freezer temperature logs (the inspector checks them) and opening/closing checklists
 
 ## 2. Customers as people
 
@@ -68,7 +78,7 @@ a profitable week) and a boss who checks your work. The checklists reuse the job
 
 ## 6. Finishing
 
-- [ ] Story mode (above)
+- [x] Story mode (above)
 - [ ] Settings and save slots
 - [ ] Balance and progression pass
 - [ ] Testing on real phones: two-finger stretching, performance at the flagship

@@ -1036,6 +1036,7 @@ func step(dt: float) -> void:
 	var idle: bool = tickets.is_empty() and bench == null and board.is_empty() and oven.items.is_empty() and oven.shelf.is_empty()
 	var anyone := parties.any(func(p): return p.state != "leave")
 	if idle and not anyone and t >= DAY: finish(false)
+	elif tickets.is_empty() and not anyone and t >= DAY + 20.0 and busy.is_empty(): finish(false)     # only pizzas nobody is waiting for are left: they are binned
 	elif idle and t > 5 and not anyone and busy.is_empty() and not G.active_recipes().any(func(rc): return sellable(rc)): finish(true)
 
 ## a pizzaiolo takes the dough and weighs out the toppings. Less skilled cooks are heavier-handed.
@@ -1086,7 +1087,11 @@ func to_pass(tk: Dictionary, res: Dictionary) -> void:
 	tk.state = "pass"
 	tk.res = res
 	r.xp += (10.0 + (res.look + res.taste) / 16.0) if res.mine else 4.0
-	if res.mine: r.mine += 1
+	if res.mine:
+		r.mine += 1
+		r.mine_q = r.get("mine_q", 0.0) + (res.look + res.taste) / 2.0
+		r.mine_cost = r.get("mine_cost", 0.0) + res.cost
+		r.mine_spec = r.get("mine_spec", 0.0) + res.spec_cost
 
 # ---------- your bench ----------
 func claim(tk: Dictionary) -> void:

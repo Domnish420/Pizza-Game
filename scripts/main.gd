@@ -38,7 +38,8 @@ func _ready() -> void:
 	toast_box.visible = false
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toast_box)
-	show_hub()
+	if Game.s.get("fresh", false): show_start()
+	else: show_hub()
 
 func _process(delta: float) -> void:
 	if toast_t > 0:
@@ -50,6 +51,32 @@ func show_hub(tab: String = "") -> void:
 	var hub := Hub.new()
 	if tab != "": hub.tab = tab
 	content.add_child(hub)
+
+## the title screen: story or free play
+func show_start() -> void:
+	Kit.clear(content)
+	var cc := CenterContainer.new()
+	cc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(cc)
+	var v := Kit.vbox(16)
+	v.custom_minimum_size.x = 760
+	cc.add_child(v)
+	var t := Kit.label("Crust Empire", 56, Kit.CHEESE)
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	v.add_child(t)
+	var st := Kit.card("Story")
+	st[1].add_child(Kit.label("Start as a pizzaiolo at %s. Learn the job to the boss's checklist, get promoted to senior pizzaiolo and run the kitchen, then go it alone with a pizza van and build your own empire." % Story.EMPLOYER, 18, Kit.MUTED, true))
+	st[1].add_child(Kit.button("Start the story", func():
+		Story.start()
+		show_hub("home"), "danger", 24))
+	v.add_child(st[0])
+	var fp := Kit.card("Free play")
+	fp[1].add_child(Kit.label("Skip the job: start straight away in your own pop-up van, doing everything yourself.", 18, Kit.MUTED, true))
+	fp[1].add_child(Kit.button("Start in the van", func():
+		Game.new_game()
+		show_hub("home"), "primary", 22))
+	v.add_child(fp[0])
 
 func start_service() -> void:
 	Kit.clear(content)

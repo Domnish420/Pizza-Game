@@ -44,6 +44,7 @@ func start_morning() -> Array:
 	Hygiene.roll_visit()
 	notes.append_array(arrivals())
 	notes.append_array(staff_prep())
+	notes.append_array(Story.morning())
 	return notes
 
 ## spend the player's time. Returns notes about anything that happened meanwhile

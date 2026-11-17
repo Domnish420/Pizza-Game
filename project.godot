@@ -17,6 +17,8 @@ Stock="*res://scripts/stock.gd"
 Market="*res://scripts/market.gd"
 Hygiene="*res://scripts/hygiene.gd"
 Day="*res://scripts/day.gd"
+Checks="*res://scripts/checks.gd"
+Story="*res://scripts/story.gd"
 Game="*res://scripts/game.gd"
 
 [display]
