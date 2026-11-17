@@ -91,6 +91,7 @@ func _ready() -> void:
 		var sc = Kit.card(Data.STORE_NAME[st])
 		if st == "fridge":
 			for l in G.s.dough:
+				if l.n <= 0: continue
 				sc[1].add_child(Kit.label("%d x %s dough · %s · %s" % [l.n, Data.DOUGHS[l.style].name, Stock.dough_status(l)[1], Data.grade_name(l.get("g", 2.0))], 16))
 		for id in ids:
 			var h := Kit.hbox(8)

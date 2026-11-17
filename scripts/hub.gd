@@ -128,7 +128,7 @@ func _page_home() -> void:
 	var short_tm := 0
 	for row in Market.par():
 		if row.short_tomorrow > 0: short_tm += 1
-	if short_tm > 0: lines.append(["warn", "%d ingredients will be short tomorrow. Order today for delivery in the morning." % short_tm])
+	if short_tm > 0: lines.append(["warn", "%d ingredients will be short tomorrow. Order today for delivery in the morning, or collect from the cash & carry." % short_tm])
 	for o in G.s.orders:
 		if int(o.due) == G.s.day + 1: lines.append(["info", "%s delivers tomorrow morning (%s)." % [Data.SUP[o.sup].name, Kit.cents(o.total)]])
 	for p in G.s.payables:

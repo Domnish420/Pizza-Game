@@ -25,7 +25,7 @@ func _ready() -> void:
 	if not open.any(func(sp): return sp.id == sel): sel = open[0].id
 	# who you can buy from
 	var lsc := ScrollContainer.new()
-	lsc.custom_minimum_size.x = 268
+	lsc.custom_minimum_size.x = 236
 	lsc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var lv := Kit.vbox(5)
 	lv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -71,7 +71,9 @@ func _ready() -> void:
 		cat = "" if i == 0 else cats[i - 1]
 		hub.render())
 	fr.add_child(ob)
-	var std := Kit.label("Grades: %s to %s.  Quality costs more, tastes better and earns bigger tips." % [Data.GRADES[int(sup.grades[0])], Data.GRADES[int(min(sup.grades[1], _top_grade()))]], 14, Kit.MUTED, true)
+	var g_lo: int = int(sup.grades[0])
+	var g_hi: int = int(min(sup.grades[1], _top_grade()))
+	var std := Kit.label(("%s grade only." % Data.GRADES[g_lo] if g_lo >= g_hi else "%s to %s grade." % [Data.GRADES[g_lo], Data.GRADES[g_hi]]) + " Better grades cost more, taste better and earn bigger tips.", 14, Kit.MUTED, true)
 	fr.add_child(std)
 	right.add_child(fr)
 
@@ -87,9 +89,9 @@ func _ready() -> void:
 	var fp := Kit.panel(Kit.PANEL2, 8)
 	var fv := Kit.vbox(3)
 	fp.add_child(fv)
-	var fh := Kit.hbox(8)
 	foot_lbl = Kit.label("", 16, Kit.INK, true)
-	fh.add_child(foot_lbl)
+	fv.add_child(foot_lbl)
+	var fh := Kit.hbox(8)
 	fh.add_child(Kit.button("Add what I am short of", func():
 		var n := Market.fill_basket(sel)
 		Kit.main.toast("Nothing they sell is short" if n == 0 else "Added %d lines from the par sheet" % n)
@@ -99,6 +101,7 @@ func _ready() -> void:
 		Game.s.baskets[sel] = {}
 		hub.render(), "ghost", 16))
 	place_btn = Kit.button("", _place, "primary", 18)
+	place_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	fh.add_child(place_btn)
 	fv.add_child(fh)
 	warn_lbl = Kit.label("", 14, Kit.TOMATO, true)
@@ -164,10 +167,12 @@ func _build_rows(sup: Dictionary) -> void:
 		var life: int = it.g[pr.g].life
 		var season := ""
 		if it.season >= 0: season = " · in season" if it.season == Game.season() else (" · out of season" if (it.season + 2) % 4 == Game.season() else "")
-		nv.add_child(Kit.label("%s%s · %s · %s%s" % ["" if pr.ing == last_ing else it.name + " · ", Data.GRADES[pr.g], pr.label, ("keeps %d days" % life) if life < 900 else "keeps", season], 14, Kit.MUTED))
+		var sub_l := Kit.label("%s%s · %s · %s%s" % ["" if pr.ing == last_ing else it.name + " · ", Data.GRADES[pr.g], pr.label, ("keeps %d days" % life) if life < 900 else "keeps", season], 14, Kit.MUTED)
+		sub_l.clip_text = true
+		nv.add_child(sub_l)
 		h.add_child(nv)
 		var pv := Kit.vbox(0)
-		pv.custom_minimum_size.x = 150
+		pv.custom_minimum_size.x = 132
 		var pl := Kit.label(Kit.cents(unit * pr.units), 18)
 		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		pv.add_child(pl)
@@ -178,7 +183,7 @@ func _build_rows(sup: Dictionary) -> void:
 		pv.add_child(sub)
 		h.add_child(pv)
 		var hv := Kit.label("have " + Data.qty(pr.ing, Stock.have(pr.ing)), 14, Kit.MUTED)
-		hv.custom_minimum_size.x = 104
+		hv.custom_minimum_size.x = 92
 		hv.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		h.add_child(hv)
 		var ql := Kit.label(str(Market.qty_in(sel, pr.key)), 20, Kit.CHEESE)

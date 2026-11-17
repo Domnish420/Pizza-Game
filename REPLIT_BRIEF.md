@@ -1,0 +1,118 @@
+# Crust Empire: brief for the art and polish pass
+
+## What this is
+
+A pizza-making and restaurant-management game for phones in landscape, built in Godot 4.3 (GDScript,
+Compatibility renderer). The player makes every pizza by hand, buys every ingredient by weight from real kinds
+of suppliers, and grows a one-person pop-up van into a flagship trattoria with a full front- and back-of-house team.
+
+All the game systems are built and playable. Everything you see is placeholder shapes and plain UI.
+Your job is to make it look, feel and sound like a finished game without changing how it plays.
+
+Read `README.md` for how a day works and a map of the code, and `ART_KEYS.md` for every image the game asks for.
+
+## The owner's vision, in their words
+
+- "I want to be making all of it (dough, the pizza itself, etc), buying ingredients and managing a restaurant."
+- "Everything is real upgrades you would do to your back and front of house."
+- "A fully interactive scene where I take orders from customers in each setting (customers walk up to the van,
+  have to take orders from people sitting down etc.)"
+- "Two fingers to stretch dough ... the dough forms properly from all the different techniques and methods of
+  dough stretching for the crust you want or the thinness of the base."
+- "Put the pizza in the oven myself and be the one turning it. Starting with an electric oven: put it in and leave it,
+  2 at a time, in a pop-up van. Later a wood-fire that we need to turn to make sure it's all cooking and colouring properly."
+- "Buying things by weight, as you would in real life", from "different businesses for different quality
+  ingredients that all have variable costs". Quality costs more but customers tip more; quantity over quality is a
+  valid choice when money is short.
+- "Keep to a stock list so you're not over-using and losing money on the pizzas."
+- "Customers rate the look of your pizza, giving tips and ratings depending on everything that made service."
+
+## How the code is split (keep it this way)
+
+- **Data** (`data/*.json`): every number and name. Add ingredients, suppliers, pizzas, menus, ovens here.
+- **Rules** (autoloads `Data`, `Stock`, `Market`, `Game`, plus `pizza.gd`, `pizza_base.gd`, `oven.gd`,
+  `service.gd`): no drawing at all.
+- **Presentation** (`front_scene.gd`, `bench.gd`, `oven_view.gd`, `pizza_draw.gd`, `hub.gd`, the `*_page.gd`
+  files, `kit.gd`): draws the state and turns touches into calls on the rules.
+
+Art goes in through `Art.tex(key)`: drop a PNG at `assets/<key with dots as dashes>.png` and it replaces the
+placeholder. Start there before touching drawing code. If you change a JSON shape, update `scripts/data.gd` too.
+The save file is `user://crust_empire_v3.json`; changing what is saved means bumping that name.
+
+## Work, in priority order
+
+### 1. Dough forming (the centrepiece)
+
+`scripts/pizza_base.gd` is the dough. It is an outline of 24 sectors around the centre. Each sector has a radius
+(`r`) and a rim width (`rim`: the puffy edge that has not been pressed yet). The ball has a fixed weight, so
+opening it wider makes it thinner (`thickness_mm()`). Each dough recipe in `data/doughs.json` sets the target
+diameter (`size_cm`), rim (`crust_cm`) and method (`hand`, `roll`, `press`). `score()` judges size and rim.
+
+Techniques are methods on `PizzaBase`, called from `scripts/bench.gd` (touch input):
+
+| Method | Gesture now |
+| --- | --- |
+| `press(p)` | one finger: fingertip press, pushes gas to the rim |
+| `stretch(p0, p1)` | two fingers spreading apart (each finger calls it) |
+| `rotate(by)` | two fingers twisting |
+| `roll(p, mv)` | rolling pin, one or two fingers |
+| `pan(p, mv)` | pushing into a pan |
+| `sheet(evenness)` | the dough sheeter button |
+
+To add a technique (slap, knuckle stretch, toss, docking with a roller, edge pinching), add a method that edits
+`r`, `rim` and `rot`, and a gesture in `bench.gd` that calls it. If you need thickness to vary across the base,
+add a per-sector or per-cell thickness array here, and have `score()` and `PizzaDraw` read it. Then make the
+dough look like dough: a deforming mesh or shader that shows thickness, the puffed rim and flour, driven by those arrays.
+
+### 2. The pizza and the bake
+
+`scripts/pizza_draw.gd` draws a `Pizza` in layers: base, sauce (`sauce_amt`, a grid of how thick it was spread),
+cheese (`cheese_amt`), toppings (`tops`, each with position and angle), browning, cuts. Browning comes from
+`Pizza.bake`: 12 values round the edge, 1.0 = done, 1.4 = burnt, plus `floor` for the underside.
+The wood oven makes the side facing the fire brown first, so those 12 values differ. Show it: leopard spotting,
+blistered rim, melted and browned cheese, charring on the side that faced the flame. Keep the layer order.
+
+### 3. The oven
+
+`scripts/oven_view.gd` shows the deck and handles dragging pizzas in, spinning them by the edge and dragging them out.
+`scripts/oven.gd` has the heat model (types and numbers are in `data/upgrades.json` under `ovens`).
+Wanted: an oven front for each type, the fire (feeding a log could be dragging a log in), a peel to load and turn
+pizzas, heat shimmer, and a clear "done" moment.
+
+### 4. Front of house
+
+`scripts/front_scene.gd` draws the customers, queue, tables and markers. The simulation in `service.gd` already moves
+every customer (`parties[].pos` and `.target`), seats them, and tracks waiting, eating and paying. Wanted: a scene per
+venue (van on a street, kiosk in a market, then dining rooms), walking, sitting and eating animations, speech
+bubbles, the hatch, and the pizza being handed over. Layout rules for the backgrounds are in `ART_KEYS.md`.
+
+### 5. Screens and UI
+
+All colours, buttons, panels and labels come from `scripts/kit.gd`. Turning that into a Godot `Theme` restyles
+every screen at once. The supplier catalogue, stores and recipe cards are data-heavy; keep them readable on a phone.
+
+### 6. Sound and feel
+
+`Art.sfx(name)` plays `assets/sfx/<name>.wav` if it exists (ding, cash, bad, tap, up). Add more where it helps:
+dough slaps, the sauce ladle, the oven door, the fire, the pizza wheel, a busy dining room.
+
+## Test on a real phone
+
+- Two-finger stretching has only been tested with simulated touch events. Check it on Android and iOS devices.
+- Check that drawing a pizza (many small circles) stays smooth on a low-end phone, especially at the flagship with
+  many pizzas in the oven. If it does not, bake layers to textures.
+- Orientation is set to sensor landscape.
+
+## Not built yet (fair game)
+
+- A tutorial or first-day walkthrough. The game currently explains itself in text on each screen.
+- A settings screen, save slots, cloud saves.
+- Showing pizzas made by staff on the bench (they are simulated, not drawn).
+- Delivery drivers on the road.
+- Weather and events. Seasons only change prices and what is available.
+
+## Balance
+
+Prices are close to real UK/US catering prices, so food cost runs at roughly 12-25% of the menu price, as it does in
+a real pizzeria. The money in the game is in waste, portion control, grade choices and staffing. All of it is first-pass
+tuning in the JSON files and is safe to adjust.

@@ -27,6 +27,21 @@ static func _fan(ci: CanvasItem, ring: PackedVector2Array, centre: Color, rim: P
 		idx.append(1 + (i + 1) % n)
 	RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), idx, pts, cols)
 
+## a ring between two outlines with the same number of points
+static func _band(ci: CanvasItem, outer: PackedVector2Array, inner: PackedVector2Array, outer_cols: PackedColorArray, inner_cols: PackedColorArray) -> void:
+	var pts := PackedVector2Array()
+	var cols := PackedColorArray()
+	pts.append_array(outer)
+	pts.append_array(inner)
+	cols.append_array(outer_cols)
+	cols.append_array(inner_cols)
+	var n := outer.size()
+	var idx := PackedInt32Array()
+	for i in n:
+		var j := (i + 1) % n
+		idx.append_array([i, j, n + i, j, n + j, n + i])
+	RenderingServer.canvas_item_add_triangle_array(ci.get_canvas_item(), idx, pts, cols)
+
 static func _flat(n: int, col: Color) -> PackedColorArray:
 	var a := PackedColorArray()
 	a.resize(n)
@@ -77,11 +92,19 @@ static func draw(ci: CanvasItem, pz: Pizza, origin: Vector2, k: float) -> void:
 		ci.draw_set_transform(origin + Vector2(tp.x, tp.y).rotated(rot) * k, rot + tp.a, Vector2(k, k))
 		topping(ci, tp.t)
 	ci.draw_set_transform(origin, rot, Vector2(k, k))
-	# browning: each part of the edge by how much heat it has had, the middle by the average
+	# browning: the crust colours by how much heat each side has had; the middle only goes golden
 	if baked:
-		var cols := PackedColorArray()
-		for i in ring.size(): cols.append(tint(bake_at(pz, i * TAU / ring.size())))
-		_fan(ci, ring, tint(pz.bake_avg() * 0.8), cols)
+		var inner := b.outline(1.0, 1.0 if b.mean_rim() > 4.0 else 0.0, 48)
+		if b.mean_rim() <= 4.0:
+			for i in inner.size(): inner[i] *= 0.88
+		var crust_cols := PackedColorArray()
+		var mid_cols := PackedColorArray()
+		for i in ring.size():
+			var c := tint(bake_at(pz, i * TAU / ring.size()))
+			crust_cols.append(c)
+			mid_cols.append(Color(c, c.a * 0.4))
+		_fan(ci, inner, Color(tint(pz.bake_avg()), tint(pz.bake_avg()).a * 0.25), mid_cols)
+		_band(ci, ring, inner, crust_cols, mid_cols)
 	for ct in pz.cuts:
 		ci.draw_line(ct.a, ct.b, Color(1, 0.98, 0.92, 0.95), 2.5)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

@@ -62,7 +62,7 @@ func _ready() -> void:
 	var G := Game
 	c = G.calc()
 	r = {"day": G.s.day, "served": 0, "mine": 0, "lost": 0, "sold": 0, "food": 0.0, "tips": 0.0, "drinks": 0.0, "deliv": 0.0,
-		"qsum": 0.0, "xp": 0.0, "rep0": G.s.rep, "lvl0": G.s.level, "cats": {"look": 0.0, "taste": 0.0, "service": 0.0, "value": 0.0}, "n_rev": 0}
+		"qsum": 0.0, "xp": 0.0, "walked": 0, "gave_up": 0, "rep0": G.s.rep, "lvl0": G.s.level, "cats": {"look": 0.0, "taste": 0.0, "service": 0.0, "value": 0.0}, "n_rev": 0}
 	oven = Oven.new(G.tier("oven"))
 	if oven.def.feeds:
 		var lit := Stock.take("wood", 3.0)       # lighting the oven before service
@@ -235,6 +235,7 @@ func spawn_party() -> int:
 	elif p.type == "take":
 		if queue.size() >= c.queue_cap:
 			r.lost += p.n
+			r.walked += p.n
 			return n
 		queue.append(p)
 		p.state = "queue"
@@ -269,7 +270,7 @@ func order(p: Dictionary) -> bool:
 		p.tks.append(tk)
 	if p.tks.is_empty():
 		r.sold += p.n
-		Game.s.rep += (2.0 - Game.s.rep) * 0.01
+		Game.s.rep += (2.5 - Game.s.rep) * max(0.003, 0.3 / (Game.s.ratings + 10))
 		float_text(p.pos, "Sold out!", Kit.TOMATO)
 		leave(p)
 		return false
@@ -448,6 +449,7 @@ func expire(p: Dictionary) -> void:
 		tb.dirty = true
 		return
 	r.lost += p.n - p.got
+	r.gave_up += p.n - p.got
 	G.s.rep += (1.5 - G.s.rep) * max(0.02, 1.0 / (G.s.ratings + 6)) * 0.35
 	for tk in p.tks:
 		if tk.state == "done": continue
@@ -591,7 +593,7 @@ func step(dt: float) -> void:
 					tk.owner = w.s.name
 					tk.state = "make"
 					w.job = tk
-					w.left = 12.0 * (1.25 - 0.1 * w.s.skill) / c.prep_speed
+					w.left = 10.0 * (1.25 - 0.1 * w.s.skill) / c.prep_speed
 					dirty = true
 					break
 	# oven
@@ -599,9 +601,10 @@ func step(dt: float) -> void:
 	if c.fornaio:
 		for o in oven.mine():
 			if o.pz.bake_avg() >= 1.0: oven_pull(o)
-		if oven.def.feeds and oven.fire < 0.85:
-			var lg := Stock.take("wood", 1.0)
-			if lg.got >= 1.0: oven.add_log(lg.g)
+	# the oven tender keeps the fire just right; without one, a pizzaiolo throws a log on when it gets low
+	if oven.def.feeds and (oven.fire < 0.85 if c.fornaio else (oven.fire < 0.55 and workers.size() > 0)):
+		var lg := Stock.take("wood", 1.0)
+		if lg.got >= 1.0: oven.add_log(lg.g)
 	# end of day
 	var idle: bool = tickets.is_empty() and bench == null and board.is_empty() and oven.items.is_empty() and oven.shelf.is_empty()
 	var anyone := parties.any(func(p): return p.state != "leave")
@@ -759,6 +762,7 @@ func oven_load(pz: Pizza, slot: int) -> void:
 func oven_pull(o: Dictionary) -> void:
 	oven.items.erase(o)
 	o.pz.stage = "board"
+	if not o.pz.tk.gone: o.pz.tk.state = "board"
 	board.append(o.pz)
 	if view == "oven" and oven.mine().is_empty() and oven.shelf.is_empty(): set_view("board")
 	dirty = true
@@ -869,7 +873,7 @@ func _build_tickets() -> void:
 			status = "READY: hand it over out front"
 			col = Kit.BASIL
 		elif tk.owner == "me":
-			status = "You: " + ("in the oven" if tk.state == "oven" else "making it")
+			status = "You: " + {"oven": "in the oven", "board": "on the board, slice it"}.get(tk.state, "making it")
 			col = Kit.CHEESE
 		elif tk.owner != "":
 			status = tk.owner + (": in the oven" if tk.state == "oven" else ": making it")
@@ -1052,7 +1056,7 @@ func finish(sold_out: bool) -> void:
 		var sorted := reviews.duplicate()
 		sorted.sort_custom(func(a, b): return a.stars > b.stars)
 		r.best = "%.1f stars: %s" % [sorted[0].stars, sorted[0].text]
-		if sorted.size() > 1: r.worst = "%.1f stars: %s" % [sorted[-1].stars, sorted[-1].text]
+		if sorted.size() > 1 and sorted[-1].stars < sorted[0].stars - 0.25: r.worst = "%.1f stars: %s" % [sorted[-1].stars, sorted[-1].text]
 	r.profit = r.food + r.tips + r.drinks + r.deliv - r.cost_used - r.cost_waste - r.rent - r.wages - r.util - r.interest
 	G.s.last = r
 	G.s.phase = "evening"
@@ -1065,6 +1069,10 @@ func _summary() -> void:
 	v.add_child(Kit.label("%s closed%s" % [Game.date_text(r.day).get_slice(" · ", 0) + ", day %d" % r.day, ": sold out!" if r.sold_out else ""], 28))
 	var g := Kit.grid(2, 30)
 	var left := [["Pizzas served", "%d (%d by you)" % [r.served, r.mine]], ["Customers lost", str(r.lost)], ["Rating", "%.2f to %.2f" % [r.rep0, r.rep1]]]
+	var why := []
+	if r.walked > 0: why.append("%d walked off when the queue was too long" % r.walked)
+	if r.gave_up > 0: why.append("%d gave up waiting" % r.gave_up)
+	if r.sold > 0: why.append("%d found nothing left to sell" % r.sold)
 	if r.n_rev > 0:
 		left.append(["Look", "%.1f / 5" % r.cats.look])
 		left.append(["Taste", "%.1f / 5" % r.cats.taste])
@@ -1093,6 +1101,7 @@ func _summary() -> void:
 			cv.add_child(h)
 		g.add_child(cv)
 	v.add_child(g)
+	if why.size() > 0: v.add_child(Kit.label("Lost customers: " + ", ".join(why) + ".", 17, Kit.TOMATO if r.lost > r.served * 0.2 else Kit.MUTED, true))
 	if r.food > 0:
 		var over: float = r.cost_used - r.cost_spec
 		var pct: float = r.cost_used / r.food * 100.0
