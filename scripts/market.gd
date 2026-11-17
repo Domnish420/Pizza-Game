@@ -211,11 +211,22 @@ func need_service(day: int) -> Dictionary:
 			need[id] = need.get(id, 0.0) + r.spec[id] / y * cov / recs.size()
 	if day == Game.s.day:          # what is already prepped does not need buying again
 		for id in need:
-			if Data.needs_prep(id): need[id] = max(0.0, need[id] - Stock.prepped(id) / float(Data.ING[id].prep.yield))
+			var y: float = float(Data.ING[id].prep.yield) if Data.needs_prep(id) else 1.0
+			need[id] = max(0.0, need[id] - (Stock.prepped(id) + Stock.rail_have(id)) / y)
 	var take_share := 1.0 if Game.calc().tables == 0 else 0.5
 	need["box"] = ceil(cov * take_share)
 	if Game.tier("oven").type == "wood": need["wood"] = 10.0
 	need["sanitiser"] = Hygiene.chem_needed("boh") + Hygiene.chem_needed("foh")
+	if day > Game.s.day:
+		# enough 4 litre tubs for a day's prep, with some going round the wash-up
+		var litres := 0.0
+		for id in need:
+			if Data.needs_prep(id): litres += need[id] * float(Data.ING[id].prep.yield) / 1000.0 * float(Data.ING[id].prep.vol)
+		var in_use := 0
+		for id in Game.s.prepped: in_use += Game.s.prepped[id].size()
+		var want := int(ceil(litres / 4.0 * 1.4)) + 2
+		var have_tubs: int = int(Stock.have("tub4")) + int(Stock.have("tub2")) / 2 + Stock.dirty_tubs() + in_use
+		if want > have_tubs: need["tub4"] = float(want - have_tubs)
 	var traps: int = Hygiene.traps_wanted() - int(Game.s.pests.laid) - int(Game.s.pests.sprung)
 	if traps > 0 and day > Game.s.day: need["traps"] = float(traps)
 	return need

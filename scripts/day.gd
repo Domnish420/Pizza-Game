@@ -122,11 +122,12 @@ func prep_list(day: int = -1) -> Array:
 			if Data.needs_prep(id): need[id] = need.get(id, 0.0) + r.spec[id] * cov / recs.size()
 	for id in need:
 		var p = Data.ING[id].prep
-		var have := Stock.prepped(id, d)
+		var have := Stock.prepped(id, d) + (Stock.rail_have(id) if d == Game.s.day else 0.0)
 		var todo: float = max(0.0, need[id] - have)
 		var raw: float = min(todo / float(p.yield), Stock.have(id))
-		rows.append({"id": id, "need": need[id], "have": have, "todo": todo, "raw": raw, "raw_have": Stock.have(id),
-			"minutes": Stock.prep_minutes(id, raw, prep_mult()) if raw > 0 else 0.0})
+		var tub_cap: float = Stock.max_prep_raw(id)
+		rows.append({"id": id, "need": need[id], "have": have, "todo": todo, "raw": min(raw, tub_cap), "raw_have": Stock.have(id), "tub_short": raw > tub_cap + 1.0,
+			"minutes": Stock.prep_minutes(id, min(raw, tub_cap), prep_mult()) if raw > 0 else 0.0})
 	rows.sort_custom(func(a, b): return Data.ING[a.id].name < Data.ING[b.id].name)
 	return rows
 
@@ -153,12 +154,36 @@ func staff_prep() -> Array:
 			raw *= left.prep / mins
 			mins = left.prep
 		if raw < 20.0: continue
-		Stock.prep(row.id, raw)
+		Stock.prep(row.id, raw, 0.6 + 0.1 * sk)
 		left.prep -= mins
 		done.append(Data.ING[row.id].name.to_lower())
 		if left.prep <= 0.0: break
-	if done.is_empty(): return []
-	return ["Your prep cook prepped the " + ", ".join(done) + "."]
+	var notes := []
+	if done.size() > 0: notes.append("Your prep cook prepped the " + ", ".join(done) + ".")
+	if left.prep > 10.0:
+		var set_up := set_up_counter()
+		left.prep -= set_up.minutes
+		if set_up.filled > 0: notes.append("Your prep cook set up the counter: %d pans filled." % set_up.filled)
+	return notes
+
+## the toppings tonight's menu needs, most used first
+func line_ids(day: int = -1) -> Array:
+	var use := {}
+	for r in Game.recipes_on(Game.s.day if day < 0 else day):
+		for id in r.spec: use[id] = use.get(id, 0.0) + 1.0
+	var ids := use.keys()
+	ids.sort_custom(func(a, b): return use[a] > use[b])
+	return ids
+
+## give every topping on the menu a pan on the rail and fill them. Returns {filled, minutes, missing}
+func set_up_counter() -> Dictionary:
+	var out := {"filled": 0, "minutes": 0.0, "missing": Stock.assign_rail(line_ids())}
+	for i in Stock.rail().size():
+		var res := Stock.refill(i)
+		if res.grams > 0:
+			out.filled += 1
+			out.minutes += res.minutes
+	return out
 
 # ---------- the evening ----------
 ## after service: the clock moves to closing and the staff do the close-down. Returns notes.
@@ -168,8 +193,11 @@ func start_evening() -> Array:
 	for e in Game.s.dock.duplicate():      # anything still at the back door gets shoved in at close
 		var res := Stock.put_away(e, false, now())
 		notes.append("%s's delivery was still at the back door at close. It was stacked in front of the old stock.%s" % [Data.SUP[e.sup].name, _waste_text(res)])
+	notes.append_array(Stock.close_rail())
 	var porters := Game.staff_of("porter")
 	if porters.size() > 0:
+		var washed := Stock.wash_all()
+		if washed > 0: notes.append("Your kitchen porter washed %d tubs." % washed)
 		var msg := Hygiene.clean("boh")
 		var n := Hygiene.reset_traps()
 		notes.append("Your kitchen porter deep-cleaned the kitchen%s.%s" % [(" and reset %d trap%s" % [n, "" if n == 1 else "s"]) if n > 0 else "", (" " + msg) if msg != "" else ""])

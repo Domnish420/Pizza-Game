@@ -6,8 +6,11 @@ extends Node
 ## Lots are used in shelf order: whatever is at the front first (f), then oldest date first. Rotating the
 ## stores clears the f flags so the oldest stock comes forward again.
 ##
-## Prepped food (grated cheese, sliced mushrooms, the day's sauce) lives on the makeline as its own lots in
-## Game.s.prepped. Toppings that need prep are taken from there during service, never from raw stock.
+## Prepped food (grated cheese, sliced mushrooms, the day's sauce) goes into 2 and 4 litre tubs, one lot per tub,
+## each with a day-dot label (the day it was made) and a use-by (Game.s.prepped). The tubs live in the fridge.
+## The pizza counter has a rail of gastronorm pans (Game.s.rail), filled from the tubs (or straight from stock for
+## things that need no prep, like sliced pepperoni). Every topping on a pizza comes off the rail.
+## Emptied tubs go to the wash-up (Game.s.washup) and are clean stock again once washed.
 ##
 ## Deliveries arrive at the back door (Game.s.dock) and are not usable until they are put away.
 ##
@@ -136,30 +139,42 @@ func _kg(id: String, q: float) -> float:
 	var u: String = Data.ING[id].unit
 	return q / 1000.0 if u == "g" or u == "ml" else q * 0.2
 
-# ---------- prepped food on the makeline ----------
+# ---------- prepped food in tubs ----------
+const TUBS := [4, 2]                       # litres, biggest first
+const DAY_DOT := ["Blue", "Yellow", "Red", "Green", "Brown", "Orange", "Black"]   # Monday .. Sunday
+const DAY_DOT_COL := ["2f6fd0", "f2c81b", "d23a2a", "2e9a46", "7a4b2a", "f08a1c", "202020"]
+
 func prepped_lots(id: String) -> Array:
 	if not Game.s.prepped.has(id): Game.s.prepped[id] = []
 	return Game.s.prepped[id]
 
+## grams of prepped food in tubs; with on_day, only what is still in date that day
 func prepped(id: String, on_day: int = -1) -> float:
 	var t := 0.0
 	for l in Game.s.prepped.get(id, []):
 		if on_day < 0 or l.x > on_day: t += l.q
 	return t
 
-## what can be put on a pizza right now: prepped food for things that need prep, stock for the rest
-func avail(id: String) -> float:
-	return prepped(id) if Data.needs_prep(id) else have(id)
+func tub_count(id: String) -> int:
+	return Game.s.prepped.get(id, []).size()
 
-## take something to put on a pizza
-func take_use(id: String, q: float) -> Dictionary:
-	if Data.needs_prep(id): return _take_from(prepped_lots(id), q)
-	return take(id, q)
+## litres one kilo of this takes once it is prepped (or as it comes, for things that need no prep)
+func line_vol(id: String) -> float:
+	var p = Data.ING[id].prep
+	return float(p.vol) if p != null else float(Data.ING[id].litres) * 0.9
 
-## everything there is of it, raw stock turned into what it would make once prepped
-func potential(id: String) -> float:
-	if not Data.needs_prep(id): return have(id)
-	return prepped(id) + have(id) * float(Data.ING[id].prep.yield)
+func clean_tubs(size: int) -> int:
+	return int(have("tub%d" % size))
+
+func tub_litres() -> float:
+	var t := 0.0
+	for sz in TUBS: t += clean_tubs(sz) * sz
+	return t
+
+## the most raw stock that can be prepped into the clean tubs there are
+func max_prep_raw(id: String) -> float:
+	var p = Data.ING[id].prep
+	return tub_litres() / float(p.vol) * 1000.0 / float(p.yield)
 
 ## minutes to prep raw_g of an ingredient. mult < 1 is faster (better kit, skilled cook)
 func prep_minutes(id: String, raw_g: float, mult: float = 1.0) -> float:
@@ -167,18 +182,193 @@ func prep_minutes(id: String, raw_g: float, mult: float = 1.0) -> float:
 	if p == null: return 0.0
 	return max(1.0, raw_g / 1000.0 * float(p.min_kg) * mult)
 
-## prep raw_g of raw stock. Returns {raw, made} in grams
-func prep(id: String, raw_g: float) -> Dictionary:
+## prep raw_g of raw stock into tubs. quality 0..1 is how well it was done: it sets the yield and how good it looks.
+## Returns {raw, made, tubs: [sizes used], short: true if there were not enough clean tubs}
+func prep(id: String, raw_g: float, quality: float = 0.8) -> Dictionary:
 	var p = Data.ING[id].prep
-	var t := take(id, raw_g)
-	if t.got <= 0: return {"raw": 0.0, "made": 0.0}
-	var made: float = t.got * float(p.yield)
+	var yld: float = float(p.yield) * (0.9 + 0.1 * clamp(quality, 0.0, 1.0))
+	var cap_raw: float = tub_litres() / float(p.vol) * 1000.0 / yld
+	var short: bool = raw_g > cap_raw + 1.0
+	var t := take(id, min(raw_g, cap_raw))
+	var out := {"raw": t.got, "made": 0.0, "tubs": [], "short": short}
+	if t.got <= 0: return out
+	var made: float = t.got * yld
+	out.made = made
+	var litres: float = made / 1000.0 * float(p.vol)
 	var x: float = min(t.x, float(Game.s.day + int(p.life)))
-	var ls := prepped_lots(id)
-	ls.append({"q": made, "x": x, "g": t.g, "c": t.cost / made})
-	ls.sort_custom(func(a, b): return a.x < b.x)
-	if p.yield < 1.0: log_trim(id, t.got - made)
-	return {"raw": t.got, "made": made}
+	var unit_c: float = t.cost / made
+	var left := made
+	while left > 0.5:
+		var size := 4 if (litres > 2.0 and clean_tubs(4) > 0) or clean_tubs(2) == 0 else 2
+		if clean_tubs(size) == 0: break
+		take("tub%d" % size, 1)
+		var fit: float = min(left, size / float(p.vol) * 1000.0)
+		prepped_lots(id).append({"q": fit, "x": x, "g": t.g, "c": unit_c, "size": size, "made": Game.s.day, "pq": quality})
+		out.tubs.append(size)
+		left -= fit
+		litres -= fit / 1000.0 * float(p.vol)
+	prepped_lots(id).sort_custom(func(a, b): return a.x < b.x)
+	if t.got - made > 0.5: log_trim(id, t.got - made)
+	return out
+
+# ---------- the rail of gastro pans on the counter ----------
+func rail() -> Array:
+	var n: int = int(Game.tier("prep").rail)
+	var r: Array = Game.s.rail
+	while r.size() < n: r.append({"ing": "", "q": 0.0, "x": 0.0, "g": 2.0, "c": 0.0, "pq": 0.8})
+	return r
+
+func rail_chilled() -> bool:
+	return bool(Game.tier("prep").chilled)
+
+## how many grams of this one pan holds
+func pan_cap(id: String) -> float:
+	return float(Game.tier("prep").pan) / line_vol(id) * 1000.0
+
+func rail_slot(id: String) -> int:
+	var r := rail()
+	for i in r.size():
+		if r[i].ing == id: return i
+	return -1
+
+func rail_have(id: String) -> float:
+	var t := 0.0
+	for pan in rail():
+		if pan.ing == id: t += pan.q
+	return t
+
+## what can go on a pizza right now: whatever is in the pans on the rail
+func avail(id: String) -> float:
+	return rail_have(id)
+
+## how well the food in a pan was prepped (0..1), for how the pizza looks
+func rail_quality(id: String) -> float:
+	var s := rail_slot(id)
+	return float(rail()[s].get("pq", 0.8)) if s >= 0 else 0.8
+
+## take something off the rail to put on a pizza
+func take_use(id: String, q: float) -> Dictionary:
+	var out := {"got": 0.0, "g": 0.0, "cost": 0.0, "x": 99999.0}
+	for pan in rail():
+		if pan.ing != id or q <= 0.00001: continue
+		var u: float = min(pan.q, q)
+		pan.q -= u
+		q -= u
+		out.g = (out.g * out.got + pan.g * u) / max(out.got + u, 0.0001)
+		out.got += u
+		out.cost += u * pan.c
+		out.x = min(out.x, pan.x)
+	return out
+
+## everything there is of it: on the rail, in tubs, and raw stock as what it would make once prepped
+func potential(id: String) -> float:
+	var y: float = float(Data.ING[id].prep.yield) if Data.needs_prep(id) else 1.0
+	return rail_have(id) + prepped(id) + have(id) * y
+
+## what could fill a pan right now (tubs for prepped food, the stores for the rest)
+func refill_source(id: String) -> float:
+	return prepped(id) if Data.needs_prep(id) else have(id)
+
+## fill pan i from tubs or stock. Returns {grams, minutes, tubs_emptied}
+func refill(i: int) -> Dictionary:
+	var pan: Dictionary = rail()[i]
+	var out := {"grams": 0.0, "minutes": 1.0, "tubs_emptied": 0}
+	var id: String = pan.ing
+	if id == "": return out
+	var room: float = pan_cap(id) - pan.q
+	if room <= 0.5: return out
+	var got := {}
+	if Data.needs_prep(id):
+		got = {"got": 0.0, "g": 0.0, "cost": 0.0, "x": 99999.0, "pq": 0.0}
+		var ls := prepped_lots(id)
+		while room > 0.5 and ls.size() > 0:
+			var tub: Dictionary = ls[0]
+			var u: float = min(tub.q, room)
+			tub.q -= u
+			room -= u
+			got.g = (got.g * got.got + tub.g * u) / (got.got + u)
+			got.pq = (got.pq * got.got + float(tub.get("pq", 0.8)) * u) / (got.got + u)
+			got.got += u
+			got.cost += u * tub.c
+			got.x = min(got.x, tub.x)
+			if tub.q <= 0.5:
+				ls.pop_front()
+				wash_add(int(tub.get("size", 4)))
+				out.tubs_emptied += 1
+	else:
+		got = take(id, room)
+		got.pq = 0.85
+	if got.got <= 0: return out
+	var total: float = pan.q + got.got
+	pan.c = (pan.c * pan.q + got.cost) / total
+	pan.g = (pan.g * pan.q + got.g * got.got) / total
+	pan.pq = (float(pan.get("pq", 0.8)) * pan.q + got.pq * got.got) / total
+	pan.x = got.x if pan.q <= 0.5 else min(pan.x, got.x)
+	pan.q = total
+	out.grams = got.got
+	out.minutes = 1.0 + out.tubs_emptied * 0.5
+	return out
+
+## put today's toppings into pans, most used first. Pans holding something no longer needed are emptied back.
+## Returns the ids that did not get a pan.
+func assign_rail(ids: Array) -> Array:
+	var r := rail()
+	var missing := []
+	for id in ids:
+		if rail_slot(id) >= 0: continue
+		var free := -1
+		for i in r.size():
+			if r[i].ing == "" or (not ids.has(r[i].ing) and r[i].q <= 0.5):
+				free = i
+				break
+		if free < 0:
+			missing.append(id)
+			continue
+		r[free] = {"ing": id, "q": 0.0, "x": 0.0, "g": 2.0, "c": 0.0, "pq": 0.8}
+	return missing
+
+## the counter at close: an unchilled rail has to go back into tubs (or the stores) in the fridge overnight
+func close_rail() -> Array:
+	var notes := []
+	if rail_chilled(): return notes
+	for pan in rail():
+		if pan.ing == "" or pan.q <= 0.5: continue
+		var id: String = pan.ing
+		if Data.needs_prep(id):
+			var size := 2 if pan.q / 1000.0 * line_vol(id) <= 2.0 else 4
+			if clean_tubs(size) == 0: size = 6 - size
+			if clean_tubs(size) == 0:
+				log_waste(id, pan.q, pan.q * pan.c)
+				notes.append("No clean tub for the %s left on the counter: binned." % Data.ING[id].name.to_lower())
+			else:
+				take("tub%d" % size, 1)
+				prepped_lots(id).append({"q": pan.q, "x": pan.x, "g": pan.g, "c": pan.c, "size": size, "made": Game.s.day, "pq": pan.get("pq", 0.8)})
+				prepped_lots(id).sort_custom(func(a, b): return a.x < b.x)
+		else:
+			add(id, pan.q, int(round(pan.g)), pan.c, pan.x)
+		pan.q = 0.0
+	return notes
+
+# ---------- the wash-up ----------
+func wash_add(size: int, n: int = 1) -> void:
+	var k := str(size)
+	Game.s.washup[k] = int(Game.s.washup.get(k, 0)) + n
+
+func dirty_tubs() -> int:
+	var t := 0
+	for k in Game.s.washup: t += int(Game.s.washup[k])
+	return t
+
+func wash_minutes() -> float:
+	return ceil(dirty_tubs() * 0.6)
+
+func wash_all() -> int:
+	var n := dirty_tubs()
+	for k in Game.s.washup:
+		var c: int = int(Game.s.washup[k])
+		if c > 0: add("tub" + k, c, 2, Data.ING["tub" + k].g[2].price)
+		Game.s.washup[k] = 0
+	return n
 
 # ---------- storage ----------
 func space_of(id: String, q: float) -> float:
@@ -190,7 +380,8 @@ func store_used(store: String) -> float:
 		if Data.ING[id].store == store: u += have(id) * Data.ING[id].space
 	if store == "fridge":
 		u += dough_count() * DOUGH_LITRES
-		for id in Game.s.prepped: u += prepped(id) * Data.ING[id].space
+		for id in Game.s.prepped:
+			for l in Game.s.prepped[id]: u += float(l.get("size", 4))
 	return u
 
 func store_cap(store: String) -> float:
@@ -247,9 +438,17 @@ func climate(store: String) -> Array:
 ## rotate = new stock behind the old (slower, correct); otherwise it is stacked in front.
 ## Returns {minutes, wasted [{id, q}], spoiled [{id, q}]}
 func put_away(entry: Dictionary, rotate: bool, now: float) -> Dictionary:
+	var each := []
+	for ln in entry.lines: each.append(rotate)
+	return put_away_each(entry, each, now)
+
+## the same, choosing for each line whether it goes behind the old stock (true) or in front (false)
+func put_away_each(entry: Dictionary, each: Array, now: float) -> Dictionary:
 	var out := {"minutes": 2.0, "wasted": [], "spoiled": []}
 	var waited: float = max(0.0, now - entry.arrived)
-	for ln in entry.lines:
+	for li in entry.lines.size():
+		var ln: Dictionary = entry.lines[li]
+		var rotate: bool = each[li]
 		var it: Dictionary = Data.ING[ln.ing]
 		var x: float = float(Game.s.day + int(ln.life))
 		var chilled: bool = it.store != "dry"
@@ -356,6 +555,8 @@ func night() -> Dictionary:
 			for l in lots(id): l.x -= lost
 		for id in Game.s.prepped:
 			for l in prepped_lots(id): l.x -= lost
+		if rail_chilled():
+			for pan in rail(): pan.x -= lost * 0.5
 		out.notes.append("The fridge ran at %.1f °C overnight: chilled food lost %.1f days of life. Open the vents or take stock out." % [temp, lost])
 	elif temp < 0.5:
 		var hit := []
@@ -372,7 +573,9 @@ func night() -> Dictionary:
 				if not hit.has(it.name.to_lower()): hit.append(it.name.to_lower())
 		for id in Game.s.prepped:
 			if Data.ING[id].frost == "bin":
-				for l in prepped_lots(id): log_waste(id, l.q, l.q * l.c)
+				for l in prepped_lots(id):
+					log_waste(id, l.q, l.q * l.c)
+					wash_add(int(l.get("size", 4)))
 				Game.s.prepped[id] = []
 		if hit.size() > 0:
 			out.notes.append("The fridge dropped to %.1f °C and froze the %s. Leaves went black; cheese and veg lost quality. Close the vents a notch." % [temp, ", ".join(hit)])
@@ -406,9 +609,15 @@ func night() -> Dictionary:
 			if l.x <= Game.s.day + 1:
 				out.binned.append({"id": id, "q": l.q, "cost": l.q * l.c, "prepped": true})
 				log_waste(id, l.q, l.q * l.c)
+				wash_add(int(l.get("size", 4)))
 			else:
 				keep.append(l)
 		Game.s.prepped[id] = keep
+	for pan in rail():
+		if pan.ing != "" and pan.q > 0.5 and pan.x <= Game.s.day + 1:
+			out.binned.append({"id": pan.ing, "q": pan.q, "cost": pan.q * pan.c, "prepped": true})
+			log_waste(pan.ing, pan.q, pan.q * pan.c)
+			pan.q = 0.0
 	return out
 
 ## bin dough that will have overproofed by tomorrow. Returns balls lost.

@@ -19,20 +19,30 @@ The project is 1280x720, landscape, Compatibility renderer, so it exports to And
 The day runs on a clock. You start at 07:00 and the venue opens at its opening time (11:30 for the van).
 
 **Morning (Jobs page).** Deliveries arrive at the back door at their own times and wait there until someone checks
-them in: rotate the new stock behind the old, or stack it in front to save time and let the old stock go off at the
-back. Do the prep list (grate the cheese, make the sauce, slice the mushrooms...). Clean, lay traps, set the fridge
-and dry-store vents. Every job takes minutes; run past opening time and you open late.
+them in: unpack them by hand onto the shelves (new stock behind the old), or stack them in front to save time and let
+the old stock go off at the back. Do the prep list by hand (slice, grate, pick, pour, stir) into 2 and 4 litre tubs
+with day-dot labels, then set up the counter: fill the gastro pans on the rail from the tubs. Clean by hand, lay traps,
+set the fridge and dry-store vents, wash up the tubs. Every job takes minutes; run past opening time and you open late.
+
+`ROADMAP.md` has the story mode (starting as an employed pizzaiolo) and everything still to come.
 
 **Service.** Four places to switch between:
 - **Front**: customers walk up to the hatch and queue (van, kiosk), or wait at the door to be seated, order at the
   table, eat and ask for the bill (shop and bigger). Tap anyone with a marker: ORDER, FOOD UP, SEAT, BILL, CLEAR.
-- **Bench**: tap a ticket and open the dough ball. Hand-stretched bases: press out with one finger, leaving a rim,
+- **Bench**: the marble top of the pizza counter, with the rail of gastro pans above it. Tap a ticket and open the dough ball. Hand-stretched bases: press out with one finger, leaving a rim,
   then spread two fingers to stretch and twist them to turn. Thin bases: roll with the pin. Deep pan: push into the pan.
-  Then top it by weight against the recipe card.
+  Then top it by weight against the ticket's recipe card, taking each topping from its pan on the rail.
 - **Oven**: drag the pizza off the shelf onto the deck. Drag its edge to spin it. Drag it out when it is done.
 - **Board**: swipe to slice, add anything that goes on after the oven, send it to the pass.
-- **Prep**: the makeline. When a topping runs out, prep more (you are tied up while you do it), let a prep cook or
-  pizzaiolo do it, or 86 the pizzas that need it. Deliveries that turn up mid-shift wait here at the back door.
+- **Prep**: the rail and the tubs. Refill an empty pan from the tubs; when the tubs run out, prep more (you are tied
+  up while you do it), let a prep cook or pizzaiolo do it, or 86 the pizzas that need it. Deliveries that turn up
+  mid-shift wait here at the back door.
+
+Customers ask for changes ("no basil", "extra mozzarella", "add olives", "well done") and some have allergies:
+the ticket becomes its own recipe card, and getting an allergy wrong is serious (refund, a hit to your rating and an
+early inspection). Unhappy customers complain at the hatch or the table: remake, refund, free drink or apologise.
+Some pay cash and you count out the change. Phone orders are collected later. Regulars come back for their usual and
+remember how you treated them. Now and then a food critic eats incognito.
 
 **Evening.** Clean down, make tomorrow's dough, order tomorrow's stock, lock up. Work past midnight and you start late.
 Overnight the fridge and dry store climate does its work, pests come in or get caught, out-of-date stock is binned,
@@ -59,7 +69,11 @@ and invoices are paid when they fall due.
   them and need resetting; pest proofing keeps them out. Mice chew the dry stock and customers who see one leave.
   An inspector visits every couple of weeks and gives a 0-5 hygiene rating that changes footfall; 0 or 1 closes you.
 - **Prep.** Toppings have to be prepped before service (grated, sliced, cooked, drained), with a yield and a short
-  life once prepped. The prep list says what the day needs.
+  life once prepped, into 2 and 4 litre tubs that take fridge space and need washing once empty. Doing it by hand
+  well is quicker and gives a better yield and a better-looking pizza.
+- **The counter.** Every topping comes out of a gastro pan on the counter rail. The rail grows with the prep-station
+  upgrades (6 pans on a folding table up to 28 across two marble-top pizza counters); a bigger menu needs a bigger rail.
+  An unchilled rail goes back into tubs every night.
 - **Recipe cards.** 48 pizzas, each with grams per ingredient on a named dough. The card shows the cost to make
   and the food-cost percentage. Everything you put on a pizza is weighed out of stock as you apply it.
 - **Stock control.** The Stores page has a par sheet (what today and tomorrow need against what you hold and have on
@@ -96,6 +110,9 @@ and invoices are paid when they fall due.
 | `scripts/service.gd` | A day's trading: customers, tickets, staff, reviews, the day's accounts |
 | `scripts/front_scene.gd`, `bench.gd`, `oven_view.gd`, `pizza_draw.gd` | Drawing and touch input for each part of service |
 | `scripts/hub.gd`, `jobs_page.gd`, `suppliers_page.gd`, `stores_page.gd`, `dough_game.gd` | The management screens |
+| `scripts/prep_task.gd`, `clean_task.gd`, `shelf_task.gd` | Prepping, cleaning and unpacking by hand |
+| `scripts/rail_view.gd` | The rail of gastro pans above the bench |
+| `scripts/orders.gd` | Order notes and allergies turned into a recipe card per ticket |
 | `scripts/kit.gd`, `main.gd`, `meter.gd` | UI helpers, screen switching, gauges |
 
 `web-prototype/` holds the first HTML version, kept for reference only.

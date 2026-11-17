@@ -47,10 +47,14 @@ var prepping := {}               # ingredient id -> who is prepping it
 var mouse := {}                  # a mouse running across the front: {pos, vel, t}
 var mouse_until := -1.0          # minute until which customers are still talking about the mouse
 var gm := 1.0                    # game minutes per second of play
+var phones := []                 # calls ringing: {n, until}
+var critic_at := -1.0            # when the food critic walks in today (-1: not today)
+var critic_in := false
 
 # ui
 var front: FrontScene
 var bench_ui: Bench
+var rail_ui: RailView
 var oven_ui: OvenView
 var kitchen: HBoxContainer
 var tick_box: VBoxContainer
@@ -81,11 +85,13 @@ func _ready() -> void:
 	c = G.calc()
 	r = {"day": G.s.day, "served": 0, "mine": 0, "lost": 0, "sold": 0, "food": 0.0, "tips": 0.0, "drinks": 0.0, "deliv": 0.0,
 		"qsum": 0.0, "xp": 0.0, "walked": 0, "gave_up": 0, "rep0": G.s.rep, "lvl0": G.s.level, "cats": {"look": 0.0, "taste": 0.0, "service": 0.0, "value": 0.0}, "n_rev": 0,
-		"mice": 0, "eighty6": [], "inspect": {}, "closed": false, "boh0": Hygiene.level("boh"), "foh0": Hygiene.level("foh"), "notes": []}
+		"mice": 0, "eighty6": [], "inspect": {}, "closed": false, "boh0": Hygiene.level("boh"), "foh0": Hygiene.level("foh"), "notes": [],
+		"complaints": 0, "refunds": 0.0, "comps": 0.0, "allergy": 0, "missed": 0, "calls": 0, "change_err": 0.0, "regulars": [], "critic": -1.0, "mods": 0}
 	gm = (c.close - c.open) / DAY
 	# opened late: the start of the day has gone
 	t = clamp((float(G.s.clock) - c.open) / (c.close - c.open), 0.0, 0.9) * DAY
 	G.s.phase = "service"
+	if G.s.day >= int(G.s.critic_next) and G.s.level >= 3: critic_at = randf_range(0.2, 0.7) * DAY
 	oven = Oven.new(G.tier("oven"))
 	if oven.def.feeds:
 		var lit := Stock.take("wood", 3.0)       # lighting the oven before service
@@ -96,6 +102,8 @@ func _ready() -> void:
 		for x in G.staff_of(role): foh.append({"s": x, "role": role, "cd": 1.0})
 	for role in ["prep", "porter"]:
 		for x in G.staff_of(role): crew.append({"s": x, "role": role, "job": "", "left": 0.0, "fn": Callable()})
+	var missing := Stock.assign_rail(Day.line_ids())
+	if missing.size() > 0: r.notes.append("No room on the rail for: " + ", ".join(missing.map(func(i): return Data.ING[i].name.to_lower())) + ".")
 	_layout()
 	_build_ui()
 	set_view("front")
@@ -144,6 +152,9 @@ func _build_ui() -> void:
 		top.add_child(top_lbl[k])
 	top_lbl.cash = Kit.label("", 26, Kit.CHEESE)
 	top.add_child(top_lbl.cash)
+	top_lbl.phone = Kit.button("Phone ringing", answer_phone, "danger", 19)
+	top_lbl.phone.visible = false
+	top.add_child(top_lbl.phone)
 	top_lbl.speed = Kit.button("1x speed", _speed, "primary", 19)
 	top.add_child(top_lbl.speed)
 	top.add_child(Kit.button("Close up", func(): Kit.main.confirm("Close early?", "Anyone still waiting leaves unserved, and anything half-made goes in the bin.", "Close up", func(): finish(false)), "ghost", 19))
@@ -181,6 +192,8 @@ func _build_ui() -> void:
 	var bcol := Kit.vbox(8)
 	bcol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	kitchen.add_child(bcol)
+	rail_ui = RailView.new(self)
+	bcol.add_child(rail_ui)
 	var stack := Control.new()
 	stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -298,6 +311,24 @@ func spawn_party() -> int:
 	pid += 1
 	var p := {"id": pid, "type": type, "n": n, "pos": L.spawn, "target": L.spawn, "state": "", "pat": 0.0, "max": 0.0, "tks": [], "got": 0, "items": [],
 		"waits": [], "table": -1, "timer": 0.0, "gone": false, "look": randi() % 6, "hue": randf(), "nobox": false}
+	var reg = _pick_regular()
+	if reg != null:
+		p.reg = reg.name
+		p.n = 1
+		p.look = int(reg.look)
+		if reg.type == "dine" and tables.size() > 0: p.type = "dine"
+		elif type != "deliv": p.type = "take"
+		type = p.type
+		n = 1
+	elif critic_at >= 0 and not critic_in and t >= critic_at and type != "deliv":
+		p.critic = true
+		critic_in = true
+	elif type == "take" and randf() < 0.15:
+		phones.append({"n": n, "until": t + 10.0})
+		r.calls += 1
+		Art.sfx("ding")
+		dirty = true
+		return n
 	if type == "deliv":
 		if not order(p): return n
 		p.pos = Vector2(-100, -100)
@@ -346,7 +377,15 @@ func order(p: Dictionary) -> bool:
 		var avail := Game.active_recipes().filter(func(rc): return can_promise(rc, pend))
 		if avail.is_empty(): break
 		nid += 1
-		var tk := {"id": nid - 1, "rec": avail.pick_random(), "p": p, "state": "new", "owner": "", "gone": false, "age": 0.0}
+		var rec: Dictionary = avail.pick_random()
+		var mods := Orders.roll(rec, line_items(), 0.16 + 0.03 * Game.s.venue)
+		var reg = _regular(p.get("reg", ""))
+		if reg != null:
+			for rc in avail:
+				if rc.id == reg.fav: rec = rc
+			mods = reg.mods if rec.id == reg.fav else []
+		if mods.size() > 0: r.mods += 1
+		var tk := {"id": nid - 1, "rec": Orders.build(rec, mods), "p": p, "state": "new", "owner": "", "gone": false, "age": 0.0}
 		tickets.append(tk)
 		p.tks.append(tk)
 	if p.tks.is_empty():
@@ -396,13 +435,14 @@ func act_seat(p: Dictionary) -> bool:
 	return true
 
 ## hand over (or run to the table) every pizza of this party that is on the pass
-func act_handover(p: Dictionary) -> void:
+func act_handover(p: Dictionary, by_player: bool = false) -> void:
 	for tk in ready_tks(p):
 		tickets.erase(tk)
 		tk.state = "done"
 		p.got += 1
 		var it: Dictionary = tk.res
 		it.price = tk.rec.price
+		it.rec = tk.rec
 		if p.type != "dine":
 			var bx := Stock.take("box", 1.0)
 			if bx.got >= 1.0:
@@ -420,14 +460,16 @@ func act_handover(p: Dictionary) -> void:
 		p.state = "eat"
 		p.timer = 24.0 * c.turn
 	else:
-		settle(p, false)
-		leave(p)
+		if settle(p, false, by_player): leave(p)
 
-func act_bill(p: Dictionary) -> void:
-	var tb = tables[p.table]
-	settle(p, false)
+func act_bill(p: Dictionary, by_player: bool = false) -> void:
+	if settle(p, false, by_player): _depart(p)
+
+## the party leaves; a table they sat at needs clearing
+func _depart(p: Dictionary) -> void:
+	var tb = tables[p.table] if p.table >= 0 else null
 	leave(p)
-	tb.dirty = true
+	if tb != null: tb.dirty = true
 
 ## The customer's verdict. They judge four things, each out of 5:
 ##   look     how the pizza looked: shape, spread of toppings, colour of the bake, slicing
@@ -436,75 +478,292 @@ func act_bill(p: Dictionary) -> void:
 ##   value    taste against what you charge
 ## The overall rating moves your reputation. Tips are more likely, and bigger, the better all of it was,
 ## and better ingredients raise both.
-func settle(p: Dictionary, walked: bool) -> void:
+func settle(p: Dictionary, walked: bool, by_player: bool = false, force: bool = false) -> bool:
+	if p.items.is_empty(): return true
+	var v := _verdict(p, walked)
+	if v.allergy:
+		v.stars = 1.0
+		v.paid = 0.0
+		v.tip = 0.0
+		r.allergy += 1
+		Game.s.rep += (1.0 - Game.s.rep) * 0.08
+		Game.s.hygiene.next = min(int(Game.s.hygiene.next), Game.s.day + 2)
+		Kit.main.toast("A customer has had an allergic reaction!", true)
+		_apply(p, v)
+		return true
+	if not walked and not force and not p.get("handled", false) and (v.stars < 2.6 or v.bad) and p.type != "deliv":
+		r.complaints += 1
+		p.handled = true
+		if Game.calc().manager:
+			_resolve(p, v, "refund" if v.stars < 1.8 else "drink")
+			return false
+		p.state = "complain"
+		p.verdict = v
+		set_pat(p, 45)
+		float_text(p.pos, "Not happy!", Kit.TOMATO)
+		Art.sfx("bad")
+		dirty = true
+		return false
+	if by_player and not walked and not force and randf() < 0.3 and not Kit.main.modal_root.visible:
+		p.state = "paying"
+		p.verdict = v
+		_cash(p, v)
+		return false
+	_apply(p, v)
+	return true
+
+## what the party thinks of it all, before anything is paid
+func _verdict(p: Dictionary, walked: bool) -> Dictionary:
 	var G := Game
 	var n: int = p.items.size()
-	if n == 0: return
 	var expect: float = [1.6, 2.4, 3.4][G.s.price]     # ingredient grade people expect at this price level
-	var paid := 0.0
-	var look := 0.0
-	var taste := 0.0
-	var grade := 0.0
-	var notes := []
+	var v := {"n": n, "paid": 0.0, "look": 0.0, "taste": 0.0, "grade": 0.0, "notes": [], "allergy": false, "walked": walked, "bad": false}
 	for it in p.items:
 		var tt: float = clamp(it.taste + (it.grade - expect) * 7.0, 0.0, 100.0)
-		look += it.look / n
-		taste += tt / n
-		grade += it.grade / n
-		if tt >= 30.0: paid += it.price * c.price_mult
+		v.look += it.look / n
+		v.taste += tt / n
+		v.grade += it.grade / n
+		if tt >= 30.0: v.paid += it.price * c.price_mult
+		else: v.bad = true
+		if it.get("allergy", false): v.allergy = true
 		for nt in it.notes:
-			if not notes.has(nt): notes.append(nt)
-		Stock.log_sale(it.use, it.spec, it.cost, it.spec_cost)
-		r.qsum += (it.look + tt) / 2.0
-	p.waits.append(clamp(p.pat / p.max, 0.0, 1.0))
+			if not v.notes.has(nt): v.notes.append(nt)
+		if not it.get("logged", false):
+			Stock.log_sale(it.use, it.spec, it.cost, it.spec_cost)
+			r.qsum += (it.look + tt) / 2.0
+			it.logged = true
+	p.waits.append(clamp(p.pat / max(p.max, 0.001), 0.0, 1.0))
 	var pf := 0.0
 	for w in p.waits: pf += w / p.waits.size()
 	var dine: bool = p.type == "dine"
 	var service: float = 100.0 * (0.2 + 0.8 * pf) + (c.rep_bonus * 20.0 if dine else 0.0)
 	if p.nobox:
 		service -= 30.0
-		notes.push_front("No box to take it home in")
+		v.notes.push_front("No box to take it home in")
 	if walked: service -= 30.0
 	var foh_clean := Hygiene.level("foh")
 	if foh_clean < 60.0:
 		service -= (60.0 - foh_clean) * 0.7
-		notes.push_front("Sticky tables" if dine else "Grubby counter")
+		v.notes.push_front("Sticky tables" if dine else "Grubby counter")
 	if minute() < mouse_until:
 		service -= 25.0
-		notes.push_front("Saw a mouse!")
+		v.notes.push_front("Saw a mouse!")
+	if p.get("remade", false): service -= 10.0
 	Hygiene.dirty("foh", (1.5 if dine else 0.6) * 30.0 * n / max(10.0, float(c.total)))
 	service = clamp(service, 0.0, 100.0)
-	var value: float = clamp(55.0 + (taste - 65.0) * 0.9 + [16.0, 0.0, -16.0][G.s.price], 0.0, 100.0)
-	var overall := look * 0.2 + taste * 0.4 + service * 0.25 + value * 0.15
-	var stars: float = clamp(1.0 + overall / 25.0, 1.0, 5.0)
-	var tip := 0.0
-	if paid > 0 and not walked:
-		var chance: float = clamp(0.05 + (overall - 55.0) / 70.0 + (grade - 2.0) * 0.1 + (0.12 if dine else 0.0), 0.02, 0.97)
+	var value: float = clamp(55.0 + (v.taste - 65.0) * 0.9 + [16.0, 0.0, -16.0][G.s.price], 0.0, 100.0)
+	var overall: float = v.look * 0.2 + v.taste * 0.4 + service * 0.25 + value * 0.15
+	v.service = service
+	v.value = value
+	v.overall = overall
+	v.pf = pf
+	v.stars = clamp(1.0 + overall / 25.0, 1.0, 5.0)
+	for nt in v.notes:
+		if nt.begins_with("I asked for no") or nt.begins_with("They ignored") or nt == "Toppings nobody ordered" or nt.begins_with("Wrong"): v.bad = true
+	if v.bad: v.stars = min(v.stars, 2.0)
+	v.tip = 0.0
+	if v.paid > 0 and not walked:
+		var chance: float = clamp(0.05 + (overall - 55.0) / 70.0 + (v.grade - 2.0) * 0.1 + (0.12 if dine else 0.0) + (0.15 if p.has("reg") else 0.0), 0.02, 0.97)
 		if randf() < chance:
-			tip = paid * (0.05 + 0.03 * grade + 0.04 * look / 100.0) * c.tip * (1.4 if dine else 1.0) * (0.5 + 0.5 * pf)
-	var drinks: float = c.drinks * n * (1.0 if dine else 0.35) * randf_range(0.6, 1.4)
-	var deliv := 2.5 if p.type == "deliv" else 0.0
+			v.tip = v.paid * (0.05 + 0.03 * v.grade + 0.04 * v.look / 100.0) * c.tip * (1.4 if dine else 1.0) * (0.5 + 0.5 * pf)
+	v.drinks = c.drinks * n * (1.0 if dine else 0.35) * randf_range(0.6, 1.4)
+	v.deliv = 2.5 if p.type == "deliv" else 0.0
+	return v
+
+## money changes hands, the review is written, the rating moves
+func _apply(p: Dictionary, v: Dictionary) -> void:
+	var G := Game
+	var stars: float = clamp(v.stars, 1.0, 5.0)
 	G.s.ratings += 1
-	G.s.rep = clamp(G.s.rep + (stars - G.s.rep) * max(0.02, 1.0 / (G.s.ratings + 4)), 1.0, 5.0)
-	var total := paid + tip + drinks + deliv
+	var weight: float = max(0.02, 1.0 / (G.s.ratings + 4))
+	if p.get("critic", false):
+		weight = 0.25
+		r.critic = stars
+		G.s.buzz = {"until": G.s.day + 7, "mult": clamp(1.0 + (stars - 3.2) * 0.15, 0.75, 1.3)}
+		G.s.critic_next = G.s.day + randi_range(14, 24)
+	G.s.rep = clamp(G.s.rep + (stars - G.s.rep) * weight, 1.0, 5.0)
+	var total: float = v.paid + v.tip + v.drinks + v.deliv
 	G.s.cash += total
 	G.s.earned += total
-	G.s.pizzas += n
-	G.s.book.sales += paid
-	r.food += paid
-	r.tips += tip
-	r.drinks += drinks
-	r.deliv += deliv
-	r.served += n
-	var cats := {"look": 1.0 + look / 25.0, "taste": 1.0 + taste / 25.0, "service": 1.0 + service / 25.0, "value": 1.0 + value / 25.0}
+	G.s.pizzas += v.n
+	G.s.book.sales += v.paid
+	r.food += v.paid
+	r.tips += v.tip
+	r.drinks += v.drinks
+	r.deliv += v.deliv
+	r.served += v.n
+	var cats := {"look": 1.0 + v.look / 25.0, "taste": 1.0 + v.taste / 25.0, "service": 1.0 + v.service / 25.0, "value": 1.0 + v.value / 25.0}
 	for k in cats: r.cats[k] += cats[k]
 	r.n_rev += 1
-	var rv := {"stars": stars, "tip": tip, "text": _review_text(cats, notes), "t": t}
+	var text := _review_text(cats, v.notes)
+	if v.allergy: text = "I had an allergic reaction. I told them about my allergy."
+	var rv := {"stars": stars, "tip": v.tip, "text": text, "t": t}
 	rv.merge(cats)
 	reviews.append(rv)
 	if reviews.size() > 60: reviews.pop_front()
-	float_text(p.pos, "%.1f stars  %s%s" % [stars, ("+" + Kit.cents(paid)) if paid > 0 else "refunded", ("  tip " + Kit.cents(tip)) if tip > 0 else ""], Kit.CHEESE if paid > 0 else Kit.TOMATO)
-	Art.sfx("cash" if paid > 0 else "bad")
+	_regular_after(p, stars)
+	float_text(p.pos, "%.1f stars  %s%s" % [stars, ("+" + Kit.cents(v.paid)) if v.paid > 0 else "refunded", ("  tip " + Kit.cents(v.tip)) if v.tip > 0 else ""], Kit.CHEESE if v.paid > 0 else Kit.TOMATO)
+	Art.sfx("cash" if v.paid > 0 else "bad")
+	dirty = true
+
+## sorting out a complaint: "remake", "refund", "drink", "sorry", or "ignored"
+func _resolve(p: Dictionary, v: Dictionary, choice: String) -> void:
+	match choice:
+		"remake":
+			var worst := 0
+			for k in p.items.size():
+				if p.items[k].look + p.items[k].taste < p.items[worst].look + p.items[worst].taste: worst = k
+			var old: Dictionary = p.items[worst]
+			p.items.remove_at(worst)
+			p.got -= 1
+			nid += 1
+			var tk := {"id": nid - 1, "rec": old.rec, "p": p, "state": "new", "owner": "", "gone": false, "age": 0.0}
+			tickets.append(tk)
+			p.tks.append(tk)
+			p.remade = true
+			p.state = "wait"
+			if p.type == "take" and not waiters.has(p): waiters.append(p)
+			set_pat(p, 100)
+			float_text(p.pos, "Remaking it", Kit.CHEESE)
+			dirty = true
+			return
+		"refund":
+			r.refunds += v.paid
+			v.paid = 0.0
+			v.tip = 0.0
+			v.stars = max(v.stars + 1.2, 2.8)
+		"drink":
+			var cost: float = 2.5 * v.n
+			Game.s.cash -= cost
+			r.comps += cost
+			v.stars = min(v.stars + 0.7, 3.8)
+			v.tip = 0.0
+		"sorry":
+			v.stars += 0.25
+			v.tip = 0.0
+		"ignored":
+			v.stars = 1.0
+			v.tip = 0.0
+	_apply(p, v)
+	_depart(p)
+
+## a complaint at the hatch or the table: you decide what to do
+func complaint_dialog(p: Dictionary) -> void:
+	if Kit.main.modal_root.visible: return
+	var v: Dictionary = p.verdict
+	var who: String = (p.reg + ", one of your regulars,") if p.has("reg") else "A customer"
+	var what: String = ", ".join(p.items.map(func(it): return it.rec.name))
+	var box := Kit.vbox(10)
+	box.add_child(Kit.label("Complaint", 26))
+	box.add_child(Kit.label("%s is not happy with their %s.\n\"%s\"" % [who, what, (v.notes[0] if v.notes.size() > 0 else "It just was not very good") + "."], 19, Kit.INK, true))
+	var h := Kit.hbox(8)
+	var opts := [["remake", "Remake it"]]
+	if v.paid > 0: opts.append(["refund", "Refund %s" % Kit.cents(v.paid)])
+	opts.append_array([["drink", "Free drink (%s)" % Kit.cents(2.5 * v.n)], ["sorry", "Apologise"]])
+	pop.visible = false
+	pop_t = 0.0
+	for o in opts:
+		h.add_child(Kit.button(o[1], func():
+			Kit.main.close_modal()
+			if p.state == "complain": _resolve(p, v, o[0]), "primary" if o[0] == "remake" else "ghost", 17))
+	box.add_child(h)
+	box.add_child(Kit.label("Remaking costs you the ingredients and time but saves the review. A refund or a drink calms them down. An apology alone rarely does.", 14, Kit.MUTED, true))
+	Kit.main.modal(box, 760)
+
+## paying cash: count out the right change
+func _cash(p: Dictionary, v: Dictionary) -> void:
+	var bill: float = snapped(v.paid + v.drinks + v.deliv, 0.1)
+	var tendered := 5.0
+	for note in [5.0, 10.0, 20.0, 50.0]:
+		tendered = note
+		if note >= bill: break
+	if randf() < 0.25 and tendered < 50.0: tendered *= 2.0
+	var due: float = snapped(tendered - bill, 0.1)
+	pop.visible = false
+	pop_t = 0.0
+	var given := [0.0]
+	var box := Kit.vbox(10)
+	box.add_child(Kit.label("Cash", 26))
+	box.add_child(Kit.label("The bill is %s. They hand you a %s note." % [Kit.cents(bill), Kit.money(tendered)], 20, Kit.INK, true))
+	var gl := Kit.label("Change counted out: $0.00", 22, Kit.CHEESE)
+	box.add_child(gl)
+	var g := Kit.grid(4, 8)
+	for coin in [10.0, 5.0, 2.0, 1.0, 0.5, 0.2, 0.1]:
+		g.add_child(Kit.button(Kit.cents(coin) if coin < 1 else Kit.money(coin), func():
+			given[0] = snapped(given[0] + coin, 0.01)
+			gl.text = "Change counted out: %s" % Kit.cents(given[0]), "ghost", 18))
+	g.add_child(Kit.button("Start again", func():
+		given[0] = 0.0
+		gl.text = "Change counted out: $0.00", "ghost", 16))
+	box.add_child(g)
+	box.add_child(Kit.button("Hand it over", func():
+		Kit.main.close_modal()
+		var diff: float = snapped(given[0] - due, 0.01)
+		if abs(diff) < 0.05:
+			v.stars += 0.1
+		elif diff > 0:
+			Game.s.cash -= diff
+			r.change_err += diff
+			Kit.main.toast("You gave %s too much change" % Kit.cents(diff), true)
+		else:
+			v.stars -= 0.3
+			Kit.main.toast("\"That's %s short.\" You hand over the rest." % Kit.cents(-diff), true)
+		if p.state == "paying":
+			_apply(p, v)
+			_depart(p)))
+	Kit.main.modal(box, 640)
+
+# ---------- regulars ----------
+func _regular(name: String):
+	for rg in Game.s.regulars:
+		if rg.name == name: return rg
+	return null
+
+## sometimes one of your regulars walks in
+func _pick_regular():
+	var regs: Array = Game.s.regulars.filter(func(rg): return int(rg.last) != Game.s.day and rg.mood >= 0.3)
+	if regs.is_empty() or randf() > min(0.3, 0.05 * regs.size()): return null
+	var rg = regs.pick_random()
+	rg.last = Game.s.day
+	return rg
+
+## how a visit went changes a regular's mood; great visits make new regulars
+func _regular_after(p: Dictionary, stars: float) -> void:
+	var G := Game
+	if p.has("reg"):
+		var rg = _regular(p.reg)
+		if rg == null: return
+		rg.visits += 1
+		rg.mood = clamp(rg.mood + (stars - 3.6) * 0.15, 0.0, 1.0)
+		r.regulars.append("%s %.1f" % [rg.name, stars])
+		if rg.mood < 0.2:
+			G.s.regulars.erase(rg)
+			r.notes.append("%s, a regular for %d visits, has had enough and stopped coming." % [rg.name, rg.visits])
+		return
+	if stars >= 4.4 and randf() < 0.12 and G.s.regulars.size() < 6 + G.s.venue * 4 and p.items.size() > 0 and not p.get("critic", false):
+		var it: Dictionary = p.items[0]
+		var rg := {"name": Data.NAMES.pick_random(), "fav": it.rec.id, "mods": it.rec.get("mods", []), "mood": 0.7, "visits": 1,
+			"type": p.type if p.type != "deliv" else "take", "look": p.look, "last": G.s.day}
+		G.s.regulars.append(rg)
+		r.notes.append("%s loved their %s and says they will be back." % [rg.name, it.rec.name])
+
+# ---------- the phone ----------
+func answer_phone() -> void:
+	if phones.is_empty() or not is_free(): return
+	var ph: Dictionary = phones.pop_front()
+	start_busy("On the phone taking an order", 1.0, func(frac): _phone_order(ph))
+
+## an order taken over the phone: they come to collect it in about 20 minutes
+func _phone_order(ph: Dictionary) -> void:
+	pid += 1
+	var p := {"id": pid, "type": "take", "n": ph.n, "pos": Vector2(-100, -100), "target": Vector2(-100, -100), "state": "", "pat": 0.0, "max": 0.0, "tks": [], "got": 0, "items": [],
+		"waits": [], "table": -1, "timer": 0.0, "gone": false, "look": randi() % 6, "hue": randf(), "nobox": false, "phone": true}
+	parties.append(p)
+	if not order(p): return
+	waiters.erase(p)
+	p.state = "phone"
+	p.arrive = minute() + 20.0
+	dirty = true
 
 func _review_text(cats: Dictionary, notes: Array) -> String:
 	var worst := "look"
@@ -531,11 +790,12 @@ func _waste_pizza(pz: Pizza) -> void:
 
 func expire(p: Dictionary, why: String = "Gave up waiting") -> void:
 	var G := Game
+	if p.state == "complain":
+		_resolve(p, p.verdict, "ignored")
+		return
 	if p.state == "bill":
-		var tb = tables[p.table]
 		settle(p, true)
-		leave(p)
-		tb.dirty = true
+		_depart(p)
 		return
 	r.lost += p.n - p.got
 	r.gave_up += p.n - p.got
@@ -550,7 +810,7 @@ func expire(p: Dictionary, why: String = "Gave up waiting") -> void:
 	oven.items = oven.items.filter(func(o): return not (o.owner == "staff" and o.tk.gone))
 	var tb = tables[p.table] if p.table >= 0 else null
 	float_text(p.pos, why, Kit.TOMATO)
-	if p.got > 0: settle(p, true)
+	if p.got > 0: settle(p, true, false, true)
 	leave(p)
 	if tb != null and p.got > 0: tb.dirty = true
 	Art.sfx("bad")
@@ -567,6 +827,8 @@ func actionables() -> Array:
 	for p in waiters:
 		if ready_tks(p).size() > 0: out.append({"kind": "food", "p": p, "pos": p.pos})
 	if door.size() > 0 and free_table() != null and door[0].pos.distance_to(d_pos(0)) < 6: out.append({"kind": "seat", "p": door[0], "pos": door[0].pos})
+	for p in parties:
+		if p.state == "complain": out.append({"kind": "complaint", "p": p, "pos": tables[p.table].pos if p.table >= 0 else p.pos})
 	for tb in tables:
 		var p = tb.party
 		if p == null:
@@ -580,9 +842,11 @@ func do_action(a: Dictionary, by_player: bool) -> void:
 	match a.kind:
 		"order":
 			if order(a.p) and by_player: r.xp += 1
-		"food": act_handover(a.p)
+		"food": act_handover(a.p, by_player)
 		"seat": act_seat(a.p)
-		"bill": act_bill(a.p)
+		"bill": act_bill(a.p, by_player)
+		"complaint":
+			if by_player: complaint_dialog(a.p)
 		"clear": a.tb.dirty = false
 
 func tap_scene(pos: Vector2) -> void:
@@ -611,7 +875,9 @@ func _process(delta: float) -> void:
 	_refresh()
 	if view == "front": front.queue_redraw()
 	elif view == "oven": oven_ui.queue_redraw()
-	else: bench_ui.queue_redraw()
+	else:
+		bench_ui.queue_redraw()
+		rail_ui.queue_redraw()
 
 func step(dt: float) -> void:
 	var G := Game
@@ -671,9 +937,21 @@ func step(dt: float) -> void:
 				if p.timer <= 0:
 					p.state = "bill"
 					set_pat(p, 60)
-			"queue", "door", "ask", "wait", "bill":
+			"queue", "door", "ask", "wait", "bill", "complain":
 				p.pat -= dt
 				if p.pat <= 0: expire(p)
+			"phone":
+				if minute() >= p.arrive:
+					p.state = "wait"
+					p.pos = L.spawn
+					waiters.append(p)
+					set_pat(p, 50)
+	for ph in phones.duplicate():
+		if t > ph.until:
+			phones.erase(ph)
+			r.lost += ph.n
+			r.missed += 1
+			dirty = true
 	for f in floats.duplicate():
 		f.t -= dt
 		f.pos.y -= 16 * dt
@@ -682,13 +960,17 @@ func step(dt: float) -> void:
 	for w in foh:
 		w.cd -= dt
 		if w.cd > 0: continue
+		if phones.size() > 0 and w.role in ["cashier", "host"]:
+			_phone_order(phones.pop_front())
+			w.cd = 3.0
+			continue
 		var acts := actionables()
 		var want := []
 		match w.role:
 			"cashier": want = acts.filter(func(a): return a.has("p") and a.p.type == "take" and a.kind in ["order", "food"])
 			"server":
 				for kind in ["food", "order", "bill", "seat", "clear"]:
-					want = acts.filter(func(a): return a.kind == kind and not (a.has("p") and a.p.type == "take"))
+					want = acts.filter(func(a): return a.kind == kind and a.kind != "complaint" and not (a.has("p") and a.p.type == "take"))
 					if want.size() > 0: break
 			"host": want = acts.filter(func(a): return a.kind == "seat")
 			"porter": want = acts.filter(func(a): return a.kind == "clear")
@@ -714,8 +996,7 @@ func step(dt: float) -> void:
 		if w.get("prep", "") != "":
 			w.left -= dt
 			if w.left <= 0:
-				Stock.prep(w.prep, w.raw)
-				prepping.erase(w.prep)
+				line_job_done(w.prep, w.raw, 0.6 + 0.08 * w.s.skill)
 				w.prep = ""
 				dirty = true
 			continue
@@ -730,17 +1011,18 @@ func step(dt: float) -> void:
 					w.left = 10.0 * (1.25 - 0.1 * w.s.skill) / c.prep_speed
 					dirty = true
 					break
-				# the line has run out of something: with no prep cook on, the pizzaiolo preps it
-				if G.staff_of("prep").is_empty():
-					var need: Array = G.needs_prepping(tk.rec).filter(func(i): return not prepping.has(i))
-					if need.size() > 0:
-						var id: String = need[0]
-						w.prep = id
-						w.raw = batch_raw(id)
-						w.left = secs(Stock.prep_minutes(id, w.raw, Day.prep_mult() * (1.25 - 0.08 * w.s.skill)))
-						prepping[id] = w.s.name
-						dirty = true
-						break
+				# a pan has run out: refill it from the tubs, or (with no prep cook on) prep more
+				var short: Array = G.line_short(tk.rec).filter(func(i): return not prepping.has(i))
+				if short.size() > 0:
+					var id: String = short[0]
+					var job := line_job(id, G.staff_of("prep").is_empty(), Day.prep_mult() * (1.25 - 0.08 * w.s.skill))
+					if job.is_empty(): continue
+					w.prep = id
+					w.raw = job.raw
+					w.left = secs(job.minutes)
+					prepping[id] = w.s.name
+					dirty = true
+					break
 	# oven
 	for o in oven.step(dt, c.bake / oven.bake_time): to_pass(o.tk, staff_result(o.tk))
 	if c.fornaio:
@@ -760,18 +1042,24 @@ func step(dt: float) -> void:
 func staff_make(x: Dictionary, rec: Dictionary) -> Dictionary:
 	var dq := Stock.take_dough(rec.base)
 	var over: float = max(0.0, 0.16 - 0.03 * x.skill - c.chef * 0.004) + randf_range(-0.02, 0.03)
-	var m := {"skill": x.skill, "dough_q": dq.q, "use": {"dough:" + rec.base: 1.0}, "spec": rec.spec.duplicate(), "cost": dq.cost, "spec_cost": dq.cost, "short": 0}
+	var spec: Dictionary = rec.spec
+	var ignored := false
+	if rec.get("mods", []).size() > 0 and randf() < max(0.02, 0.14 - 0.03 * x.skill):
+		spec = Data.REC[rec.id].spec
+		ignored = true
+	var m := {"skill": x.skill, "dough_q": dq.q, "use": {"dough:" + rec.base: 1.0}, "spec": rec.spec.duplicate(), "cost": dq.cost, "spec_cost": dq.cost, "short": 0,
+		"ignored": ignored, "allergy": ignored and rec.get("allergy", "") != ""}
 	m.spec["dough:" + rec.base] = 1.0
 	var gw: float = Data.DOUGHS[rec.base].ball * 0.4
 	var gsum: float = dq.g * gw
-	for id in rec.spec:
-		var got := Stock.take_use(id, rec.spec[id] * (1.0 + over))
+	for id in spec:
+		var got := Stock.take_use(id, spec[id] * (1.0 + over))
 		m.use[id] = got.got
 		m.cost += got.cost
-		m.spec_cost += rec.spec[id] * (got.cost / got.got if got.got > 0 else 0.0)
+		m.spec_cost += spec[id] * (got.cost / got.got if got.got > 0 else 0.0)
 		gsum += got.g * got.got
 		gw += got.got
-		if got.got < rec.spec[id] * 0.85: m.short += 1
+		if got.got < spec[id] * 0.85: m.short += 1
 	m.grade = gsum / gw
 	return m
 
@@ -781,6 +1069,12 @@ func staff_result(tk: Dictionary) -> Dictionary:
 	a.look = clamp(46.0 + m.skill * 8.0 + c.chef * 0.6 + c.prep_q + randf_range(-7, 7), 15.0, 97.0)
 	a.taste = clamp(44.0 + m.skill * 8.0 + c.chef + c.oven_q * 0.5 + c.prep_q + (m.dough_q - 60.0) * 0.15 - m.short * 12.0 + randf_range(-5, 5), 15.0, 98.0)
 	if m.short > 0: a.notes.append("Something was missing from it")
+	if m.ignored:
+		a.notes.push_front("They ignored what I asked for")
+		a.taste -= 25.0
+	if m.allergy:
+		a.allergy = true
+		a.notes.push_front("ALLERGY: it had %s on it" % Data.ING[tk.rec.allergy].name.to_lower())
 	return a
 
 func to_pass(tk: Dictionary, res: Dictionary) -> void:
@@ -929,7 +1223,7 @@ func serve() -> void:
 	if pz.tk.gone:
 		var alt = null
 		for tk in tickets:
-			if tk.state == "new" and tk.owner == "" and tk.rec == pz.rec: alt = tk
+			if tk.state == "new" and tk.owner == "" and tk.rec.key == pz.rec.key: alt = tk
 		if alt == null:
 			board.pop_front()
 			_waste_pizza(pz)
@@ -968,6 +1262,8 @@ func _refresh() -> void:
 	clock.value = clamp(t / DAY, 0, 1)
 	top_lbl.time.text = ("Last orders " if t >= DAY else "") + Data.hhmm(min(minute(), c.close))
 	top_lbl.cash.text = Kit.money(G.s.cash)
+	top_lbl.phone.visible = phones.size() > 0
+	if phones.size() > 0: top_lbl.phone.modulate.a = 0.6 + 0.4 * sin(Time.get_ticks_msec() / 120.0)
 	top_lbl.rep.text = "Rating %.1f" % G.s.rep
 	top_lbl.count.text = "Served %d · Lost %d" % [r.served, r.lost + r.sold]
 	var dn := 0
@@ -992,7 +1288,7 @@ func _refresh() -> void:
 	tab_btns.board.text = "Board (%d)" % board.size()
 	var low := 0
 	for id in line_items():
-		if Stock.prepped(id) < per_pizza(id) * 3.0: low += 1
+		if Stock.rail_have(id) < per_pizza(id) * 3.0: low += 1
 	tab_btns.prep.text = "Prep" + (" (%d low)" % low if low > 0 else "") + ("  DELIVERY" if Game.s.dock.size() > 0 else "")
 	busy_wrap.visible = not busy.is_empty() and view != "front"
 	if not busy.is_empty():
@@ -1019,6 +1315,7 @@ func _refresh() -> void:
 	bench_ui.visible = view == "bench" or view == "board"
 	oven_ui.visible = view == "oven"
 	prep_scroll.visible = view == "prep"
+	rail_ui.visible = view == "bench" or view == "board"
 	_build_tickets()
 	_build_side()
 	_build_prep()
@@ -1041,7 +1338,11 @@ func _build_tickets() -> void:
 		elif tk.owner != "":
 			status = tk.owner + (": in the oven" if tk.state == "oven" else ": making it")
 			col = Color("c9d3c4")
-		var where: String = {"take": "Takeaway", "dine": "Table %d" % (tk.p.table + 1), "deliv": "Delivery"}[tk.p.type]
+		var where: String = {"take": "Phone order" if tk.p.get("phone", false) else "Takeaway", "dine": "Table %d" % (tk.p.table + 1), "deliv": "Delivery"}[tk.p.type]
+		if tk.p.has("reg"): where = "%s's usual · %s" % [tk.p.reg, where]
+		var note := Orders.text(tk.rec.get("mods", []))
+		if note != "": status = note.to_upper() + "\n" + status
+		if tk.rec.get("allergy", "") != "": col = Color("f2a38f") if col == Kit.INK else col
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -1082,9 +1383,10 @@ func _tool_button(id: String, need: bool) -> Button:
 	var fgc := Color.BLACK if bg.get_luminance() > 0.5 else Color.WHITE
 	for cn in ["font_color", "font_hover_color", "font_pressed_color"]: b.add_theme_color_override(cn, fgc)
 	b.pressed.connect(func():
-		if Data.needs_prep(id) and Stock.prepped(id) <= 0.0:
-			Kit.main.toast("No %s %s on the line. Prep some, or 86 the pizzas that need it." % [Data.ING[id].prep.as, Data.ING[id].name.to_lower()], true)
-			set_view("prep")
+		if Stock.rail_have(id) <= 0.5:
+			var sl := Stock.rail_slot(id)
+			if sl >= 0: rail_tap(sl)
+			else: Kit.main.toast("There is no pan of %s on the rail" % Data.ING[id].name.to_lower(), true)
 			return
 		tool = id
 		dirty = true)
@@ -1137,8 +1439,8 @@ func _build_side() -> void:
 				dirty = true, "primary" if tool == "" else "ghost", 15)
 			wheel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			g.add_child(wheel)
-			for id in finishing: g.add_child(_tool_button(id, true))
 			palette.add_child(g)
+			palette.add_child(Kit.label("For the finishing toppings, tap their pan on the rail.", 14, Kit.MUTED, true))
 		return
 	if pz.stage == "shape":
 		next_btn.text = "Base is ready"
@@ -1164,13 +1466,7 @@ func _build_side() -> void:
 		else:
 			_gram_row(pz, id)
 	_info(func(): return ["On the pizza so far: %s" % Kit.cents(pz.cost), Kit.MUTED], 15)
-	var used := {}
-	for rc in Game.active_recipes():
-		for i in rc.spec:
-			if not Data.ING[i].after: used[i] = true
-	var g := Kit.grid(2, 5)
-	for id in used: g.add_child(_tool_button(id, pz.rec.spec.has(id)))
-	palette.add_child(g)
+	info.add_child(Kit.label("Tap a pan on the rail to pick up that topping, then spread or place it on the pizza." + ((" In your hand: " + Data.ING[tool].name.to_lower() + ".") if tool != "" else ""), 15, Kit.CHEESE if tool == "" else Kit.MUTED, true))
 
 func _side_oven() -> void:
 	info.add_child(Kit.label(oven.tier.n, 20))
@@ -1189,14 +1485,14 @@ func _side_oven() -> void:
 			var rng: Array = o.pz.bake_range()
 			return ["%s: %s, %d%% done (%d%% to %d%%)" % [o.pz.rec.name, oven.status(o), o.pz.bake_avg() * 100, rng[0] * 100, rng[1] * 100], Kit.INK])
 
-# ---------- the makeline, prep and the back door ----------
-## toppings on tonight's line that have to be prepped
+# ---------- the counter rail, prep and the back door ----------
+## every topping on tonight's menu (all of them go in a pan on the rail)
 func line_items() -> Array:
 	var out := []
 	for rc in Game.active_recipes():
 		if eighty6.has(rc.id): continue
 		for id in rc.spec:
-			if Data.needs_prep(id) and not out.has(id): out.append(id)
+			if not out.has(id): out.append(id)
 	return out
 
 ## grams of a topping one pizza takes, averaged over tonight's pizzas that use it
@@ -1220,18 +1516,76 @@ func batch_raw(id: String, pizzas: int = -1) -> float:
 		var users := 0
 		for rc in Game.active_recipes():
 			if rc.spec.has(id) and not eighty6.has(rc.id): users += 1
-		want = max(per_pizza(id) * users * c.total * max(0.1, 1.0 - t / DAY) * 1.1 / all - Stock.prepped(id), per_pizza(id) * 8.0)
-	return min(Stock.have(id), want / y)
+		want = max(per_pizza(id) * users * c.total * max(0.1, 1.0 - t / DAY) * 1.1 / all - Stock.prepped(id) - Stock.rail_have(id), per_pizza(id) * 8.0)
+	return min(min(Stock.have(id), Stock.max_prep_raw(id)), want / y)
 
-## you prep something: you are tied up until it is done
+## what it takes to get a topping back on the rail: {kind "refill"/"prep", raw, minutes} or {} if nothing can be done
+func line_job(id: String, may_prep: bool, mult: float) -> Dictionary:
+	var slot := Stock.rail_slot(id)
+	if slot < 0: return {}
+	if Stock.refill_source(id) > 0.5: return {"kind": "refill", "raw": 0.0, "minutes": 1.0}
+	if may_prep and Data.needs_prep(id) and Stock.have(id) > 0:
+		var raw := batch_raw(id)
+		if raw > 10.0: return {"kind": "prep", "raw": raw, "minutes": Stock.prep_minutes(id, raw, mult) + 1.0}
+	return {}
+
+## a line job is done: prep into tubs if needed, then fill the pan
+func line_job_done(id: String, raw: float, quality: float) -> void:
+	if raw > 0.0: Stock.prep(id, raw, quality)
+	var slot := Stock.rail_slot(id)
+	if slot >= 0: Stock.refill(slot)
+	prepping.erase(id)
+
+## you tap a pan on the rail
+func rail_tap(i: int) -> void:
+	var pan: Dictionary = Stock.rail()[i]
+	if pan.ing == "":
+		Kit.main.toast("That pan is not in use tonight")
+		return
+	var id: String = pan.ing
+	var enough: bool = pan.q > max(0.5, per_pizza(id) * 0.7)
+	if not enough and Stock.refill_source(id) > 0.5:
+		refill_now(i)
+		return
+	if pan.q > 0.5:
+		var it: Dictionary = Data.ING[id]
+		if view == "bench" and bench != null and bench.stage == "top" and not it.after:
+			tool = id
+			dirty = true
+		elif view == "board" and it.after:
+			tool = id
+			dirty = true
+		else:
+			Kit.main.toast("%s goes on %s" % [it.name, "after the oven, on the board" if it.after else "before the oven"])
+		return
+	if Stock.refill_source(id) > 0.5: refill_now(i)
+	elif Data.needs_prep(id) and Stock.have(id) > 0:
+		Kit.main.toast("No %s %s left in tubs. Prep some on the Prep tab." % [Data.ING[id].prep.as, Data.ING[id].name.to_lower()], true)
+		set_view("prep")
+	else:
+		Kit.main.toast("You are out of %s. 86 the pizzas that need it." % Data.ING[id].name.to_lower(), true)
+		set_view("prep")
+
+## you refill a pan from the tubs (or the stores)
+func refill_now(i: int) -> void:
+	if not is_free(): return
+	var id: String = Stock.rail()[i].ing
+	start_busy("Refilling the %s pan" % Data.ING[id].name.to_lower(), 1.0, func(frac):
+		if frac >= 0.99: Stock.refill(i))
+
+## you prep something: you are tied up until it is done, then you fill the pan with it
 func prep_now(id: String, raw: float) -> void:
 	if raw <= 0.0 or not is_free(): return
 	var p = Data.ING[id].prep
-	var mins := Stock.prep_minutes(id, raw, Day.prep_mult())
+	var mins := Stock.prep_minutes(id, raw, Day.prep_mult()) + 1.0
 	prepping[id] = "you"
 	start_busy("%s: %s %s" % [p.task, Data.qty(id, raw), Data.ING[id].name.to_lower()], mins, func(frac):
-		Stock.prep(id, raw * frac)
-		prepping.erase(id))
+		line_job_done(id, raw * frac, 0.7))
+
+func wash_now() -> void:
+	if not is_free() or Stock.dirty_tubs() == 0: return
+	start_busy("Washing %d tubs" % Stock.dirty_tubs(), Stock.wash_minutes(), func(frac):
+		if frac >= 0.99: Stock.wash_all())
 
 ## you put a delivery away
 func put_away_now(e: Dictionary, rotate: bool) -> void:
@@ -1245,7 +1599,7 @@ func put_away_now(e: Dictionary, rotate: bool) -> void:
 		var txt := Day._waste_text(res)
 		if txt != "": Kit.main.toast(txt.strip_edges(), true))
 
-## prep cooks and kitchen porters: deliveries first, then the line (prep cook) or the washing up (porter)
+## prep cooks and kitchen porters: deliveries first, then the rail (prep cook) or the wash-up and floor (porter)
 func _crew_step(dt: float) -> void:
 	for w in crew:
 		if w.job != "":
@@ -1267,18 +1621,23 @@ func _crew_step(dt: float) -> void:
 		if w.job != "": continue
 		if w.role == "prep":
 			for id in line_items():
-				if prepping.has(id) or Stock.have(id) <= 0.0: continue
-				if Stock.prepped(id) >= per_pizza(id) * 6.0: continue
-				var raw := batch_raw(id)
-				if raw < 10.0: continue
+				if prepping.has(id) or Stock.rail_have(id) >= per_pizza(id) * 6.0: continue
+				var job := line_job(id, true, Day.prep_mult() * (1.25 - 0.08 * w.s.skill))
+				if job.is_empty(): continue
 				prepping[id] = w.s.name
-				w.job = "prep"
-				w.left = secs(Stock.prep_minutes(id, raw, Day.prep_mult() * (1.25 - 0.08 * w.s.skill)))
-				w.fn = func():
-					Stock.prep(id, raw)
-					prepping.erase(id)
+				w.job = job.kind
+				w.left = secs(job.minutes)
+				var raw: float = job.raw
+				var q: float = 0.6 + 0.08 * w.s.skill
+				w.fn = func(): line_job_done(id, raw, q)
 				break
-		if w.job == "" and w.role == "porter": Hygiene.tidy("boh", 0.3 * gm * dt)
+		if w.job == "" and w.role == "porter":
+			if Stock.dirty_tubs() >= 3:
+				w.job = "wash"
+				w.left = secs(Stock.wash_minutes())
+				w.fn = func(): Stock.wash_all()
+			else:
+				Hygiene.tidy("boh", 0.3 * gm * dt)
 	var servers := Game.staff_of("server").size()
 	if servers > 0: Hygiene.tidy("foh", 0.05 * servers * gm * dt)
 
@@ -1295,7 +1654,10 @@ func _mouse() -> void:
 	Game.s.rep += (1.0 - Game.s.rep) * max(0.02, 1.0 / (Game.s.ratings + 6)) * 0.6
 	Kit.main.toast("A customer saw a mouse!", true)
 
-## the Prep tab: the back door, the makeline, and tonight's menu
+func _day_dot(l: Dictionary) -> String:
+	return "%s dot, use by %s" % [Stock.DAY_DOT[Game.weekday(int(l.get("made", Game.s.day)))].to_lower(), Data.DAY_SHORT[Game.weekday(int(ceil(l.x)) - 1)] if l.x - Game.s.day < 7 else "next week"]
+
+## the Prep tab: the back door, the rail and the tubs, the wash-up, and tonight's menu
 func _build_prep() -> void:
 	Kit.clear(prep_box)
 	if view != "prep": return
@@ -1321,13 +1683,14 @@ func _build_prep() -> void:
 				h.add_child(Kit.button("Stack it in front (%d min)" % Stock.dock_minutes(e, false), put_away_now.bind(e, false), "ghost", 16))
 				v.add_child(h)
 			prep_box.add_child(pc)
-	prep_box.add_child(Kit.label("THE MAKELINE", 15, Kit.MUTED))
-	var ids := []
-	for rc in Game.active_recipes():
-		for id in rc.spec:
-			if not ids.has(id): ids.append(id)
-	ids.sort_custom(func(a, b): return Data.needs_prep(a) and not Data.needs_prep(b) if Data.needs_prep(a) != Data.needs_prep(b) else Data.ING[a].name < Data.ING[b].name)
-	for id in ids:
+	var th := Kit.hbox(8)
+	var tl := Kit.label("", 15, Kit.MUTED, true)
+	th.add_child(tl)
+	info_rows.append([tl, func(): return ["THE RAIL AND THE TUBS   ·   clean tubs: %d x 4 L, %d x 2 L   ·   %d dirty" % [Stock.clean_tubs(4), Stock.clean_tubs(2), Stock.dirty_tubs()], Kit.MUTED]])
+	if Stock.dirty_tubs() > 0 and Game.staff_of("porter").is_empty():
+		th.add_child(Kit.button("Wash up · %d min" % Stock.wash_minutes(), wash_now, "ghost", 14))
+	prep_box.add_child(th)
+	for id in line_items():
 		var it: Dictionary = Data.ING[id]
 		var pc := Kit.panel(Kit.PANEL, 8, 10)
 		var h := Kit.hbox(8)
@@ -1340,24 +1703,25 @@ func _build_prep() -> void:
 		v.add_child(st)
 		h.add_child(v)
 		var pp := per_pizza(id)
-		if not Data.needs_prep(id):
-			info_rows.append([st, func():
-				var a := Stock.have(id)
-				return ["Ready to use · %s in stock (about %d pizzas)" % [Data.qty(id, a), a / max(pp, 0.01)], Kit.TOMATO if a < pp * 3 else Kit.MUTED]])
-		else:
-			info_rows.append([st, func():
-				var a := Stock.prepped(id)
-				var who: String = prepping.get(id, "")
-				return ["%s %s on the line (about %d pizzas) · %s raw in stock%s" % [Data.qty(id, a), it.prep.as, a / max(pp, 0.01), Data.qty(id, Stock.have(id)), ("  ·  " + ("you are" if who == "you" else who + " is") + " prepping it") if who != "" else ""],
-					Kit.TOMATO if a < pp * 3 else (Kit.CHEESE if a < pp * 8 else Kit.MUTED)]])
-			if prepping.has(id) or Stock.have(id) <= 0.0:
-				pass
-			else:
+		var slot := Stock.rail_slot(id)
+		info_rows.append([st, func():
+			if slot < 0: return ["No pan for it on the rail: the counter is full. 86 the pizzas that need it, or upgrade the counter.", Kit.TOMATO]
+			var a := Stock.rail_have(id)
+			var who: String = prepping.get(id, "")
+			var tubs := ""
+			if Data.needs_prep(id):
+				var ls: Array = Stock.prepped_lots(id)
+				tubs = "  ·  %d tub%s, %s%s" % [ls.size(), "" if ls.size() == 1 else "s", Data.qty(id, Stock.prepped(id)), (" (" + _day_dot(ls[0]) + ")") if ls.size() > 0 else ""]
+			return ["Pan %d: %s (about %d pizzas)%s  ·  %s raw%s" % [slot + 1, Data.qty(id, a), a / max(pp, 0.01), tubs, Data.qty(id, Stock.have(id)), ("  ·  " + ("you are" if who == "you" else who + " is") + " on it") if who != "" else ""],
+				Kit.TOMATO if a < pp * 2 else (Kit.CHEESE if a < pp * 6 else Kit.MUTED)]])
+		if slot >= 0 and not prepping.has(id):
+			if Stock.refill_source(id) > 0.5 and Stock.rail_have(id) < Stock.pan_cap(id) * 0.7:
+				h.add_child(Kit.button("Refill pan · 1 min", refill_now.bind(slot), "primary", 15))
+			if Data.needs_prep(id) and Stock.have(id) > 0:
 				var small := batch_raw(id, 10)
 				var rest := batch_raw(id)
-				h.add_child(Kit.button("10 pizzas · %d min" % ceil(Stock.prep_minutes(id, small, Day.prep_mult())), prep_now.bind(id, small), "ghost", 15))
-				if rest > small * 1.3:
-					h.add_child(Kit.button("Rest of tonight · %d min" % ceil(Stock.prep_minutes(id, rest, Day.prep_mult())), prep_now.bind(id, rest), "primary", 15))
+				if small > 10.0: h.add_child(Kit.button("Prep 10 pizzas · %d min" % ceil(Stock.prep_minutes(id, small, Day.prep_mult()) + 1), prep_now.bind(id, small), "ghost", 15))
+				if rest > small * 1.3: h.add_child(Kit.button("Rest of tonight · %d min" % ceil(Stock.prep_minutes(id, rest, Day.prep_mult()) + 1), prep_now.bind(id, rest), "ghost", 15))
 		prep_box.add_child(pc)
 	prep_box.add_child(Kit.label("TONIGHT'S MENU", 15, Kit.MUTED))
 	for rc in Game.active_recipes():
@@ -1371,8 +1735,8 @@ func _build_prep() -> void:
 			if eighty6.has(rc.id): return ["86'd: off the menu tonight", Kit.TOMATO]
 			if Stock.dough_ready(rc.base) < 1: return ["Sold out: no %s dough left" % Data.DOUGHS[rc.base].name, Kit.TOMATO]
 			if not sellable(rc): return ["Sold out: not enough left in stock", Kit.TOMATO]
-			var np := Game.needs_prepping(rc)
-			if np.size() > 0: return ["Customers can order it but the line is out of " + ", ".join(np.map(func(i): return Data.ING[i].name.to_lower())), Kit.CHEESE]
+			var np := Game.line_short(rc)
+			if np.size() > 0: return ["Customers can order it but the rail is out of " + ", ".join(np.map(func(i): return Data.ING[i].name.to_lower())), Kit.CHEESE]
 			return ["On", Kit.BASIL]])
 		var off: bool = eighty6.has(rc.id)
 		h.add_child(Kit.button("Back on" if off else "86 it", func():
@@ -1382,12 +1746,12 @@ func _build_prep() -> void:
 		prep_box.add_child(h)
 
 func _side_prep() -> void:
-	info.add_child(Kit.label("Prep and stock", 21))
-	info.add_child(Kit.label("Toppings come off the makeline. When something runs low, prep more (you are tied up while you do), let a prep cook or pizzaiolo do it, or 86 the pizzas that need it. Deliveries that arrive mid-shift wait at the back door until someone puts them away.", 15, Kit.MUTED, true))
+	info.add_child(Kit.label("Prep and the rail", 21))
+	info.add_child(Kit.label("Every topping comes out of a pan on the counter rail. Empty pans are refilled from the tubs in the fridge; when the tubs run out, prep more (you are tied up while you do), let a prep cook or pizzaiolo do it, or 86 the pizzas that need it. Deliveries that arrive mid-shift wait at the back door.", 15, Kit.MUTED, true))
 	for w in crew:
-		_info(func(): return ["%s (%s): %s" % [w.s.name, Data.ROLES[w.s.role].name.to_lower(), {"": "keeping on top of things", "prep": "prepping", "delivery": "putting a delivery away"}[w.job]], Kit.INK], 15)
+		_info(func(): return ["%s (%s): %s" % [w.s.name, Data.ROLES[w.s.role].name.to_lower(), {"": "keeping on top of things", "prep": "prepping", "refill": "refilling a pan", "delivery": "putting a delivery away", "wash": "washing tubs"}[w.job]], Kit.INK], 15)
 	for w in workers:
-		_info(func(): return ["%s (pizzaiolo): %s" % [w.s.name, ("prepping " + Data.ING[w.prep].name.to_lower()) if w.prep != "" else ("making a pizza" if w.job != null else "waiting for tickets")], Kit.INK], 15)
+		_info(func(): return ["%s (pizzaiolo): %s" % [w.s.name, ("sorting out the " + Data.ING[w.prep].name.to_lower()) if w.prep != "" else ("making a pizza" if w.job != null else "waiting for tickets")], Kit.INK], 15)
 	_info(func():
 		var l := Hygiene.level("boh")
 		return ["Kitchen %d%% clean" % l, Kit.BASIL if l >= 70 else (Kit.CHEESE if l >= 45 else Kit.TOMATO)], 16)
@@ -1485,6 +1849,15 @@ func _summary() -> void:
 	v.add_child(g)
 	if r.get("mouse_lost", 0) > 0: why.append("%d left after seeing a mouse" % r.mouse_lost)
 	if why.size() > 0: v.add_child(Kit.label("Lost customers: " + ", ".join(why) + ".", 17, Kit.TOMATO if r.lost > r.served * 0.2 else Kit.MUTED, true))
+	var cust := []
+	if r.mods > 0: cust.append("%d orders came with notes" % r.mods)
+	if r.complaints > 0: cust.append("%d complaint%s (%s refunded, %s on free drinks)" % [r.complaints, "" if r.complaints == 1 else "s", Kit.cents(r.refunds), Kit.cents(r.comps)])
+	if r.allergy > 0: cust.append("%d ALLERGIC REACTION%s: expect the inspector soon" % [r.allergy, "" if r.allergy == 1 else "S"])
+	if r.calls > 0: cust.append("%d phone call%s, %d missed" % [r.calls, "" if r.calls == 1 else "s", r.missed])
+	if r.change_err > 0.0: cust.append("%s lost giving too much change" % Kit.cents(r.change_err))
+	if r.regulars.size() > 0: cust.append("regulars in: " + ", ".join(r.regulars))
+	if cust.size() > 0: v.add_child(Kit.label("Customers: " + "; ".join(cust) + ".", 16, Kit.TOMATO if r.allergy > 0 else Kit.MUTED, true))
+	if r.critic >= 0: v.add_child(Kit.label("A food critic from the Evening Post was in today, incognito. They gave you %.1f stars. %s" % [r.critic, "Expect a busier week." if r.critic >= 3.5 else "That will keep people away for a while."], 18, Kit.BASIL if r.critic >= 3.5 else Kit.TOMATO, true))
 	if r.closed: v.add_child(Kit.label("The hygiene inspector closed you down at %s. Clean up, deal with the pests, and you can open again tomorrow." % Data.hhmm(minute()), 18, Kit.TOMATO, true))
 	elif not r.inspect.is_empty(): v.add_child(Kit.label("Hygiene inspection: rated %s." % Hygiene.rating_text(), 17, Kit.CHEESE if r.inspect.rating < 4 else Kit.BASIL, true))
 	var clean_line := "Kitchen %d%% clean (was %d%%), front of house %d%% (was %d%%)." % [r.boh1, r.boh0, r.foh1, r.foh0]

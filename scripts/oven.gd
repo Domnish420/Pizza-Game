@@ -121,7 +121,8 @@ func status(o: Dictionary) -> String:
 	var rng := pz.bake_range()
 	var avg := pz.bake_avg()
 	if rng[1] > 1.4: return "BURNING"
-	if avg >= 0.95 and rng[0] >= 0.85: return "READY"
+	var tg: float = pz.bake_target
+	if avg >= 0.95 * tg and rng[0] >= 0.85 * tg: return "READY"
 	if def.fire > 0.0 and def.spin <= 0.0 and not o.auto and rng[1] - rng[0] > 0.22: return "TURN"
-	if avg >= 1.12: return "OVERDONE"
+	if avg >= 1.12 * tg: return "OVERDONE"
 	return "baking"

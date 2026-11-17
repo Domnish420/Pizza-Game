@@ -7,7 +7,7 @@ extends Control
 
 const W := 640.0
 const H := 320.0
-const BUBBLE := {"order": ["ORDER", Color("f4c64f")], "food": ["FOOD UP", Color("74c47a")], "seat": ["SEAT", Color("8fb7e8")], "bill": ["BILL", Color("f7eed9")], "clear": ["CLEAR", Color("d9a37a")], "delivery": ["DELIVERY", Color("e2a35a")]}
+const BUBBLE := {"order": ["ORDER", Color("f4c64f")], "food": ["FOOD UP", Color("74c47a")], "seat": ["SEAT", Color("8fb7e8")], "bill": ["BILL", Color("f7eed9")], "clear": ["CLEAR", Color("d9a37a")], "delivery": ["DELIVERY", Color("e2a35a")], "complaint": ["COMPLAINT", Color("e2553c")]}
 var svc: ServiceScreen
 var font: Font
 
@@ -44,6 +44,7 @@ func _person(pos: Vector2, p: Dictionary, k: float = 1.0) -> void:
 		draw_rect(Rect2(pos.x - 9 * k, pos.y - 30 * k, 18 * k, 30 * k), col)
 		draw_circle(pos - Vector2(0, 38 * k), 9 * k, Color("e8c39e"))
 	if p.n > 1: _text(pos + Vector2(16, -8), "x%d" % p.n, 12, Kit.INK, false)
+	if p.has("reg"): _text(pos + Vector2(0, 12), p.reg, 11, Kit.CHEESE)
 
 func _bubble(pos: Vector2, kind: String, frac: float) -> void:
 	var b = BUBBLE[kind]

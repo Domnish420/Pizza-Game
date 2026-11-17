@@ -4,7 +4,7 @@ extends Node
 ## Stock lives in `Stock`, buying in `Market`, the clock in `Day`, cleaning and pests in `Hygiene`,
 ## a day's trading in `ServiceScreen`.
 
-const SAVE_PATH := "user://crust_empire_v4.json"
+const SAVE_PATH := "user://crust_empire_v5.json"
 var s := {}
 
 func _ready() -> void:
@@ -22,7 +22,8 @@ func new_game() -> void:
 		"day": 1, "phase": "morning", "cash": 200.0, "xp": 0, "level": 1, "rep": 3.0, "ratings": 0,
 		"venue": 0, "pitch": 0, "upg": upg, "tables": 0,
 		"stock": {}, "dough": [], "baskets": {}, "orders": [], "payables": [], "house_grade": 2,
-		"clock": Day.START, "late_start": 0, "staff_left": {}, "dock": [], "prepped": {}, "notes": [],
+		"clock": Day.START, "late_start": 0, "staff_left": {}, "dock": [], "prepped": {}, "rail": [], "washup": {"2": 0, "4": 0}, "notes": [],
+		"regulars": [], "critic_next": randi_range(8, 16), "buzz": {"until": 0, "mult": 1.0},
 		"vent": {"fridge": 2, "dry": 2}, "clean": {"boh": 85.0, "foh": 85.0},
 		"pests": {"level": 8.0, "laid": 0, "sprung": 0}, "hygiene": {"rating": -1, "day": 0, "notes": [], "next": randi_range(6, 12), "at": -1.0},
 		"book": new_book(), "books": [],
@@ -31,7 +32,7 @@ func new_game() -> void:
 	}
 	# what the last owner left in the van
 	for e in [["flour00", 3000, 2], ["yeast", 42, 2], ["salt", 750, 1], ["tomato", 1200, 2], ["mozz", 1000, 2],
-			["basil", 30, 2], ["pepperoni", 500, 2], ["mushroom", 250, 2], ["box", 25, 2], ["sanitiser", 1500, 1], ["traps", 2, 2]]:
+			["basil", 30, 2], ["pepperoni", 500, 2], ["mushroom", 250, 2], ["box", 25, 2], ["sanitiser", 1500, 1], ["traps", 2, 2], ["tub2", 6, 2], ["tub4", 6, 2]]:
 		Stock.add(e[0], e[1], e[2], Data.ING[e[0]].g[e[2]].price)
 	s.dough.append({"style": "neapolitan", "n": 8, "q": 65, "d": 0, "speed": 0, "g": 2.0, "c": 0.25})
 	gen_offers()
@@ -46,7 +47,7 @@ func save_game() -> void:
 func load_game() -> bool:
 	if not FileAccess.file_exists(SAVE_PATH): return false
 	var d = JSON.parse_string(FileAccess.open(SAVE_PATH, FileAccess.READ).get_as_text())
-	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("clock"): return false
+	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("rail"): return false
 	s = d
 	for k in Data.UPG: s.upg[k] = int(s.upg.get(k, 0))
 	for k in ["day", "level", "venue", "pitch", "tables", "price", "sid", "oid", "cycle_start", "ratings", "xp", "house_grade", "clock", "late_start"]:
@@ -199,18 +200,19 @@ func can_make(r: Dictionary) -> bool:
 		if Stock.avail(i) < r.spec[i] * 0.7: return false
 	return true
 
-## the toppings of a pizza that have run out on the makeline but could still be prepped from stock
-func needs_prepping(r: Dictionary) -> Array:
+## the toppings of a pizza whose pan on the rail has run low but which could still be refilled or prepped
+func line_short(r: Dictionary) -> Array:
 	var out := []
 	for i in r.spec:
-		if Data.needs_prep(i) and Stock.prepped(i) < r.spec[i] * 0.7 and Stock.have(i) > 0: out.append(i)
+		if Stock.rail_have(i) < r.spec[i] * 0.7 and Stock.rail_slot(i) >= 0 and (Stock.refill_source(i) > 0.5 or (Data.needs_prep(i) and Stock.have(i) > 0)): out.append(i)
 	return out
 
 # ---------- everything the upgrades and staff add up to ----------
 func traffic_mult() -> float:
 	var host := staff_of("host")
 	var host_bonus: float = (0.06 + 0.02 * host[0].skill) if host.size() > 0 else 0.0
-	return (0.4 + s.rep * 0.22) * [1.2, 1.0, 0.82][s.price] * (1.0 + tier("sign").tr + tier("marketing").tr + tier("pos").tr + tier("comfort").tr + menu_now().buzz + host_bonus)
+	var buzz: float = float(s.buzz.mult) if int(s.buzz.until) >= s.day else 1.0
+	return buzz * (0.4 + s.rep * 0.22) * [1.2, 1.0, 0.82][s.price] * (1.0 + tier("sign").tr + tier("marketing").tr + tier("pos").tr + tier("comfort").tr + menu_now().buzz + host_bonus)
 
 func delivery_covers(day: int = -1) -> int:
 	return int(round(staff_of("driver").size() * tier("delivery").per * (0.4 + s.rep * 0.22) * Data.WEEK[weekday(day)]))

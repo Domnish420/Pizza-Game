@@ -131,7 +131,11 @@ func _page_home() -> void:
 		if short.size() > 0: lines.append(["bad", "Not enough for today: " + ", ".join(short) + ". It is too late to order for today: plan to 86 what you cannot make."])
 		else: lines.append(["ok", "The stores cover today's service by recipe card."])
 		var todo_prep := 0.0
-		for row in Day.prep_list(): todo_prep += row.minutes
+		var tub_short := false
+		for row in Day.prep_list():
+			todo_prep += row.minutes
+			if row.tub_short: tub_short = true
+		if tub_short: lines.append(["bad", "Not enough clean tubs for today's prep. Wash up, and order more 4 litre tubs for tomorrow."])
 		if todo_prep > 1.0: lines.append(["warn", "About %d minutes of prep to do before you open. See Jobs." % ceil(todo_prep)])
 		if G.s.dock.size() > 0: lines.append(["bad", "%d deliver%s waiting at the back door to be put away." % [G.s.dock.size(), "y" if G.s.dock.size() == 1 else "ies"]])
 		for o in Day.pending(): lines.append(["info", "%s due at about %s%s." % [Data.SUP[o.sup].name, Data.hhmm(o.eta), " (during service)" if o.eta >= Day.open_time() else ""]])

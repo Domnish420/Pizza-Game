@@ -75,12 +75,16 @@ func _ready() -> void:
 				", ".join(e.lines.map(func(ln): return "%s %s" % [ln.what, ln.name])) + ". Waiting %d min: chilled food spoils after 30." % waited, Kit.TOMATO if waited > 30 else Kit.INK)
 			var rm := Stock.dock_minutes(e, true)
 			var qm := Stock.dock_minutes(e, false)
-			h.add_child(Kit.button("Put away & rotate · %d min" % rm, func():
+			h.add_child(Kit.button("Unpack by hand", func():
+				var t := ShelfTask.new(e)
+				t.finished.connect(hub.render)
+				Kit.main.modal(t, 900), "primary", 15))
+			h.add_child(Kit.button("Rotate all · %d min" % rm, func():
 				var res := Day.put_away(e, true)
 				Game.save_game()
 				var msg: String = ("\n".join(res.notes) + "\n" if res.notes.size() > 0 else "") + res.text
 				if msg.strip_edges() != "": Kit.main.message("Put away", msg.strip_edges(), "OK")
-				hub.render(), "primary", 15))
+				hub.render(), "ghost", 15))
 			h.add_child(Kit.button("Stack in front · %d min" % qm, func():
 				var res := Day.put_away(e, false)
 				Game.save_game()
@@ -107,16 +111,51 @@ func _ready() -> void:
 					if ln.ing == row.id: at_door = true
 			h.add_child(Kit.label("Put the delivery away first" if at_door else ("Due in at %s" % Data.hhmm(_due(row.id)) if _due(row.id) >= 0 else "Nothing to prep it from"), 15, Kit.CHEESE if at_door or _due(row.id) >= 0 else Kit.TOMATO))
 		else:
-			total += row.minutes
-			h.add_child(Kit.button("Prep %s · %d min" % [Data.qty(row.id, row.raw), ceil(row.minutes)], func():
-				_do(ceil(row.minutes), func(): Stock.prep(row.id, row.raw), "Prepped the %s" % it.name.to_lower()), "primary", 15))
+			total += row.minutes * 1.25
+			h.add_child(Kit.button("Prep by hand", func():
+				var t := PrepTask.new(row.id, row.raw)
+				t.finished.connect(hub.render)
+				Kit.main.modal(t, 900), "primary", 15))
+			h.add_child(Kit.button("Quick · %d min" % ceil(row.minutes * 1.25), func():
+				_do(ceil(row.minutes * 1.25), func(): Stock.prep(row.id, row.raw, 0.55), "Prepped the %s" % it.name.to_lower()), "ghost", 15))
+			if row.tub_short: h.add_child(Kit.label("Not enough tubs for all of it", 14, Kit.TOMATO))
 	if rows.is_empty(): pc[1].add_child(Kit.label("Nothing on the menu needs prep.", 15, Kit.MUTED))
 	elif total > 0:
-		pc[1].add_child(Kit.button("Do all the prep · %d min" % ceil(total), func():
+		pc[1].add_child(Kit.button("Quick-prep everything · %d min" % ceil(total), func():
 			_do(ceil(total), func():
 				for row in Day.prep_list(day):
-					if row.raw > 0: Stock.prep(row.id, row.raw), "Prep done"), "primary", 17))
+					if row.raw > 0: Stock.prep(row.id, row.raw, 0.55), "Prep done"), "ghost", 16))
+	pc[1].add_child(Kit.label("Clean tubs: %d x 4 L, %d x 2 L. Waiting to be washed: %d." % [Stock.clean_tubs(4), Stock.clean_tubs(2), Stock.dirty_tubs()], 14, Kit.TOMATO if Stock.clean_tubs(4) + Stock.clean_tubs(2) < 3 else Kit.MUTED))
+	if Stock.dirty_tubs() > 0:
+		var wb := Kit.button("Wash up the tubs · %d min" % Stock.wash_minutes(), func(): _do(Stock.wash_minutes(), func(): Stock.wash_all(), "Tubs washed"), "ghost", 15)
+		wb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		pc[1].add_child(wb)
 	add_child(pc[0])
+
+	# the counter
+	if morning:
+		var kc0 = Kit.card("The counter")
+		var rl := Stock.rail()
+		var empty := 0
+		for pan in rl:
+			if pan.ing == "" or pan.q < Stock.pan_cap(pan.ing) * 0.5: empty += 1
+		kc0[1].add_child(Kit.label("%s: %d pans on the rail. %s" % [Game.tier("prep").n, rl.size(), "Every topping comes out of a pan. Fill them from the tubs (or straight from the stores for things that need no prep) before you open." if empty > 0 else "All set up."], 15, Kit.MUTED if empty == 0 else Kit.INK, true))
+		var filled := []
+		for pan in rl:
+			if pan.ing != "": filled.append("%s %s" % [Data.ING[pan.ing].name.to_lower(), Data.qty(pan.ing, pan.q)])
+		if filled.size() > 0: kc0[1].add_child(Kit.label(", ".join(filled), 14, Kit.MUTED, true))
+		if empty > 0:
+			var est: float = 1.0 * rl.size()
+			kc0[1].add_child(Kit.button("Set up the counter · about %d min" % est, func():
+				var res := Day.set_up_counter()
+				var notes := Day.spend(res.minutes)
+				Game.save_game()
+				var msg := "%d pans filled." % res.filled
+				if res.missing.size() > 0: msg += " No pan left for: " + ", ".join(res.missing.map(func(x): return Data.ING[x].name.to_lower())) + "."
+				if notes.size() > 0: msg += "\n" + "\n".join(notes)
+				Kit.main.message("The counter", msg, "OK")
+				hub.render(), "primary", 16))
+		add_child(kc0[0])
 
 	# cleaning
 	var cc = Kit.card("Cleaning")
@@ -128,10 +167,14 @@ func _ready() -> void:
 		var mins := Hygiene.clean_minutes(area)
 		var h := _row(cc[1], "%s: %s (%d%%)" % [nm, hs[0].to_lower(), Hygiene.level(area)], "Uses about %s of cleaning chemicals" % Data.qty("sanitiser", Hygiene.chem_needed(area)), {"ok": Kit.BASIL, "warn": Kit.CHEESE, "bad": Kit.TOMATO}[hs[1]])
 		if Hygiene.level(area) < 99.0:
-			h.add_child(Kit.button("Clean · %d min" % mins, func():
+			h.add_child(Kit.button("Clean by hand", func():
+				var t := CleanTask.new(area)
+				t.finished.connect(hub.render)
+				Kit.main.modal(t, 900), "primary", 15))
+			h.add_child(Kit.button("Quick · %d min" % mins, func():
 				var msg := ""
 				_do(mins, func(): msg = Hygiene.clean(area))
-				if msg != "": Kit.main.toast(msg, true), "primary", 15))
+				if msg != "": Kit.main.toast(msg, true), "ghost", 15))
 	cc[1].add_child(Kit.label("Cleaning chemicals in stock: %s." % Data.qty("sanitiser", Stock.have("sanitiser")), 14, Kit.TOMATO if Stock.have("sanitiser") < Hygiene.chem_needed("boh") else Kit.MUTED))
 	add_child(cc[0])
 

@@ -38,12 +38,14 @@ var bake := []             # doneness of each edge sector (1.0 = done)
 var floor := 0.0           # doneness of the underside
 var turn := 0.0            # which way it faces in the oven
 var cuts := []             # [{a, b, d: distance of the cut from the centre}]
+var bake_target := 1.0     # 1.15 for "well done"
 
 func _init(ticket: Dictionary, dough: Dictionary) -> void:
 	id = _next_id
 	_next_id += 1
 	tk = ticket
 	rec = ticket.rec
+	if rec.get("well", false): bake_target = 1.15
 	d = Data.DOUGHS[rec.base]
 	base = PizzaBase.new(d)
 	dough_q = dough.q
@@ -258,8 +260,8 @@ func assess(c: Dictionary) -> Dictionary:
 	var avg := bake_avg()
 	var rng := bake_range()
 	var done := 0.0
-	for b in bake: done += done_score(b) / NSEC
-	a.bake = done * 0.75 + done_score(floor) * 0.25
+	for b in bake: done += done_score(b / bake_target) / NSEC
+	a.bake = done * 0.75 + done_score(floor / bake_target) * 0.25
 	a.bake_even = 1.0 - clamp((rng[1] - rng[0] - 0.1) / 0.6, 0.0, 1.0)
 	a.colour = done * (0.55 + 0.45 * a.bake_even)
 	a.bake_avg = avg
@@ -287,6 +289,14 @@ func assess(c: Dictionary) -> Dictionary:
 	if extra.size() > 0:
 		wrong += 0.15 * extra.size()
 		a.notes.push_front("Toppings nobody ordered")
+	for ing in rec.get("no", []):
+		if grams.get(ing, 0.0) > 0.0:
+			wrong += 0.25
+			a.notes.push_front("I asked for no %s" % Data.ING[ing].name.to_lower())
+	if rec.get("allergy", "") != "" and grams.get(rec.allergy, 0.0) > 0.0:
+		a.allergy = true
+		a.notes.push_front("ALLERGY: it had %s on it" % Data.ING[rec.allergy].name.to_lower())
+	if rec.get("well", false) and avg < 1.08: a.notes.append("I asked for it well done")
 	a.right = clamp(1.0 - wrong, 0.0, 1.0)
 
 	a.look = 100.0 * (0.26 * a.shape + 0.14 * a.cover * (0.6 + 0.4 * a.even) + 0.18 * a.layout + 0.30 * a.colour + 0.12 * a.cut) * (0.7 + 0.3 * a.right)
