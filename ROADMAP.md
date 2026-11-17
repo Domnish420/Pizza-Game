@@ -75,6 +75,10 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 
 ## 5. Look, sound and feel (Replit)
 
+- [x] 3D first-person service world (GoPro angle): room, stations, look and gyro, touch on 3D objects and surfaces
+- [ ] Models for every `fp.*` key, rigged hands and customers, the dough as a deforming 3D mesh
+- [ ] The screens between services brought into the world (phone/tablet in hand, clipboard, walk-in and dry store)
+
 - [ ] Art for every screen, animated customers and staff in a visible kitchen
 - [ ] Dough that deforms properly for every stretching technique
 - [ ] Leopard-spotted crusts, a living fire

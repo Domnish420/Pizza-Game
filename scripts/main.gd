@@ -46,7 +46,13 @@ func _process(delta: float) -> void:
 		toast_t -= delta
 		if toast_t <= 0: toast_box.visible = false
 
+## the 3D kitchen runs edge to edge; the screens between services keep a margin
+func _margins(full: bool) -> void:
+	for m in ["margin_left", "margin_right"]: content.add_theme_constant_override(m, 0 if full else 28)
+	for m in ["margin_top", "margin_bottom"]: content.add_theme_constant_override(m, 6 if full else 12)
+
 func show_hub(tab: String = "") -> void:
+	_margins(false)
 	Kit.clear(content)
 	var hub := Hub.new()
 	if tab != "": hub.tab = tab
@@ -54,6 +60,7 @@ func show_hub(tab: String = "") -> void:
 
 ## the title screen: story or free play
 func show_start() -> void:
+	_margins(false)
 	Kit.clear(content)
 	var cc := CenterContainer.new()
 	cc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -79,6 +86,7 @@ func show_start() -> void:
 	v.add_child(fp[0])
 
 func start_service() -> void:
+	_margins(Game.s.get("view3d", true))
 	Kit.clear(content)
 	content.add_child(ServiceScreen.new())
 

@@ -248,6 +248,10 @@ func _page_home() -> void:
 	else:
 		nc[1].add_child(Kit.label("You run the best pizzeria in town. Keep the ovens hot.", 18, Kit.MUTED, true))
 	nc[1].add_child(Kit.label("%d pizzas sold · %s taken all-time" % [G.s.pizzas, Kit.money(G.s.earned)], 15, Kit.MUTED))
+	var vh := Kit.hbox(6)
+	vh.add_child(Kit.button("Service in 3D: " + ("on" if G.s.get("view3d", true) else "off"), func(): _act(func(): Game.s.view3d = not Game.s.get("view3d", true)), "ghost", 15))
+	vh.add_child(Kit.button("Look by turning the phone: " + ("on" if G.s.get("gyro", true) else "off"), func(): _act(func(): Game.s.gyro = not Game.s.get("gyro", true)), "ghost", 15))
+	nc[1].add_child(vh)
 	var reset := Kit.button("Start over", func(): Kit.main.confirm("Start over?", "This wipes your save and takes you back to the start.", "Wipe my save", func():
 		Game.new_game()
 		Kit.main.show_start()), "ghost", 15)

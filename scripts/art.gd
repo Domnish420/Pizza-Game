@@ -31,3 +31,18 @@ func sfx(sound: String) -> void:
 		_players[sound] = p
 	if _players[sound] != null:
 		_players[sound].play()
+
+## A 3D model by key: res://assets/models/<key with dots as dashes>.glb (or .gltf / .tscn), instanced.
+## null if there is none yet, and the 3D kitchen builds a placeholder shape instead. See ART_KEYS.md.
+var _models := {}
+func model(key: String) -> Node3D:
+	if not _models.has(key):
+		_models[key] = null
+		for ext in [".glb", ".gltf", ".tscn"]:
+			var path: String = "res://assets/models/" + key.replace(".", "-") + ext
+			if ResourceLoader.exists(path):
+				_models[key] = load(path)
+				break
+	var ps = _models[key]
+	if ps is PackedScene: return ps.instantiate() as Node3D
+	return null

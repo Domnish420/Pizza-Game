@@ -33,7 +33,14 @@ set the fridge and dry-store vents, wash up the tubs. Every job takes minutes; r
 
 `ROADMAP.md` has the story mode (starting as an employed pizzaiolo) and everything still to come.
 
-**Service.** Four places to switch between:
+**Service is 3D and first person** (`scripts/fp/`): you stand at the counter in the van or the kitchen, seen from a
+chest-mounted wide camera, with the hatch or the pass ahead, the oven and cutting board on your right and the prep
+station on your left. The station buttons turn your head; drag on the room to look around (or turn the phone). Tap
+customers, tickets on the ticket rail, the pans on the rail and the ladles on their rack where they are; the bench,
+board, oven and prep tablet take your fingers directly, so two-finger stretching happens on the marble in front of
+you. The classic 2D layout can be switched back on from the Today page.
+
+The stations (the same in both layouts):
 - **Front**: customers walk up to the hatch and queue (van, kiosk), or wait at the door to be seated, order at the
   table, eat and ask for the bill (shop and bigger). Tap anyone with a marker: ORDER, FOOD UP, SEAT, BILL, CLEAR.
 - **Bench**: the marble top of the pizza counter, with the rail of gastro pans above it. Tap a ticket and open the dough ball. Hand-stretched bases: press out with one finger, leaving a rim,
@@ -158,7 +165,8 @@ and invoices are paid when they fall due.
 | `scripts/front_scene.gd`, `bench.gd`, `oven_view.gd`, `pizza_draw.gd` | Drawing and touch input for each part of service |
 | `scripts/hub.gd`, `jobs_page.gd`, `suppliers_page.gd`, `stores_page.gd`, `dough_game.gd` | The management screens |
 | `scripts/prep_task.gd`, `clean_task.gd`, `shelf_task.gd` | Prepping, cleaning and unpacking by hand |
-| `scripts/rail_view.gd` | The rail of gastro pans above the bench |
+| `scripts/rail_view.gd` | The rail of gastro pans above the bench (2D layout) |
+| `scripts/fp/fp_world.gd`, `fp_view.gd`, `fp_surface.gd` | The 3D first-person kitchen: room, camera, look, touch, 3D props, and the station surfaces |
 | `scripts/orders.gd` | Order notes and allergies turned into a recipe card per ticket |
 | `scripts/checks.gd` | Opening and closing checklists, the temperature log (autoload `Checks`) |
 | `scripts/story.gd` | The career: the employer, the crew, shift reviews, promotions, going solo (autoload `Story`) |

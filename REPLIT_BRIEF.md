@@ -6,12 +6,20 @@ A pizza-making and restaurant-management game for phones in landscape, built in 
 Compatibility renderer). The player makes every pizza by hand, buys every ingredient by weight from real kinds
 of suppliers, and grows a one-person pop-up van into a flagship trattoria with a full front- and back-of-house team.
 
+**The art direction is 3D and first person.** Service is played from a chest-mounted GoPro-style camera: you are
+standing at your station in the van or the kitchen, your forearms and hands at the bottom of the frame, and everything
+you work with is a 3D object in the room that you touch where it is. Think a VR game played on a phone. The 3D world
+is built and playable with placeholder shapes (`scripts/fp/`); every prop is swappable for a model by key.
+
 All the game systems are built and playable. Everything you see is placeholder shapes and plain UI.
 Your job is to make it look, feel and sound like a finished game without changing how it plays.
 
 Read `README.md` for how a day works and a map of the code, and `ART_KEYS.md` for every image the game asks for.
 
 ## The owner's vision, in their words
+
+- "My vision for the art of the game is 3D, all of it to be 3D interactable. I want the game really to be from a
+  GoPro angle, having it all be first person. Like a VR game for mobile."
 
 - "I want to be making all of it (dough, the pizza itself, etc), buying ingredients and managing a restaurant."
 - "Everything is real upgrades you would do to your back and front of house."
@@ -56,6 +64,8 @@ sneeze guard. Ask the owner for the photos; the counter, tubs and rail should lo
 ## How the code is split (keep it this way)
 
 - **Data** (`data/*.json`): every number and name. Add ingredients, suppliers, pizzas, menus, ovens here.
+- **The 3D world** (`scripts/fp/`): presentation only. It reads the service state and calls the same methods the 2D
+  layout does (`rail_tap`, `claim`, `do_action`, `set_view`); it never changes the rules.
 - **Rules** (autoloads `Data`, `Stock`, `Market`, `Game`, plus `pizza.gd`, `pizza_base.gd`, `oven.gd`,
   `service.gd`): no drawing at all.
 - **Presentation** (`front_scene.gd`, `bench.gd`, `oven_view.gd`, `pizza_draw.gd`, `hub.gd`, the `*_page.gd`
@@ -66,6 +76,46 @@ placeholder. Start there before touching drawing code. If you change a JSON shap
 The save file is `user://crust_empire_v8.json`; changing what is saved means bumping that name.
 
 ## Work, in priority order
+
+### 0. The 3D first-person world (do this first: everything else lives in it)
+
+Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on screen behind a light HUD, and
+`FPSurface` turns a 2D station control into a working surface in the room.
+
+- **The camera** (`FPWorld._camera`, `STATION_LEAN`, `STATION_AT`, `STATION_FOV`): eye height 1.62 m, standing at the
+  origin facing -Z. Five stations: front (the hatch or the pass), bench, board, oven and prep. Station buttons turn your
+  head and lean you in. You can also drag on anything that isn't a surface to look around (let go near a station and you
+  settle on it), or turn the phone, which uses the gyroscope. Keep the wide, slightly low chest-cam framing: the hands
+  should be in shot.
+- **The hands** (`hand.right`, `hand.left`): the right hand follows your first finger on a surface and the left your
+  second (two-finger stretching uses both). Replace them with rigged forearms: pressing, stretching, holding the ladle,
+  the peel, the wheel. Drive the pose from which tool is in use (`svc.tool`, `svc.view`).
+- **The surfaces**: the marble bench, the cutting board, the oven mouth and the prep tablet each show the game's 2D
+  control (Bench, OvenView, the prep list) rendered onto a flat quad, with touches projected through. Every mechanic
+  already works in 3D this way.
+  - The goal is to make them truly 3D one at a time: a deformable dough mesh driven by `PizzaBase` (`r`, `rim` per
+    sector, thickness), sauce and cheese as decals or vertex colours from `Pizza.sauce_amt` and `cheese_amt`, and
+    toppings as instanced meshes from `Pizza.tops`.
+  - Pizzas on the oven deck can become real meshes, and the shelf a real peel.
+  - Keep the touch mapping: either keep the quad as an invisible hit plane (`FPSurface.to_px`), or raycast onto the new
+    mesh and convert to the same bench coordinates.
+- **Tappable 3D objects**: the gastro pans on the rail (fill level, the topping in your hand highlighted), the portion
+  ladles on their rack, the paper tickets on the ticket rail (with a patience strip), customers with their markers,
+  tables, delivery-app riders and the delivery crates by the back door. Each is a StaticBody3D with an `act` meta;
+  keep that when you swap in a model.
+- **Models**: every prop calls `Art.model("fp.<key>")` and falls back to a placeholder. Drop
+  `assets/models/fp-<key>.glb` and it appears; the keys and sizes are in `ART_KEYS.md`. The van interior, the street
+  outside the hatch, the kitchen and dining room, the counter, the ovens (electric, gas, wood, rotary), customers (six
+  looks), the rider, tables, pans, ladles and tickets.
+- **Customers** are placed from the simulation's 2D positions (`FPWorld._to3d`). They need walk, idle, order (talking),
+  waiting-impatiently, eating and leaving animations, and seated poses at tables.
+- **Next to bring into the world**: the screens between services (Today, Jobs, Suppliers, KitBox and so on) are still
+  flat 2D. In the same spirit they should become things you hold or walk to: a phone or tablet in your hand for ordering
+  and KitBox, a clipboard for the checklists, the walk-in and dry store as rooms you step into, the hands-on prep and
+  cleaning minigames on the prep bench.
+- The classic 2D layout is still there (Today page, "Service in 3D: off") for testing; keep it working.
+- Performance: the Compatibility renderer, four small SubViewports for the surfaces, unshaded quads. Keep the polygon
+  budget phone-sized, bake lighting where you can, and check frame time on a low-end Android phone.
 
 ### 1. Dough forming (the centrepiece)
 

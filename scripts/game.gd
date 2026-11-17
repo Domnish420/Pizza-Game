@@ -25,7 +25,7 @@ func new_game() -> void:
 		"stock": {}, "dough": [], "baskets": {}, "orders": [], "payables": [], "house_grade": 2,
 		"clock": Day.START, "late_start": 0, "staff_left": {}, "dock": [], "prepped": {}, "rail": [], "washup": {"2": 0, "4": 0}, "notes": [], "folded": 0, "folded_c": 0.0,
 		"regulars": [], "critic_next": randi_range(8, 16), "buzz": {"until": 0, "mult": 1.0},
-		"templog": [], "checklog": [], "story": {"stage": "free"}, "equip": Equip.starter("van"), "kit_orders": [], "kit_basket": {}, "extra_off": {}, "app": {"on": false, "paused": false, "rating": 4.4, "orders": 0},
+		"templog": [], "checklog": [], "story": {"stage": "free"}, "equip": Equip.starter("van"), "kit_orders": [], "kit_basket": {}, "view3d": true, "gyro": true, "extra_off": {}, "app": {"on": false, "paused": false, "rating": 4.4, "orders": 0},
 		"vent": {"fridge": 2, "dry": 2}, "clean": {"boh": 85.0, "foh": 85.0},
 		"pests": {"level": 8.0, "traps": [], "seen": {"0": 1.0}}, "hygiene": {"rating": -1, "day": 0, "notes": [], "next": randi_range(6, 12), "at": -1.0},
 		"book": new_book(), "books": [],
@@ -52,7 +52,7 @@ func load_game() -> bool:
 	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("equip"): return false
 	s = d
 	# fields added since the save was written
-	var added := {"folded": 0, "folded_c": 0.0, "extra_off": {}, "app": {"on": false, "paused": false, "rating": float(Data.APP.start_rating), "orders": 0}}
+	var added := {"view3d": true, "gyro": true, "folded": 0, "folded_c": 0.0, "extra_off": {}, "app": {"on": false, "paused": false, "rating": float(Data.APP.start_rating), "orders": 0}}
 	for k in added:
 		if not s.has(k): s[k] = added[k]
 	for k in Data.UPG: s.upg[k] = int(s.upg.get(k, 0))

@@ -53,11 +53,15 @@ var ladle_ing := ""
 var phones := []                 # calls ringing: {n, until}
 var tablet := []                 # delivery-app orders pinging on the tablet: {n, until}
 var app_acc := 0.0
+var spiked := []                 # tickets that have just gone (walked out, collected): {tk, why, until (msec)} - they stay on the rail a moment
 var critic_at := -1.0            # when the food critic walks in today (-1: not today)
 var critic_in := false
 
 # ui
 var front: FrontScene
+var fp: FPView = null            # the 3D first-person kitchen (null in the classic 2D layout)
+var fp_mode := false
+var board_ui: Bench              # the cutting board as its own surface (3D only)
 var bench_ui: Bench
 var rail_ui: RailView
 var oven_ui: OvenView
@@ -173,6 +177,18 @@ func _build_ui() -> void:
 	top.add_child(top_lbl.speed)
 	top.add_child(Kit.button("Close up", func(): Kit.main.confirm("Close early?", "Anyone still waiting leaves unserved, and anything half-made goes in the bin.", "Close up", func(): finish(false)), "ghost", 19))
 
+	fp_mode = Game.s.get("view3d", true)
+	if fp_mode: _build_fp_body()
+	else: _build_2d_body()
+
+	pop = Kit.panel(Kit.INK, 14)
+	pop.visible = false
+	pop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pop.top_level = true
+	add_child(pop)
+
+## the classic layout: tickets on the left, the station in the middle, the recipe card on the right
+func _build_2d_body() -> void:
 	var body := Kit.hbox(12)
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_child(body)
@@ -263,11 +279,108 @@ func _build_ui() -> void:
 	mini_panel.add_child(mini_box)
 	right.add_child(mini_panel)
 
-	pop = Kit.panel(Kit.INK, 14)
-	pop.visible = false
-	pop.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pop.top_level = true
-	add_child(pop)
+
+## the 3D first-person layout: the kitchen fills the screen and a light HUD sits over it
+func _build_fp_body() -> void:
+	var stack := Control.new()
+	stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	add_child(stack)
+	front = FrontScene.new(self)           # the 3D crowd replaces its drawing; its taps and markers still come from here
+	kitchen = Kit.hbox(10)
+	rail_ui = RailView.new(self)
+	bench_ui = Bench.new(self)
+	bench_ui.mode = "bench"
+	board_ui = Bench.new(self)
+	board_ui.mode = "board"
+	oven_ui = OvenView.new(self)
+	prep_scroll = ScrollContainer.new()
+	prep_scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	prep_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	prep_box = Kit.vbox(8)
+	prep_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	prep_scroll.add_child(prep_box)
+	var tablet_ui := Kit.panel(Kit.BG, 14, 0)
+	tablet_ui.add_child(prep_scroll)
+	fp = FPView.new(self, {"bench": bench_ui, "board": board_ui, "oven": oven_ui, "prep": tablet_ui})
+	fp.set_anchors_preset(Control.PRESET_FULL_RECT)
+	stack.add_child(fp)
+	# the ticket list, for when you would rather read them flat (hidden: the tickets hang on the rail in 3D)
+	var tl := ScrollContainer.new()
+	tl.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	tl.set_anchors_and_offsets_preset(Control.PRESET_LEFT_WIDE)
+	tl.offset_right = 250
+	tl.offset_bottom = -70
+	tick_box = Kit.vbox(6)
+	tick_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tl.add_child(tick_box)
+	tl.visible = false
+	stack.add_child(tl)
+	# turning your head: one button per station
+	var tabs := Kit.hbox(6)
+	tabs.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	tabs.offset_top = -58
+	tabs.offset_left = 8
+	for k in ["front", "bench", "oven", "board", "prep"]:
+		var b := Kit.button("", set_view.bind(k), "tab", 18)
+		b.custom_minimum_size = Vector2(96, 50)
+		tabs.add_child(b)
+		tab_btns[k] = b
+	var lb := Kit.button("List", func(): tl.visible = not tl.visible, "ghost", 16)
+	lb.custom_minimum_size = Vector2(60, 50)
+	tabs.add_child(lb)
+	stack.add_child(tabs)
+	btn_row = Kit.hbox(8)
+	btn_row.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	btn_row.offset_top = -62
+	btn_row.offset_left = -470
+	btn_row.offset_right = -8
+	bin_btn = Kit.button("Bin", bin, "ghost", 20)
+	btn_row.add_child(bin_btn)
+	auto_btn = Kit.button("Sheeter", sheeter, "ghost", 20)
+	btn_row.add_child(auto_btn)
+	next_btn = Kit.button("", next, "primary", 22)
+	next_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_row.add_child(next_btn)
+	stack.add_child(btn_row)
+	# the recipe card and what is in your hand, top right, folded away on request
+	var card := Kit.panel(Color(0.1, 0.14, 0.11, 0.82), 10)
+	card.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	card.offset_left = -330
+	card.offset_right = -8
+	card.offset_top = 8
+	var sv := Kit.vbox(6)
+	info = Kit.vbox(3)
+	palette = Kit.vbox(5)
+	sv.add_child(info)
+	sv.add_child(palette)
+	mini_panel = Kit.panel(Color("3a2a22"), 8)
+	mini_box = Kit.vbox(3)
+	mini_panel.add_child(mini_box)
+	sv.add_child(mini_panel)
+	card.add_child(sv)
+	stack.add_child(card)
+	var cb := Kit.button("Card", func(): card.visible = not card.visible, "ghost", 15)
+	cb.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
+	cb.offset_left = -400
+	cb.offset_right = -338
+	cb.offset_top = 8
+	stack.add_child(cb)
+	busy_wrap = CenterContainer.new()
+	busy_wrap.set_anchors_preset(Control.PRESET_FULL_RECT)
+	busy_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	busy_wrap.visible = false
+	busy_panel = Kit.panel(Color(0.05, 0.08, 0.06, 0.92), 18)
+	var bv := Kit.vbox(8)
+	busy_lbl = Kit.label("", 22, Kit.INK, true)
+	busy_lbl.custom_minimum_size.x = 380
+	bv.add_child(busy_lbl)
+	busy_bar = Kit.bar(0, Kit.CHEESE, 14)
+	bv.add_child(busy_bar)
+	bv.add_child(Kit.button("Stop and leave it", stop_busy, "ghost", 18))
+	busy_panel.add_child(bv)
+	busy_wrap.add_child(busy_panel)
+	stack.add_child(busy_wrap)
 
 ## the clock, in minutes after midnight
 func minute() -> float:
@@ -488,6 +601,26 @@ func make_quick(tk: Dictionary) -> void:
 			tk.state = "new")
 	dirty = true
 
+## how long someone who has ordered will wait for their food (seconds of play). They can see the queue: they allow
+## for every ticket ahead of theirs, at the pace this kitchen works (a pizza made by hand takes the best part of a
+## minute; staff are quicker), plus the bake.
+func food_patience(p: Dictionary) -> float:
+	var hands: float = 1.0 + workers.size()
+	var make: float = 45.0 if workers.is_empty() else 14.0
+	var ahead := tickets.filter(func(tk): return tk.p != p and tk.state in ["new", "make"]).size()
+	var expect: float = (float(ahead) / hands + p.n) * make + c.bake * oven_rounds(p.n)
+	var base: float = {"take": 70.0, "dine": 90.0, "deliv": 100.0}.get(p.type, 80.0)
+	return clamp(base + expect * 1.25, 100.0, 480.0)
+
+## how many goes in the oven n pizzas take
+func oven_rounds(n: int) -> float:
+	return ceil(float(n) / max(1.0, float(oven.slots)))
+
+## a ticket that has just gone stays on the rail a moment so you can see what happened
+func spike(tk: Dictionary, why: String, secs_shown: float) -> void:
+	spiked.append({"tk": tk, "why": why, "until": Time.get_ticks_msec() + int(secs_shown * 1000.0)})
+	dirty = true
+
 ## the party orders a pizza each. false = there was nothing left to sell them.
 func order(p: Dictionary) -> bool:
 	for k in p.n:
@@ -515,7 +648,7 @@ func order(p: Dictionary) -> bool:
 	p.n = p.tks.size()
 	_order_extras(p, ["drink", "side"] if p.type == "dine" else ["drink", "side", "dessert"])     # at a table, dessert comes after the meal
 	p.state = "wait"
-	set_pat(p, {"take": 100, "dine": 120, "deliv": 135}[p.type] + 20 * (p.n - 1))
+	set_pat(p, food_patience(p))
 	if p.type == "take":
 		queue.erase(p)
 		waiters.append(p)
@@ -570,6 +703,7 @@ func act_handover(p: Dictionary, by_player: bool = false) -> void:
 	for tk in ready_tks(p):
 		tickets.erase(tk)
 		tk.state = "done"
+		spike(tk, "COLLECTED" if p.type != "dine" else "SERVED", 2.5)
 		p.got += 1
 		var it: Dictionary = tk.res
 		it.price = tk.rec.price
@@ -986,6 +1120,7 @@ func expire(p: Dictionary, why: String = "Gave up waiting") -> void:
 		tk.gone = true
 		tickets.erase(tk)
 		_waste_tk(tk)
+		spike(tk, why.to_upper() if why != "Gave up waiting" else "WALKED OUT", 7.0)
 	for w in workers:
 		if w.job != null and w.job.gone: w.job = null
 	oven.items = oven.items.filter(func(o): return not (o.owner == "staff" and o.tk.gone))
@@ -1057,6 +1192,7 @@ func _process(delta: float) -> void:
 		pop_t -= real
 		if pop_t <= 0: pop.visible = false
 	_refresh()
+	if fp_mode: return                    # the 3D world redraws its surfaces itself
 	if view == "front": front.queue_redraw()
 	elif view == "oven": oven_ui.queue_redraw()
 	else:
@@ -1664,12 +1800,17 @@ func _show_result(pz: Pizza, a: Dictionary) -> void:
 	pop.add_child(v)
 	pop.visible = true
 	pop.reset_size()
-	pop.position = kitchen.global_position + Vector2(16, 16) if kitchen.visible else front.global_position + Vector2(16, 16)
+	if fp_mode: pop.position = Vector2(get_viewport_rect().size.x / 2.0 - 160.0, 70.0)
+	else: pop.position = kitchen.global_position + Vector2(16, 16) if kitchen.visible else front.global_position + Vector2(16, 16)
 	pop_t = 4.5
 
 # ---------- ui refresh ----------
 func _refresh() -> void:
 	var G := Game
+	var now_ms := Time.get_ticks_msec()
+	var before := spiked.size()
+	spiked = spiked.filter(func(e): return e.until > now_ms)
+	if spiked.size() != before: dirty = true
 	clock.value = clamp(t / DAY, 0, 1)
 	top_lbl.time.text = ("Last orders " if t >= DAY else "") + Data.hhmm(min(minute(), c.close))
 	top_lbl.cash.text = Kit.money(G.s.cash)
@@ -1706,7 +1847,7 @@ func _refresh() -> void:
 	for id in line_items():
 		if Stock.rail_have(id) < per_pizza(id) * 3.0: low += 1
 	tab_btns.prep.text = "Prep" + (" (%d low)" % low if low > 0 else "") + ("  DELIVERY" if Game.s.dock.size() > 0 else "")
-	busy_wrap.visible = not busy.is_empty() and view != "front"
+	busy_wrap.visible = not busy.is_empty() and (view != "front" or fp_mode)
 	if not busy.is_empty():
 		busy_lbl.text = busy.label + "\n%d s left" % ceil(busy.left)
 		busy_bar.value = 1.0 - busy.left / max(busy.total, 0.001)
@@ -1726,45 +1867,59 @@ func _refresh() -> void:
 		var on: bool = view == k
 		tab_btns[k].add_theme_stylebox_override("normal", Kit.box(Kit.PANEL2 if on else Kit.PANEL, 10, 8))
 		tab_btns[k].add_theme_color_override("font_color", Kit.INK if on else Kit.MUTED)
+	if not fp_mode: _show_2d()
+	_build_tickets()
+	_build_side()
+	_build_prep()
+
+## in the classic layout, only the station you are at is on screen
+func _show_2d() -> void:
 	front.visible = view == "front"
 	kitchen.visible = view != "front"
 	bench_ui.visible = view == "bench" or view == "board"
 	oven_ui.visible = view == "oven"
 	prep_scroll.visible = view == "prep"
 	rail_ui.visible = view == "bench" or view == "board"
-	_build_tickets()
-	_build_side()
-	_build_prep()
+
+
+## what a ticket says: {status, col, where, kind, note}. Used by the ticket list and the paper tickets in 3D.
+func ticket_info(tk: Dictionary) -> Dictionary:
+	var status := "Tap to make it"
+	var col := Kit.INK
+	if tk.state == "pass":
+		status = "READY: hand it over"
+		col = Kit.BASIL
+	elif tk.owner == "me":
+		status = "You: " + {"oven": "in the oven", "board": "on the board, slice it"}.get(tk.state, "making it")
+		col = Kit.CHEESE
+	elif tk.owner != "":
+		status = tk.owner + (": in the oven" if tk.state == "oven" else ": making it")
+		col = Color("c9d3c4")
+	var where: String = {"take": "Phone order" if tk.p.get("phone", false) else "Takeaway", "dine": "Table %d" % (tk.p.table + 1), "deliv": "Delivery"}[tk.p.type]
+	if tk.p.get("app", false): where = "%s · rider %s" % [Data.APP.name, Data.hhmm(tk.p.collect_at)]
+	if tk.p.has("reg"): where = "%s's usual · %s" % [tk.p.reg, where]
+	var note := Orders.text(tk.rec.get("mods", []))
+	if tk.rec.get("allergy", "") != "": col = Color("f2a38f") if col == Kit.INK else col
+	var kind_txt: String = Data.DOUGHS[tk.rec.base].name if tk.rec.has("base") else ""
+	if tk.get("x", false):
+		var mk: String = tk.rec.make
+		kind_txt = {"side": "Side", "dessert": "Dessert", "drink": "Drink"}[tk.rec.course] + {"oven": ", baked", "cold": ", plated", "bar": ", made at the bar"}.get(mk, "")
+		if tk.state == "new" and tk.owner == "" and mk != "oven": status = "Tap to %s it (%d sec)" % ["make" if mk == "bar" else "plate", int(round(float(tk.rec.mins) * 60.0))]
+	return {"status": status, "col": col, "where": where, "kind": kind_txt, "note": note}
 
 func _build_tickets() -> void:
 	Kit.clear(tick_box)
 	tick_bars = {}
 	var shown := 0
 	for tk in tickets:
-		if shown >= 9: break
+		if shown >= 12: break
 		shown += 1
-		var status := "Tap to make it"
-		var col := Kit.INK
-		if tk.state == "pass":
-			status = "READY: hand it over out front"
-			col = Kit.BASIL
-		elif tk.owner == "me":
-			status = "You: " + {"oven": "in the oven", "board": "on the board, slice it"}.get(tk.state, "making it")
-			col = Kit.CHEESE
-		elif tk.owner != "":
-			status = tk.owner + (": in the oven" if tk.state == "oven" else ": making it")
-			col = Color("c9d3c4")
-		var where: String = {"take": "Phone order" if tk.p.get("phone", false) else "Takeaway", "dine": "Table %d" % (tk.p.table + 1), "deliv": "Delivery"}[tk.p.type]
-		if tk.p.get("app", false): where = "%s · rider %s" % [Data.APP.name, Data.hhmm(tk.p.collect_at)]
-		if tk.p.has("reg"): where = "%s's usual · %s" % [tk.p.reg, where]
-		var note := Orders.text(tk.rec.get("mods", []))
-		if note != "": status = note.to_upper() + "\n" + status
-		if tk.rec.get("allergy", "") != "": col = Color("f2a38f") if col == Kit.INK else col
-		var kind_txt: String = Data.DOUGHS[tk.rec.base].name if tk.rec.has("base") else ""
-		if tk.get("x", false):
-			var mk: String = tk.rec.make
-			kind_txt = {"side": "Side", "dessert": "Dessert", "drink": "Drink"}[tk.rec.course] + {"oven": ", baked", "cold": ", plated", "bar": ", made at the bar"}.get(mk, "")
-			if tk.state == "new" and tk.owner == "" and mk != "oven": status = "Tap to %s it (%d sec)" % ["make" if mk == "bar" else "plate", int(round(float(tk.rec.mins) * 60.0))]
+		var ti := ticket_info(tk)
+		var status: String = ti.status
+		var col: Color = ti.col
+		var where: String = ti.where
+		var kind_txt: String = ti.kind
+		if ti.note != "": status = ti.note.to_upper() + "\n" + status
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -1778,6 +1933,10 @@ func _build_tickets() -> void:
 		tick_box.add_child(bar)
 		tick_bars[tk.id] = {"bar": bar, "tk": tk}
 	if tickets.size() > shown: tick_box.add_child(Kit.label("+%d more waiting" % (tickets.size() - shown), 16, Kit.MUTED))
+	for e in spiked:
+		var sb := Kit.label("#%d %s\n%s" % [e.tk.id, e.tk.rec.name, e.why], 15, Kit.TOMATO if e.why != "COLLECTED" and e.why != "SERVED" else Kit.BASIL, true)
+		sb.modulate.a = 0.75
+		tick_box.add_child(sb)
 	if tickets.is_empty(): tick_box.add_child(Kit.label("No orders yet. Customers order out front.", 16, Kit.MUTED, true))
 
 func _info(fn: Callable, size: int = 17) -> void:

@@ -23,12 +23,17 @@ var cut_from = null
 var cut_to = null
 var pin_at = null
 var last_touch := 0
+var mode := ""                   # "bench" or "board" for a fixed surface in the 3D kitchen; "" follows svc.view (2D layout)
 
 func _init(service: ServiceScreen) -> void:
 	svc = service
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	font = ThemeDB.fallback_font
 	clip_contents = true
+
+## which surface this is showing: the bench or the cutting board
+func _v() -> String:
+	return mode if mode != "" else svc.view
 
 func _k() -> float:
 	return min(size.x, size.y) / S
@@ -83,11 +88,11 @@ func _gui_input(e: InputEvent) -> void:
 
 func _shaping():
 	var pz = svc.bench
-	return pz if (svc.view == "bench" and pz != null and pz.stage == "shape") else null
+	return pz if (_v() == "bench" and pz != null and pz.stage == "shape") else null
 
 ## one finger goes down
 func _down(p: Vector2) -> void:
-	if svc.view == "board":
+	if _v() == "board":
 		if svc.tool == "":
 			cut_from = p
 			cut_to = p
@@ -104,7 +109,7 @@ func _down(p: Vector2) -> void:
 
 ## one finger moves
 func _move(prev: Vector2, p: Vector2) -> void:
-	if svc.view == "board":
+	if _v() == "board":
 		if svc.tool == "": cut_to = p
 		else: svc.apply_tool(p, prev)
 		return
@@ -178,7 +183,7 @@ func _draw() -> void:
 	var k := _k()
 	var off := _off()
 	draw_set_transform(off, 0, Vector2(k, k))
-	var on_board: bool = svc.view == "board"
+	var on_board: bool = _v() == "board"
 	var t = Art.tex("board.bg" if on_board else "bench.bg")
 	if t != null: draw_texture_rect(t, Rect2(0, 0, S, S), false)
 	elif on_board:

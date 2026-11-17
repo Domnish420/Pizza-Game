@@ -7,7 +7,32 @@ placeholder shape. No code changes. Example: key `bg.van` loads `assets/bg-van.p
 Sizes are in game units: the front-of-house scene is 640 x 320, the bench and board are 320 x 320,
 the oven is 400 x 320. Supply images at 3x those sizes or larger.
 
-## Front of house (`scripts/front_scene.gd`)
+## 3D models for the first-person world (`scripts/fp/fp_world.gd`)
+
+Drop `assets/models/fp-<key with dots as dashes>.glb` (or .gltf / .tscn). Metres, Y up, the player stands at the
+origin facing -Z with eyes at 1.62 m. Room and fixture models are placed at the origin, so model them in room
+coordinates; small props are placed at their own position, so model them around their own origin (base at y = 0).
+
+| Key | What it is |
+| --- | --- |
+| `fp.room.van`, `fp.room.kitchen` | The van interior (serving hatch in the front wall at z = -1.12, x -0.8..0.8, y 1.05..1.85, back door on the left) and the kitchen behind the pass (open above the counter) |
+| `fp.street` | Outside the van and kiosk: pavement and road 0.42 m below the van floor, shops across the street |
+| `fp.dining` | The dining room beyond the pass (shop and up), about 9 x 13 m |
+| `fp.counter` | The pizza counter: stainless body, marble top at y 0.92 (x -0.8..0.8, z -1.1..-0.46), the chilled rail of pans along the back, the sneeze guard and the ticket rail at y 1.96 |
+| `fp.counter.side` | The counter on the right with the wooden cutting board (board centre 1.16, 0.94, -0.72) |
+| `fp.oven.electric`, `fp.oven.gas`, `fp.oven.wood`, `fp.oven.rotary` | The oven on the right, mouth facing the player at x 1.04, centred y 1.1, z 0.2, about 0.78 x 0.62 |
+| `fp.prep` | The prep station on the left: counter, tubs, sink; the prep tablet hangs on the wall at (-1.6, 1.42, -0.42) |
+| `fp.crates` | A delivery stacked by the back door |
+| `fp.customer.0` .. `fp.customer.5` | A customer standing, 1.75 m, facing +Z; also used seated (lowered 0.3 m) at tables |
+| `fp.rider` | A delivery-app rider with helmet and insulated bag |
+| `fp.table` | A dining table (top at 0.74 m) with four chairs 0.62 m out |
+| `fp.pan` | One gastronorm pan (its width is set by how many the counter holds); the fill is drawn by code |
+| `fp.ladle.1` .. `fp.ladle.8` | Portion ladles by size in oz, hanging from the handle (origin at the hook) |
+| `fp.ticket` | A paper order ticket, 0.19 x 0.26 m, hanging from its top; the text is drawn by code |
+| `fp.hand.right`, `fp.hand.left` | Forearm and hand, attached to the camera, pointing forward (-Z), fingertips at the origin |
+| `fp.mouse` | A mouse running across the floor |
+
+## Front of house, classic 2D layout (`scripts/front_scene.gd`)
 
 | Key | Size | What it is |
 | --- | --- | --- |
