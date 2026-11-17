@@ -19,6 +19,9 @@ func _do(minutes: float, fn: Callable, done_text: String = "") -> void:
 	elif done_text != "": Kit.main.toast(done_text)
 	hub.render()
 
+func _lay_quick(n: int) -> void:
+	for i in n: Hygiene.lay_trap()
+
 func _row(parent: Node, text: String, sub: String, col: Color = Kit.INK) -> HBoxContainer:
 	var h := Kit.hbox(8)
 	var v := Kit.vbox(0)
@@ -222,6 +225,20 @@ func _ready() -> void:
 				hub.render(), "primary", 16))
 		add_child(kc0[0])
 
+	# pizza boxes
+	var need_boxes: int = Stock.boxes_needed(G.s.day if morning else G.s.day + 1)
+	var bc = Kit.card("Pizza boxes")
+	var flat := int(Stock.have("box"))
+	var hb := _row(bc[1], "%d folded by the pass, %d flat" % [Stock.folded(), flat], "About %d takeaways %s. Boxes come flat: fold them before you open, or every takeaway waits while somebody folds one." % [need_boxes, "today" if morning else "tomorrow"], Kit.BASIL if Stock.folded() >= need_boxes else (Kit.TOMATO if flat + Stock.folded() < need_boxes else Kit.CHEESE))
+	var to_fold: int = int(min(need_boxes - Stock.folded(), min(flat, Stock.fold_cap() - Stock.folded())))
+	if flat > 0 and Stock.folded() < Stock.fold_cap():
+		hb.add_child(Kit.button("Fold by hand", func():
+			var t := FoldTask.new()
+			t.finished.connect(hub.render)
+			Kit.main.modal(t, 900), "primary", 15))
+		if to_fold > 0: hb.add_child(Kit.button("Quick: fold %d · %d min" % [to_fold, ceil(to_fold * Stock.FOLD_MIN * 1.4)], func(): _do(ceil(to_fold * Stock.FOLD_MIN * 1.4), func(): Stock.fold(to_fold), "Boxes folded"), "ghost", 15))
+	add_child(bc[0])
+
 	# cleaning
 	var cc = Kit.card("Cleaning")
 	for area in ["boh", "foh"]:
@@ -247,15 +264,19 @@ func _ready() -> void:
 	var kc = Kit.card("Pest control")
 	var ps := Hygiene.pest_state()
 	_row(kc[1], ps[0], ("Drawing them in: " + ", ".join(Hygiene.pest_causes()) + ".") if Hygiene.pest_causes().size() > 0 else "Keep it clean, keep the traps down.", {"ok": Kit.BASIL, "warn": Kit.CHEESE, "bad": Kit.TOMATO}[ps[1]])
-	var P: Dictionary = G.s.pests
-	var h2 := _row(kc[1], "Traps down: %d of the %d this place needs" % [P.laid, Hygiene.traps_wanted()], "%s in stock. %s" % [Data.qty("traps", Stock.have("traps")), "Proofing: " + G.tier("pest").n], Kit.INK if P.laid >= Hygiene.traps_wanted() else Kit.CHEESE)
-	if P.laid < Hygiene.traps_wanted():
-		var b := Kit.button("Lay a trap · 5 min", func(): _do(5, func(): Hygiene.lay_trap(), "Trap laid"), "primary", 15)
-		b.disabled = Stock.have("traps") < 1
-		h2.add_child(b)
-	if int(P.sprung) > 0:
-		var h3 := _row(kc[1], "%d sprung trap%s" % [P.sprung, "" if P.sprung == 1 else "s"], "Empty them and set them again.", Kit.CHEESE)
-		h3.add_child(Kit.button("Reset · %d min" % (2 * int(P.sprung)), func(): _do(2 * int(P.sprung), func(): Hygiene.reset_traps(), "Traps reset"), "primary", 15))
+	var lay: int = Hygiene.laid()
+	var h2 := _row(kc[1], "Traps set: %d of the %d this place needs" % [lay, Hygiene.traps_wanted()], "%s in the box. %s. Traps only work against a wall, close to where mice get in." % [Data.qty("traps", Stock.have("traps")), "Proofing: " + G.tier("pest").n], Kit.INK if lay >= Hygiene.traps_wanted() else Kit.CHEESE)
+	h2.add_child(Kit.button("Floor plan", func():
+		var t := TrapTask.new()
+		t.finished.connect(hub.render)
+		Kit.main.modal(t, 900), "primary", 15))
+	var short: int = min(Hygiene.traps_wanted() - lay - Hygiene.sprung(), int(Stock.have("traps")))
+	if short > 0:
+		h2.add_child(Kit.button("Quick: %d by the doors · %d min" % [short, 5 * short], func(): _do(5 * short, _lay_quick.bind(short), "Traps laid by the doors"), "ghost", 15))
+	if Hygiene.sprung() > 0:
+		var ns: int = Hygiene.sprung()
+		var h3 := _row(kc[1], "%d sprung trap%s" % [ns, "" if ns == 1 else "s"], "Empty them and set them again where they are.", Kit.CHEESE)
+		h3.add_child(Kit.button("Reset · %d min" % (2 * ns), func(): _do(2 * ns, func(): Hygiene.reset_traps(), "Traps reset"), "primary", 15))
 	add_child(kc[0])
 
 	# stock rotation and the stores' climate

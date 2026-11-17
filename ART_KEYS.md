@@ -20,6 +20,8 @@ the oven is 400 x 320. Supply images at 3x those sizes or larger.
 | `table.clean`, `table.food`, `table.dirty` | 44x34 | A table from above: laid, with pizzas on it, with dirty plates |
 | `bubble.order`, `bubble.food`, `bubble.seat`, `bubble.bill`, `bubble.clear`, `bubble.delivery` | 30x30 | The marker over anyone (or any table, or the back door) that needs you |
 | `bubble.complaint` | 30x30 | A customer complaining |
+| `bubble.rider` | 30x30 | A delivery-app rider waiting for an order |
+| `rider` | 34x52 | A delivery-app rider in a helmet with an insulated bag on their back, front view (the app is fictional: Hungrr, teal) |
 | `crates` | 36x28 | A delivery stacked at the back door (bottom left of the van scene, by the pass in dining rooms) |
 | `mouse` | 22x12 | A mouse running across the floor, facing right |
 
@@ -31,7 +33,7 @@ the oven is 400 x 320. Supply images at 3x those sizes or larger.
 | `board.bg` | 320x320 | Wooden cutting board, top-down |
 | `pan` | 220x220 | Round deep pizza pan, top-down (deep-pan and gluten-free bases) |
 | `pin` | 150x26 | Rolling pin, top-down, horizontal |
-| `top.<id>` | 24x24 | One piece of a topping, top-down. Ids: parmesan, gorgonzola, ricotta, pecorino, goatcheese, burrata, taleggio, pepperoni, ham, prosciutto, salami, spicysalami, sausage, nduja, pancetta, guanciale, chicken, meatball, speck, mortadella, anchovy, tuna, prawn, seafood, salmon, mushroom, porcini, pepper, onion, olive, artichoke, rocket, spinach, cherrytom, sundried, aubergine, courgette, sweetcorn, pineapple, chilli, jalapeno, garlic, potato, friarielli, caper, truffle, basil, oregano, rosemary, honey, pistachio |
+| `top.<id>` | 24x24 | One piece of a topping, top-down. Ids: parmesan, gorgonzola, ricotta, pecorino, goatcheese, burrata, taleggio, pepperoni, ham, prosciutto, salami, spicysalami, sausage, nduja, pancetta, guanciale, chicken, meatball, speck, mortadella, anchovy, tuna, prawn, seafood, salmon, mushroom, porcini, pepper, onion, olive, artichoke, rocket, spinach, cherrytom, sundried, aubergine, courgette, sweetcorn, pineapple, chilli, jalapeno, garlic, potato, friarielli, caper, truffle, basil, oregano, rosemary, honey, pistachio, chocspread (a dollop of chocolate hazelnut spread) |
 | `dough.blob` | 180x180 | A ball of dough, for the kneading step |
 | `rail` | full width x 78 | The chilled rail of the pizza counter under its glass sneeze guard, seen from the front |
 | `pan` | about 90x60 | One stainless gastronorm pan, empty |
@@ -40,6 +42,16 @@ the oven is 400 x 320. Supply images at 3x those sizes or larger.
 
 The base, sauce, cheese, browning and cuts are drawn by code because they change shape as you work.
 See `PizzaDraw.draw()`; each layer is a separate block and can be swapped for shaders or textures one at a time.
+
+## Pest control and boxes (`scripts/trap_task.gd`, `scripts/fold_task.gd`)
+
+| Key | Size | What it is |
+| --- | --- | --- |
+| `plan.0` .. `plan.5` | 640x320 | Floor plan of each premises from above (van, kiosk, shop, pizzeria, restaurant, flagship). Rooms, walls, doors, drains, pipe holes and air bricks must sit where `data/floorplans.json` puts them |
+| `trap`, `trap.sprung` | 24x14 | A snap trap or bait station from above, set and sprung |
+| `droppings` | 8x8 | Mouse droppings |
+| `box.flat` | 320x320 | A flat pizza box blank from above, with its front, sides and lid flaps |
+| `box.folded` | 110x9 | A closed pizza box seen from the side, for the stack by the pass |
 
 ## Oven (`scripts/oven_view.gd`)
 
@@ -61,7 +73,7 @@ Pizza spots on the deck are laid out by code (`Oven._init`).
 
 | Key | Size | What it is |
 | --- | --- | --- |
-| `icon.<id>` | 22x22 | Ingredient icon in the supplier catalogue and stock lists. All 71 ids are in `data/ingredients.json` |
+| `icon.<id>` | 22x22 | Ingredient icon in the supplier catalogue and stock lists. All 89 ids are in `data/ingredients.json`, including the drinks (cola, lemonade, water, coffee, milk, beer, redwine, whitewine, prosecco, aperitivo, gin, vermouth) and desserts (chocspread, tiramisu, gelato) |
 
 ## Sound (`scripts/art.gd`)
 

@@ -1,0 +1,516 @@
+{
+ "_about": "Floor plans of each premises for pest control, in plan units (640 x 320). rooms: [x, y, w, h]; the edges are walls. entries: where mice get in, with w = how many of them use it. food: what they are after. Traps work best against a wall, close to where the mice come in (see Hygiene in scripts/hygiene.gd).",
+ "plans": [
+  {
+   "venue": 0,
+   "rooms": [
+    {
+     "n": "Van",
+     "a": "boh",
+     "r": [
+      40,
+      70,
+      560,
+      180
+     ]
+    }
+   ],
+   "food": [
+    [
+     548,
+     112,
+     "Dry shelf"
+    ]
+   ],
+   "entries": [
+    {
+     "n": "Hole where the gas pipe comes up through the floor",
+     "kind": "pipe",
+     "x": 110,
+     "y": 248,
+     "w": 3
+    },
+    {
+     "n": "Gap around the serving hatch",
+     "kind": "hatch",
+     "x": 330,
+     "y": 72,
+     "w": 1
+    },
+    {
+     "n": "Worn seal on the back doors",
+     "kind": "door",
+     "x": 598,
+     "y": 165,
+     "w": 2
+    }
+   ]
+  },
+  {
+   "venue": 1,
+   "rooms": [
+    {
+     "n": "Kiosk",
+     "a": "boh",
+     "r": [
+      40,
+      60,
+      400,
+      200
+     ]
+    },
+    {
+     "n": "Store cupboard",
+     "a": "dry",
+     "r": [
+      440,
+      60,
+      160,
+      200
+     ]
+    }
+   ],
+   "food": [
+    [
+     520,
+     110,
+     "Dry store"
+    ]
+   ],
+   "entries": [
+    {
+     "n": "Gap under the back door",
+     "kind": "door",
+     "x": 598,
+     "y": 225,
+     "w": 3
+    },
+    {
+     "n": "Floor drain",
+     "kind": "drain",
+     "x": 200,
+     "y": 200,
+     "w": 2
+    },
+    {
+     "n": "Hole where the cables come in",
+     "kind": "pipe",
+     "x": 42,
+     "y": 120,
+     "w": 1
+    }
+   ]
+  },
+  {
+   "venue": 2,
+   "rooms": [
+    {
+     "n": "Kitchen",
+     "a": "boh",
+     "r": [
+      40,
+      30,
+      330,
+      180
+     ]
+    },
+    {
+     "n": "Dry store",
+     "a": "dry",
+     "r": [
+      370,
+      30,
+      130,
+      180
+     ]
+    },
+    {
+     "n": "Shop front",
+     "a": "foh",
+     "r": [
+      40,
+      210,
+      560,
+      90
+     ]
+    }
+   ],
+   "food": [
+    [
+     435,
+     120,
+     "Dry store"
+    ]
+   ],
+   "entries": [
+    {
+     "n": "Gap under the back door",
+     "kind": "door",
+     "x": 42,
+     "y": 120,
+     "w": 3
+    },
+    {
+     "n": "Kitchen floor drain",
+     "kind": "drain",
+     "x": 200,
+     "y": 185,
+     "w": 2
+    },
+    {
+     "n": "Broken air brick in the dry store",
+     "kind": "vent",
+     "x": 498,
+     "y": 80,
+     "w": 2
+    },
+    {
+     "n": "Gap under the front door",
+     "kind": "door",
+     "x": 320,
+     "y": 298,
+     "w": 1
+    }
+   ]
+  },
+  {
+   "venue": 3,
+   "rooms": [
+    {
+     "n": "Kitchen",
+     "a": "boh",
+     "r": [
+      40,
+      30,
+      300,
+      150
+     ]
+    },
+    {
+     "n": "Dry store",
+     "a": "dry",
+     "r": [
+      340,
+      30,
+      110,
+      150
+     ]
+    },
+    {
+     "n": "Toilets",
+     "a": "foh",
+     "r": [
+      450,
+      30,
+      150,
+      150
+     ]
+    },
+    {
+     "n": "Dining room",
+     "a": "foh",
+     "r": [
+      40,
+      180,
+      560,
+      120
+     ]
+    }
+   ],
+   "food": [
+    [
+     395,
+     105,
+     "Dry store"
+    ]
+   ],
+   "entries": [
+    {
+     "n": "Gap under the back door",
+     "kind": "door",
+     "x": 42,
+     "y": 100,
+     "w": 3
+    },
+    {
+     "n": "Drain under the dishwasher",
+     "kind": "drain",
+     "x": 150,
+     "y": 165,
+     "w": 2
+    },
+    {
+     "n": "Air brick in the dry store",
+     "kind": "vent",
+     "x": 395,
+     "y": 32,
+     "w": 2
+    },
+    {
+     "n": "Pipe gap behind the oven",
+     "kind": "pipe",
+     "x": 338,
+     "y": 60,
+     "w": 1
+    },
+    {
+     "n": "Gap around the toilet waste pipe",
+     "kind": "pipe",
+     "x": 590,
+     "y": 60,
+     "w": 1
+    },
+    {
+     "n": "Gap under the front door",
+     "kind": "door",
+     "x": 320,
+     "y": 298,
+     "w": 1
+    }
+   ]
+  },
+  {
+   "venue": 4,
+   "rooms": [
+    {
+     "n": "Kitchen",
+     "a": "boh",
+     "r": [
+      40,
+      30,
+      320,
+      150
+     ]
+    },
+    {
+     "n": "Dry store",
+     "a": "dry",
+     "r": [
+      360,
+      30,
+      100,
+      150
+     ]
+    },
+    {
+     "n": "Bin store",
+     "a": "boh",
+     "r": [
+      460,
+      30,
+      140,
+      80
+     ]
+    },
+    {
+     "n": "Office",
+     "a": "foh",
+     "r": [
+      460,
+      110,
+      140,
+      70
+     ]
+    },
+    {
+     "n": "Dining room",
+     "a": "foh",
+     "r": [
+      40,
+      180,
+      560,
+      120
+     ]
+    }
+   ],
+   "food": [
+    [
+     410,
+     105,
+     "Dry store"
+    ]
+   ],
+   "entries": [
+    {
+     "n": "Gap under the yard door",
+     "kind": "door",
+     "x": 42,
+     "y": 90,
+     "w": 3
+    },
+    {
+     "n": "Bin store door",
+     "kind": "door",
+     "x": 598,
+     "y": 60,
+     "w": 3
+    },
+    {
+     "n": "Drain under the pot wash",
+     "kind": "drain",
+     "x": 120,
+     "y": 170,
+     "w": 2
+    },
+    {
+     "n": "Air brick in the dry store",
+     "kind": "vent",
+     "x": 410,
+     "y": 32,
+     "w": 2
+    },
+    {
+     "n": "Pipe gap behind the oven",
+     "kind": "pipe",
+     "x": 358,
+     "y": 150,
+     "w": 1
+    },
+    {
+     "n": "Cable duct by the office",
+     "kind": "pipe",
+     "x": 598,
+     "y": 150,
+     "w": 1
+    },
+    {
+     "n": "Gap under the front door",
+     "kind": "door",
+     "x": 320,
+     "y": 298,
+     "w": 1
+    }
+   ]
+  },
+  {
+   "venue": 5,
+   "rooms": [
+    {
+     "n": "Kitchen",
+     "a": "boh",
+     "r": [
+      40,
+      20,
+      280,
+      160
+     ]
+    },
+    {
+     "n": "Pastry and prep",
+     "a": "boh",
+     "r": [
+      320,
+      20,
+      120,
+      160
+     ]
+    },
+    {
+     "n": "Dry store",
+     "a": "dry",
+     "r": [
+      440,
+      20,
+      80,
+      100
+     ]
+    },
+    {
+     "n": "Bin store",
+     "a": "boh",
+     "r": [
+      520,
+      20,
+      80,
+      100
+     ]
+    },
+    {
+     "n": "Wine cellar stairs",
+     "a": "foh",
+     "r": [
+      440,
+      120,
+      160,
+      60
+     ]
+    },
+    {
+     "n": "Dining room",
+     "a": "foh",
+     "r": [
+      40,
+      180,
+      560,
+      130
+     ]
+    }
+   ],
+   "food": [
+    [
+     480,
+     70,
+     "Dry store"
+    ]
+   ],
+   "entries": [
+    {
+     "n": "Gap under the delivery door",
+     "kind": "door",
+     "x": 42,
+     "y": 80,
+     "w": 3
+    },
+    {
+     "n": "Bin store door",
+     "kind": "door",
+     "x": 598,
+     "y": 70,
+     "w": 3
+    },
+    {
+     "n": "Drain under the pot wash",
+     "kind": "drain",
+     "x": 110,
+     "y": 165,
+     "w": 2
+    },
+    {
+     "n": "Drain in the prep room",
+     "kind": "drain",
+     "x": 380,
+     "y": 165,
+     "w": 1
+    },
+    {
+     "n": "Air brick in the dry store",
+     "kind": "vent",
+     "x": 480,
+     "y": 22,
+     "w": 2
+    },
+    {
+     "n": "Gap around the cellar pipes",
+     "kind": "pipe",
+     "x": 520,
+     "y": 178,
+     "w": 2
+    },
+    {
+     "n": "Gap under the terrace doors",
+     "kind": "door",
+     "x": 598,
+     "y": 250,
+     "w": 1
+    },
+    {
+     "n": "Gap under the front door",
+     "kind": "door",
+     "x": 320,
+     "y": 308,
+     "w": 1
+    }
+   ]
+  }
+ ]
+}

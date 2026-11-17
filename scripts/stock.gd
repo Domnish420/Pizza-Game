@@ -364,6 +364,40 @@ func close_rail() -> Array:
 		pan.q = 0.0
 	return notes
 
+# ---------- pizza boxes ----------
+## Boxes come flat in sleeves. Before service someone folds a stack of them; a takeaway pizza goes into a folded
+## box at the pass. With none folded, a box is folded on the spot, which keeps the customer waiting.
+const FOLD_MIN := 0.25        # minutes to fold one box by hand
+
+func folded() -> int:
+	return int(Game.s.get("folded", 0))
+
+## room by the pass for folded boxes
+func fold_cap() -> int:
+	return int(round(30.0 * float(Game.venue().size)))
+
+## fold up to n flat boxes. Returns how many were folded.
+func fold(n: int) -> int:
+	n = int(min(n, min(floor(have("box")), fold_cap() - folded())))
+	if n <= 0: return 0
+	var t := take("box", n)
+	var c0: float = float(Game.s.get("folded_c", 0.0))
+	Game.s.folded_c = (c0 * folded() + t.cost) / (folded() + n)
+	Game.s.folded = folded() + n
+	return n
+
+## take a folded box for a takeaway. {ok, cost, folded_now: true if it had to be folded on the spot}
+func box_one() -> Dictionary:
+	var now := folded() <= 0
+	if now and fold(1) <= 0: return {"ok": false, "cost": 0.0, "folded_now": false}
+	Game.s.folded = folded() - 1
+	return {"ok": true, "cost": float(Game.s.get("folded_c", 0.0)), "folded_now": now}
+
+## folded boxes a day like today will need
+func boxes_needed(day: int = -1) -> int:
+	var take_share := 1.0 if Game.calc().tables == 0 else 0.5
+	return int(ceil(Game.covers(Game.s.day if day < 0 else day) * take_share))
+
 # ---------- the wash-up ----------
 func wash_add(size: int, n: int = 1) -> void:
 	var k := str(size)

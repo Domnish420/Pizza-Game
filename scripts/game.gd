@@ -23,11 +23,11 @@ func new_game() -> void:
 		"day": 1, "phase": "morning", "cash": 200.0, "xp": 0, "level": 1, "rep": 3.0, "ratings": 0,
 		"venue": 0, "pitch": 0, "upg": upg, "tables": 0,
 		"stock": {}, "dough": [], "baskets": {}, "orders": [], "payables": [], "house_grade": 2,
-		"clock": Day.START, "late_start": 0, "staff_left": {}, "dock": [], "prepped": {}, "rail": [], "washup": {"2": 0, "4": 0}, "notes": [],
+		"clock": Day.START, "late_start": 0, "staff_left": {}, "dock": [], "prepped": {}, "rail": [], "washup": {"2": 0, "4": 0}, "notes": [], "folded": 0, "folded_c": 0.0,
 		"regulars": [], "critic_next": randi_range(8, 16), "buzz": {"until": 0, "mult": 1.0},
-		"templog": [], "checklog": [], "story": {"stage": "free"}, "equip": Equip.starter("van"), "kit_orders": [], "kit_basket": {},
+		"templog": [], "checklog": [], "story": {"stage": "free"}, "equip": Equip.starter("van"), "kit_orders": [], "kit_basket": {}, "extra_off": {}, "app": {"on": false, "paused": false, "rating": 4.4, "orders": 0},
 		"vent": {"fridge": 2, "dry": 2}, "clean": {"boh": 85.0, "foh": 85.0},
-		"pests": {"level": 8.0, "laid": 0, "sprung": 0}, "hygiene": {"rating": -1, "day": 0, "notes": [], "next": randi_range(6, 12), "at": -1.0},
+		"pests": {"level": 8.0, "traps": [], "seen": {"0": 1.0}}, "hygiene": {"rating": -1, "day": 0, "notes": [], "next": randi_range(6, 12), "at": -1.0},
 		"book": new_book(), "books": [],
 		"menu_id": "classics", "next_menu": "", "offers": [], "cycle_start": 1, "off": {}, "price": 1,
 		"staff": [], "cands": [], "last": {}, "sid": 1, "oid": 1, "mute": false, "pizzas": 0, "earned": 0.0,
@@ -51,6 +51,10 @@ func load_game() -> bool:
 	var d = JSON.parse_string(FileAccess.open(SAVE_PATH, FileAccess.READ).get_as_text())
 	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("equip"): return false
 	s = d
+	# fields added since the save was written
+	var added := {"folded": 0, "folded_c": 0.0, "extra_off": {}, "app": {"on": false, "paused": false, "rating": float(Data.APP.start_rating), "orders": 0}}
+	for k in added:
+		if not s.has(k): s[k] = added[k]
 	for k in Data.UPG: s.upg[k] = int(s.upg.get(k, 0))
 	for k in ["day", "level", "venue", "pitch", "tables", "price", "sid", "oid", "cycle_start", "ratings", "xp", "house_grade", "clock", "late_start"]:
 		s[k] = int(s[k])
@@ -221,6 +225,33 @@ func sauce_sizes() -> Array:
 	out.sort()
 	return out
 
+# ---------- sides, desserts and drinks ----------
+## the drinks upgrade that is working: the bar needs a bartender
+func drinks_tier() -> int:
+	var dt := int(s.upg.drinks)
+	if dt >= 3 and staff_of("bartender").is_empty(): dt = 2
+	return dt
+
+## what stops an extra being sold here ("" = nothing)
+func extra_block(x: Dictionary) -> String:
+	if x.lvl > s.level: return "Level %d" % x.lvl
+	if x.course == "drink" and drinks_tier() < x.tier: return "Needs the " + Data.UPG.drinks.tiers[x.tier].n.to_lower() + (" and a bartender" if x.tier >= 3 else "")
+	if x.tool != "" and not Equip.has(x.tool): return "Needs an " + Equip.ITEM[x.tool].short + " (" + Equip.SHOP.name + ")"
+	return ""
+
+## the sides, desserts or drinks on sale today ("" = all of them)
+func extras_on(course: String = "") -> Array:
+	return Data.EXTRAS.filter(func(x): return (course == "" or x.course == course) and extra_block(x) == "" and not s.get("extra_off", {}).get(x.id, false))
+
+## how many of one extra an average customer buys
+func extra_rate(x: Dictionary) -> float:
+	var ch: Dictionary = Data.EXTRA_CHANCE[x.course]
+	var r: float = (0.65 * float(ch.dine) + 0.35 * float(ch.take)) if calc_tables() > 0 else float(ch.take)
+	return r / max(1, extras_on(x.course).size())
+
+func calc_tables() -> int:
+	return int(min(s.tables, venue().tables))
+
 ## can this pizza be made right now: a dough ball of the right style and most of each topping, prepped
 func can_make(r: Dictionary) -> bool:
 	if Stock.dough_ready(r.base) < 1: return false
@@ -246,9 +277,16 @@ func traffic_mult() -> float:
 func delivery_covers(day: int = -1) -> int:
 	return int(round(staff_of("driver").size() * tier("delivery").per * (0.4 + s.rep * 0.22) * Data.WEEK[weekday(day)]))
 
+## orders the delivery app sends on a given day (pizzas)
+func app_covers(day: int = -1) -> int:
+	var A: Dictionary = s.get("app", {})
+	if not A.get("on", false) or A.get("paused", false) or Story.employed(): return 0
+	var A0: Dictionary = Data.APP
+	return int(round((float(A0.base) + float(A0.per_size) * float(venue().size)) * pow(float(A.rating) / 4.5, 2.0) * Data.WEEK[weekday(day)] * Hygiene.footfall()))
+
 ## pizzas you can expect to sell on a given day
 func covers(day: int = -1) -> int:
-	return int(round(venue().traffic * traffic_mult() * day_factor(day) * Hygiene.footfall() * Story.traffic())) + delivery_covers(day)
+	return int(round(venue().traffic * traffic_mult() * day_factor(day) * Hygiene.footfall() * Story.traffic())) + delivery_covers(day) + app_covers(day)
 
 func calc() -> Dictionary:
 	var v := venue()
@@ -277,11 +315,12 @@ func calc() -> Dictionary:
 	c.customers = int(round(v.traffic * traffic_mult() * c.day_factor * Hygiene.footfall() * Story.traffic()))
 	c.open = Day.open_time()
 	c.close = Day.close_time()
+	c.app = app_covers()
 	c.total = c.customers + c.delivery
 	c.tables = int(min(s.tables, v.tables))
 	var dt := int(s.upg.drinks)
 	if dt >= 3 and staff_of("bartender").is_empty(): dt = 2
-	c.drinks = Data.UPG.drinks.tiers[dt].per * (1.0 + skill_of("bartender") * 0.06)
+	c.drinks_tier = dt
 	var p = pitch()
 	c.tip = 1.0 + tier("furniture").tip + tier("ambience").tip + skill_of("server") * 0.03 + (p.get("tip", 0.0) if p != null else 0.0)
 	c.rep_bonus = tier("ambience").rep
@@ -299,6 +338,8 @@ func dough_plan(make_day: int = -1) -> Dictionary:
 	if recs.is_empty(): return plan
 	var cov := covers(d + 1)
 	for r in recs: plan[r.base] = plan.get(r.base, 0.0) + cov * 1.1 / recs.size()
+	for x in extras_on():
+		if x.make == "oven": plan[x.base] = plan.get(x.base, 0.0) + cov * extra_rate(x)
 	for st in plan:
 		plan[st] = int(max(0, ceil(plan[st] + 1 - (_dough_left_tomorrow(st) if d == s.day else 0.0))))
 	return plan

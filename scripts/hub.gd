@@ -162,6 +162,8 @@ func _page_home() -> void:
 			if row.tub_short: tub_short = true
 		if tub_short: lines.append(["bad", "Not enough clean tubs for today's prep. Wash up, and order more 4 litre tubs for tomorrow."])
 		if todo_prep > 1.0: lines.append(["warn", "About %d minutes of prep to do before you open. See Jobs." % ceil(todo_prep)])
+		if Stock.folded() < min(Stock.boxes_needed(), Stock.fold_cap()) * 0.5:
+			lines.append(["warn" if Stock.have("box") >= 1 else "bad", ("Only %d pizza boxes folded for about %d takeaways. Fold some before you open (Jobs)." % [Stock.folded(), Stock.boxes_needed()]) if Stock.have("box") >= 1 else "No pizza boxes left. Order some."])
 		if G.s.dock.size() > 0: lines.append(["bad", "%d deliver%s waiting at the back door to be put away." % [G.s.dock.size(), "y" if G.s.dock.size() == 1 else "ies"]])
 		for o in Day.pending(): lines.append(["info", "%s due at about %s%s." % [Data.SUP[o.sup].name, Data.hhmm(o.eta), " (during service)" if o.eta >= Day.open_time() else ""]])
 	var plan := G.dough_plan()
@@ -185,7 +187,7 @@ func _page_home() -> void:
 		if hs[1] != "ok" and not (area == "foh" and G.venue().tables == 0 and Hygiene.level(area) > 40): lines.append([hs[1], "%s: %s (%d%%)." % ["Kitchen" if area == "boh" else "Front of house", hs[0].to_lower(), Hygiene.level(area)]])
 	var ps := Hygiene.pest_state()
 	if ps[1] != "ok": lines.append([ps[1], "%s. Causes: %s." % [ps[0], ", ".join(Hygiene.pest_causes())] if Hygiene.pest_causes().size() > 0 else ps[0] + "."])
-	if int(G.s.pests.sprung) > 0: lines.append(["warn", "%d sprung trap%s to reset." % [G.s.pests.sprung, "" if G.s.pests.sprung == 1 else "s"]])
+	if Hygiene.sprung() > 0: lines.append(["warn", "%d sprung trap%s to reset." % [Hygiene.sprung(), "" if Hygiene.sprung() == 1 else "s"]])
 	if G.cycle_left() <= 3:
 		lines.append(["warn", "The menu changes in %d day%s. %s" % [G.cycle_left(), "" if G.cycle_left() == 1 else "s", "Run your stock down." if G.s.next_menu != "" else "Book the next one on the Menu page or you fall back to House Classics."]])
 	if G.s.cash < 0: lines.append(["bad", "Overdrawn: the bank charges 5% a day."])
@@ -363,6 +365,37 @@ func _menu_lines(parent: Node, m: Dictionary, toggles: bool) -> void:
 					Game.s.off[id] = not off), "ghost" if off else "primary", 15))
 		parent.add_child(h)
 
+## sides, desserts and drinks: what you sell on top of the pizzas, and switching each on or off
+func _extras_card() -> Control:
+	var G := Game
+	var xc = Kit.card("Sides, desserts and drinks")
+	xc[1].add_child(Kit.label("Customers add these to their order. Baked sides and desserts are made on the bench and go through the oven like a pizza; cold ones are plated from the rail or the fridge; drinks come out of the fridge with the order, or are made at the coffee machine or the bar. At a table, dessert is ordered after the meal.", 15, Kit.MUTED, true))
+	var xg := Kit.grid(2)
+	for x in Data.EXTRAS:
+		var h := Kit.hbox(6)
+		var v := Kit.vbox(0)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var price: float = x.price * G.calc().price_mult
+		v.add_child(Kit.label("%s  ·  %s" % [x.name, Kit.cents(price)], 17))
+		var how: String = {"oven": "baked", "cold": "plated", "hand": "from the fridge", "bar": "made at the bar"}[x.make]
+		var ing := []
+		for i in x.spec: ing.append("%s %s" % [Data.qty(i, x.spec[i]), Data.ING[i].name.to_lower()])
+		v.add_child(Kit.label("%s, %s · %s" % [x.course.capitalize(), how, ", ".join(ing)], 13, Kit.MUTED, true))
+		h.add_child(v)
+		var block := G.extra_block(x)
+		if block != "":
+			h.add_child(Kit.label(block, 13, Kit.CHEESE, true))
+		else:
+			var cost: float = Market.recipe_cost(x).cost
+			h.add_child(Kit.label("%d%%" % (cost / price * 100.0), 15, Kit.BASIL if cost / price < 0.3 else Kit.CHEESE))
+			var off: bool = G.s.get("extra_off", {}).get(x.id, false)
+			h.add_child(Kit.button("Off" if off else "On", func(): _act(func():
+				if not Game.s.has("extra_off"): Game.s.extra_off = {}
+				Game.s.extra_off[x.id] = not off), "ghost" if off else "primary", 14))
+		xg.add_child(h)
+	xc[1].add_child(xg)
+	return xc[0]
+
 func _page_menu() -> void:
 	var G := Game
 	var m := G.menu_now()
@@ -399,6 +432,8 @@ func _page_menu() -> void:
 	pc[1].add_child(Kit.label(descs[G.s.price], 16, Kit.MUTED, true))
 	pc[1].add_child(Kit.label("Menus run for %d days. Book the next one before this one ends. Whatever the new menu does not use is dead stock, so order carefully in the last few days." % Data.MENU_DAYS, 15, Kit.MUTED, true))
 	g.add_child(pc[0])
+
+	page.add_child(_extras_card())
 
 	page.add_child(Kit.label("Next fortnight's menu" + ("  ·  booked: " + Data.MENU[G.s.next_menu].name if G.s.next_menu != "" else "  ·  nothing booked (House Classics)"), 21))
 	var og := Kit.grid(3)
@@ -499,8 +534,36 @@ func _page_foh() -> void:
 	else:
 		cd[1].add_child(Kit.label("No room for seating here. The Takeaway Shop has window seats.", 15, Kit.MUTED, true))
 	g.add_child(cd[0])
+	g.add_child(_app_card())
 	for k in Data.UPG:
 		if Data.UPG[k].area == "foh": g.add_child(_upg_card(k))
+
+## the delivery app: join it, pause it, leave it
+func _app_card() -> Control:
+	var G := Game
+	var A0: Dictionary = Data.APP
+	var A: Dictionary = G.s.app
+	var ac = Kit.card("%s delivery app" % A0.name)
+	var gm: float = (Day.close_time() - Day.open_time()) / ServiceScreen.DAY
+	ac[1].add_child(Kit.label("Orders ping on a tablet during service: accept them in time or they count as missed. A rider is booked to collect each one about %d minutes later and waits up to %d. %s keeps %d%% of every order. Late, missed and cancelled orders drop your rating in the app, and a lower rating means fewer orders." % [int(round(float(A0.prep_secs) * gm / 5.0) * 5), int(round(float(A0.rider_secs) * gm / 5.0) * 5), A0.name, int(float(A0.commission) * 100)], 14, Kit.MUTED, true))
+	if not A.on:
+		if int(G.s.venue) < int(A0.venue): ac[1].add_child(_tag("Needs a fixed address: the " + Data.VENUES[int(A0.venue)].name))
+		elif G.s.level < int(A0.lvl): ac[1].add_child(_tag("Level %d" % int(A0.lvl)))
+		else:
+			var b := Kit.button("Join for %s" % Kit.money(A0.join_fee), func(): _act(func():
+				Game.s.cash -= float(A0.join_fee)
+				Game.s.app.on = true
+				Game.s.app.paused = false
+				Game.s.app.rating = float(A0.start_rating)), "primary", 17)
+			b.disabled = G.s.cash < float(A0.join_fee)
+			ac[1].add_child(b)
+		return ac[0]
+	ac[1].add_child(Kit.label("Rating %.1f / 5 · %d orders so far · about %d pizzas a day from the app" % [float(A.rating), int(A.get("orders", 0)), G.app_covers() if not A.paused else 0], 16, Kit.BASIL if float(A.rating) >= 4.3 else (Kit.CHEESE if float(A.rating) >= 3.6 else Kit.TOMATO), true))
+	var h := Kit.hbox(6)
+	h.add_child(Kit.button("Resume orders" if A.paused else "Pause orders", func(): _act(func(): Game.s.app.paused = not Game.s.app.paused), "primary" if A.paused else "ghost", 15))
+	h.add_child(Kit.button("Leave the app", func(): _act(func(): Game.s.app.on = false), "ghost", 15))
+	ac[1].add_child(h)
+	return ac[0]
 
 # ---------- Staff ----------
 func _person(x: Dictionary, hired: bool) -> Control:
@@ -570,6 +633,7 @@ func _page_property() -> void:
 		else:
 			var b := Kit.button("Buy & move in " + Kit.money(v.cost), func(): Kit.main.confirm("Move to the %s?" % v.name, "%s. Your equipment, staff and reputation move with you. Bigger premises take bigger ovens, fridges, freezers and dry stores." % Kit.money(v.cost), "Sign the lease", func():
 				Game.s.cash -= v.cost
+				Hygiene.move_out()
 				Game.s.venue = i
 				Game.gen_cands()
 				Game.save_game()

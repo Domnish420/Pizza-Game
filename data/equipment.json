@@ -423,6 +423,37 @@
    "short": "probe thermometer"
   },
   {
+   "id": "gelato_scoop",
+   "name": "Ice cream scoop, 60 mm",
+   "cat": "prep",
+   "price": 8.99,
+   "desc": "Portions ice cream in neat, even scoops. Needed to serve ice cream.",
+   "rule": "scoop",
+   "short": "ice cream scoop"
+  },
+  {
+   "id": "dessert_plate",
+   "name": "Dessert plate, 8 inch, pack of 6",
+   "cat": "foh",
+   "price": 17.94,
+   "desc": "Plated desserts and salads go out on these. One per dessert or salad being eaten.",
+   "rule": "dessert_plate",
+   "pack": 6,
+   "unit": "dessert plate",
+   "short": "dessert plates"
+  },
+  {
+   "id": "coffee_cup",
+   "name": "Espresso and cappuccino cups with saucers, pack of 12",
+   "cat": "foh",
+   "price": 29.88,
+   "desc": "Coffee goes out in these. Without them you cannot serve coffee at the table.",
+   "rule": "cups",
+   "pack": 12,
+   "unit": "cup",
+   "short": "coffee cups"
+  },
+  {
    "id": "gn16",
    "name": "Gastronorm pan 1/6, 100 mm",
    "cat": "storage",
@@ -656,7 +687,10 @@
    "fire_blanket": 1,
    "extinguisher": 2,
    "handwash": 1,
-   "pan_tin": 6
+   "pan_tin": 6,
+   "gelato_scoop": 1,
+   "dessert_plate": 24,
+   "coffee_cup": 24
   }
  }
 }

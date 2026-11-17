@@ -49,7 +49,9 @@ func start() -> void:
 	var kit := {"oven": 2, "mixer": 3, "proofer": 2, "fridge": 4, "freezer": 3, "dry": 3, "roller": 1, "prep": 3, "dish": 2, "pest": 2,
 		"pos": 2, "sign": 2, "marketing": 2, "drinks": 2, "delivery": 0, "furniture": 2, "ambience": 1, "comfort": 1}
 	for k in kit: s.upg[k] = kit[k]
-	s.pests.laid = Hygiene.traps_wanted()
+	Hygiene.move_out()
+	Stock.take("traps", Stock.have("traps"))
+	Hygiene.place_best(Hygiene.traps_wanted())
 	Stock.add("tub4", 30, 2, 1.6)
 	Stock.add("tub2", 16, 2, 1.1)
 	Stock.add("sanitiser", 10000, 3, 0.0032)
@@ -61,7 +63,8 @@ func start() -> void:
 	s.dough = [{"style": "neapolitan", "n": int(c.total * 1.25) + 2, "q": 78, "d": 0, "speed": 0, "g": 3.0, "c": 0.3}]
 	s.stock.erase("mozz")
 	s.stock.erase("tomato")
-	for e in [["flour00", 25000, 3], ["tomato", 5000, 3], ["mozz", 5000, 3], ["basil", 125, 2], ["pepperoni", 1000, 2], ["mushroom", 1000, 2], ["box", 50, 2]]:
+	for e in [["flour00", 25000, 3], ["tomato", 5000, 3], ["mozz", 5000, 3], ["basil", 125, 2], ["pepperoni", 1000, 2], ["mushroom", 1000, 2], ["box", 50, 2],
+			["garlicbutter", 2500, 2], ["cola", 48, 2], ["lemonade", 24, 2], ["water", 48, 1], ["coffee", 2000, 2], ["milk", 4000, 2]]:
 		Stock.add(e[0], e[1], e[2], Data.ING[e[0]].g[e[2]].price)
 	s.notes = ["%s: \"Morning! Welcome to %s. Your list is on the Jobs page: the prep, then set up the counter. We open at %s. Any questions, shout.\"" % [BOSS, EMPLOYER, Data.hhmm(Day.open_time())]]
 	Game.save_game()
@@ -92,7 +95,8 @@ func morning() -> Array:
 			var res := Stock.prep(id, raw, 0.7)
 			if res.made > 0: done.append("%s %s" % [Data.qty(id, res.made), Data.ING[id].name.to_lower()])
 		var set_up := Day.set_up_counter()
-		notes.append("%s came in early and prepped to your list: %s. %s set up the counter (%d pans)." % [JUNIOR, ", ".join(done) if done.size() > 0 else "nothing needed doing", JUNIOR, set_up.filled])
+		var boxes := Stock.fold(Stock.boxes_needed() - Stock.folded())
+		notes.append("%s came in early and prepped to your list: %s. %s set up the counter (%d pans)%s." % [JUNIOR, ", ".join(done) if done.size() > 0 else "nothing needed doing", JUNIOR, set_up.filled, (" and folded %d boxes" % boxes) if boxes > 0 else ""])
 	elif stage() == "senior" and Game.s.day > int(st.get("promoted", 0)):
 		notes.append("There was no prep list for %s this morning, so nothing was prepped before you got in." % JUNIOR)
 	return notes

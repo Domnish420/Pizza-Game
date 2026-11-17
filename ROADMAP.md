@@ -39,8 +39,8 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [x] Prep by hand: knife work, grating, picking leaves, draining and pouring, stirring
 - [x] Cleaning by hand: scrub the kitchen and the front
 - [x] Putting deliveries away by hand: each line behind or in front of the old stock
-- [ ] Traps placed on a floor plan where the mice actually come in
-- [ ] Folding and boxing takeaways
+- [x] Traps placed on a floor plan where the mice actually come in
+- [x] Folding and boxing takeaways
 - [x] Fridge and freezer temperature logs (the inspector checks them) and opening/closing checklists
 - [x] Sauce with portion ladles: scoop an exact amount, drop it, spread it; every size bought separately
 - [x] Every utensil and piece of small equipment bought from KitBox, the catering-supplies site, and used in play:
@@ -57,8 +57,8 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [x] Regulars who come back for "the usual" and remember how you treated them
 - [x] Phone orders for collection
 - [x] Incognito food critics
-- [ ] Drinks, sides and desserts you make
-- [ ] Delivery-app tickets
+- [x] Drinks, sides and desserts you make
+- [x] Delivery-app tickets
 
 ## 3. Running a real kitchen
 

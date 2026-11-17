@@ -3,8 +3,9 @@ extends Node
 ##
 ## Cleanliness (0-100) of the kitchen ("boh") and front of house ("foh") drops through service and is put back
 ## by cleaning, which takes time and cleaning chemicals. Pests (0-100) creep up when the place is dirty, when the
-## dry store vents are open too wide, in autumn and winter, and when nothing is keeping them out. Traps catch
-## them, then need resetting. Pest proofing (an upgrade track) keeps most of them out in the first place.
+## dry store vents are open too wide, in autumn and winter, and when nothing is keeping them out. Mice come in
+## through particular ways in on each premises' floor plan; traps laid against the wall near them catch them, then
+## need resetting. Pest proofing (an upgrade track) keeps most of them out in the first place.
 ## At night mice raid the dry store; during service a customer may see one.
 ## An inspector visits every couple of weeks and gives a 0-5 rating that customers can see. 0 or 1 closes you.
 
@@ -50,22 +51,176 @@ func state(area: String) -> Array:
 	if l >= 30: return ["Dirty", "bad"]
 	return ["Filthy", "bad"]
 
-# ---------- traps ----------
+# ---------- the floor plan and traps ----------
+## Every premises has a floor plan (data/floorplans.json): rooms whose edges are walls, the ways mice get in
+## (gaps under doors, drains, pipe holes, air bricks) and the food they are after. Mice come in through those ways
+## and run along the walls. A trap catches them when it is flat against a wall, close to where they come in.
+## Droppings build up where mice have been getting in, so the plan shows you where traps are needed.
+const TRAP_RANGE := 110.0     # plan units: further than this from a way in, a trap catches nothing from it
+const WALL_GAP := 18.0        # this close to a wall, a trap is on the mice's run
+const PLAN_SIZE := Vector2(640, 320)
+var PLANS := []
+
+func _init() -> void:
+	var d = JSON.parse_string(FileAccess.open("res://data/floorplans.json", FileAccess.READ).get_as_text())
+	PLANS = d.plans
+
+func plan() -> Dictionary:
+	return PLANS[clamp(int(Game.s.venue), 0, PLANS.size() - 1)]
+
+func entries() -> Array:
+	return plan().entries
+
 ## how many traps the premises should have down
 func traps_wanted() -> int:
 	return int(ceil(2.0 * float(Game.venue().size)))
 
-func lay_trap() -> bool:
+## the traps on the floor: [{x, y, sprung}]
+func traps() -> Array:
+	var P: Dictionary = Game.s.pests
+	if not P.has("traps"):           # an older save kept only counts: put them down by the doors
+		P.traps = []
+		var n := int(P.get("laid", 0)) + int(P.get("sprung", 0))
+		for i in n:
+			var sp := _auto_spot(false)
+			P.traps.append({"x": sp.x, "y": sp.y, "sprung": i < int(P.get("sprung", 0))})
+		P.erase("laid")
+		P.erase("sprung")
+	if not P.has("seen"): P.seen = {}
+	return P.traps
+
+func laid() -> int:
+	return traps().filter(func(t): return not t.sprung).size()
+
+func sprung() -> int:
+	return traps().filter(func(t): return t.sprung).size()
+
+## the room a point is in, or {}
+func room_at(p: Vector2) -> Dictionary:
+	for rm in plan().rooms:
+		var r: Array = rm.r
+		if p.x >= r[0] + 4 and p.x <= r[0] + r[2] - 4 and p.y >= r[1] + 4 and p.y <= r[1] + r[3] - 4: return rm
+	return {}
+
+## how far a point is from the nearest wall of the room it is in
+func wall_dist(p: Vector2) -> float:
+	var rm := room_at(p)
+	if rm.is_empty(): return 999.0
+	var r: Array = rm.r
+	return min(min(p.x - r[0], r[0] + r[2] - p.x), min(p.y - r[1], r[1] + r[3] - p.y))
+
+## how well a trap at p catches mice coming in through entry e (0..1)
+func trap_q(p: Vector2, e: Dictionary) -> float:
+	var d := p.distance_to(Vector2(e.x, e.y))
+	var prox: float = clamp(1.0 - d / TRAP_RANGE, 0.0, 1.0)
+	var on_run: bool = wall_dist(p) <= WALL_GAP or (e.kind == "drain" and d < 30.0)
+	return prox * (1.0 if on_run else 0.35)
+
+## how good a spot is for a trap: the best it does against any way in (0..1)
+func spot_value(p: Vector2) -> float:
+	var best := 0.0
+	for e in entries(): best = max(best, trap_q(p, e))
+	return best
+
+## share of the mice (by how many use each way in) that run past a well-placed trap
+func coverage() -> float:
+	var tot := 0.0
+	var got := 0.0
+	for e in entries():
+		var best := 0.0
+		for t in traps():
+			if not t.sprung: best = max(best, trap_q(Vector2(t.x, t.y), e))
+		tot += float(e.w)
+		got += float(e.w) * min(1.0, best / 0.6)
+	return got / tot if tot > 0 else 1.0
+
+## where someone puts a trap without looking for droppings: by the doors and the food (smart = by every way in,
+## the busiest first, as a pest controller would)
+func _auto_spot(smart: bool) -> Vector2:
+	var es: Array = entries().duplicate()
+	var food := Vector2(plan().food[0][0], plan().food[0][1])
+	if smart: es.sort_custom(func(a, b): return float(a.w) > float(b.w))
+	else:
+		es = es.filter(func(e): return e.kind == "door")
+		es.append({"x": food.x, "y": food.y - 30.0, "kind": "food"})
+	for e in es:
+		var at := Vector2(e.x, e.y)
+		var taken := false
+		for t in Game.s.pests.get("traps", []):
+			if Vector2(t.x, t.y).distance_to(at) < 45.0: taken = true
+		if taken: continue
+		return _onto_floor(at.move_toward(food, 20.0))
+	var any: Dictionary = es.pick_random()
+	return _onto_floor(Vector2(any.x, any.y).move_toward(food, 40.0))
+
+## nudge a point inside the nearest room
+func _onto_floor(p: Vector2) -> Vector2:
+	if not room_at(p).is_empty(): return p
+	var best := p
+	var bd := 1e9
+	for rm in plan().rooms:
+		var r: Array = rm.r
+		var q := Vector2(clamp(p.x, r[0] + 8, r[0] + r[2] - 8), clamp(p.y, r[1] + 8, r[1] + r[3] - 8))
+		if q.distance_to(p) < bd:
+			bd = q.distance_to(p)
+			best = q
+	return best
+
+## put a trap down at p (or where someone would without looking, if p is null). Takes one from stock.
+func lay_trap(p = null, smart: bool = false) -> bool:
 	if Stock.have("traps") < 1: return false
 	Stock.take("traps", 1)
-	Game.s.pests.laid += 1
+	var at: Vector2 = _onto_floor(p) if p != null else _auto_spot(smart)
+	traps().append({"x": at.x, "y": at.y, "sprung": false})
 	return true
 
+## put traps down without taking them from stock (a new business that comes with them)
+func place_best(n: int) -> void:
+	for i in n:
+		var at := _auto_spot(true)
+		traps().append({"x": at.x, "y": at.y, "sprung": false})
+
+func move_trap(i: int, p: Vector2) -> void:
+	var at := _onto_floor(p)
+	traps()[i].x = at.x
+	traps()[i].y = at.y
+
+## lift a trap and put it back in the box
+func pick_up(i: int) -> void:
+	traps().remove_at(i)
+	Stock.add("traps", 1, 2, Data.ING.traps.g[2].price)
+
 func reset_traps() -> int:
-	var n: int = Game.s.pests.sprung
-	Game.s.pests.laid += n
-	Game.s.pests.sprung = 0
+	var n := 0
+	for t in traps():
+		if t.sprung:
+			t.sprung = false
+			n += 1
 	return n
+
+## moving to new premises: the traps come with you, in the box
+func move_out() -> void:
+	var n := traps().size()
+	if n > 0: Stock.add("traps", n, 2, Data.ING.traps.g[2].price)
+	Game.s.pests.traps = []
+	Game.s.pests.seen = {}
+
+## droppings on the floor where mice have been getting in: [Vector2]
+func droppings() -> Array:
+	var out := []
+	traps()
+	var seen: Dictionary = Game.s.pests.seen
+	var food := Vector2(plan().food[0][0], plan().food[0][1])
+	var es := entries()
+	for i in es.size():
+		var n := int(clamp(round(float(seen.get(str(i), 0.0)) * 3.0), 0, 14))
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash("%d:%d" % [int(Game.s.venue), i])
+		var at := Vector2(es[i].x, es[i].y)
+		for k in n:
+			var along: Vector2 = at.move_toward(food, rng.randf_range(4.0, 70.0))
+			out.append(_onto_floor(along + Vector2(rng.randf_range(-10, 10), rng.randf_range(-10, 10))))
+	return out
 
 # ---------- pests ----------
 func pests() -> float:
@@ -84,10 +239,21 @@ func pest_causes() -> Array:
 	if level("boh") < 60: out.append("a dirty kitchen")
 	if level("foh") < 55: out.append("a dirty front of house")
 	if Stock.dry_draught() > 0: out.append("dry store vents open too wide")
-	if Game.s.pests.laid < traps_wanted(): out.append("not enough traps down")
-	if Game.s.pests.sprung > 0: out.append("sprung traps not reset")
+	if laid() < traps_wanted(): out.append("not enough traps down")
+	elif pests() >= 8.0 and coverage() < 0.5: out.append("traps not where the mice are getting in (look for droppings)")
+	if sprung() > 0: out.append("sprung traps not reset")
 	if Game.season() >= 2: out.append("cold weather driving mice indoors")
 	return out
+
+func _pick_entry() -> int:
+	var es := entries()
+	var tot := 0.0
+	for e in es: tot += float(e.w)
+	var r := randf() * tot
+	for i in es.size():
+		r -= float(es[i].w)
+		if r <= 0.0: return i
+	return es.size() - 1
 
 ## the night: pests come in, traps catch some, the rest go for the dry store. Returns notes.
 func night() -> Array:
@@ -97,13 +263,31 @@ func night() -> Array:
 	var pressure: float = (100.0 - level("boh")) * 0.22 + (100.0 - level("foh")) * 0.1 + Stock.dry_draught() * 14.0 + [1.0, 0.0, 4.0, 6.0][Game.season()]
 	pressure *= 1.0 - guard
 	P.level = clamp(P.level + pressure * 0.2 - 1.5 - guard * 3.0, 0.0, 100.0)
+	# mice come in through the ways in; the best-placed traps on their way get the first chance
+	traps()
+	var seen: Dictionary = P.seen
+	for k in seen.keys(): seen[k] = float(seen[k]) * 0.6
+	var visits := 0
+	if P.level > 2.0:
+		visits = int(P.level / 12.0) + (1 if randf() < fmod(P.level / 12.0, 1.0) else 0)
 	var caught := 0
-	for i in int(P.laid):
-		if P.level > 2.0 and randf() < min(0.6, P.level / 70.0):
-			caught += 1
-			P.level = max(0.0, P.level - 7.0)
-	P.laid -= caught
-	P.sprung += caught
+	var es := entries()
+	for v in visits:
+		var ei := _pick_entry()
+		var e: Dictionary = es[ei]
+		var set_traps: Array = traps().filter(func(t): return not t.sprung)
+		set_traps.sort_custom(func(a, b): return trap_q(Vector2(a.x, a.y), e) > trap_q(Vector2(b.x, b.y), e))
+		var got := false
+		for t in set_traps.slice(0, 3):
+			var q := trap_q(Vector2(t.x, t.y), e)
+			if q <= 0.0: break
+			if randf() < 0.6 * q:
+				t.sprung = true
+				caught += 1
+				P.level = max(0.0, P.level - 7.0)
+				got = true
+				break
+		if not got: seen[str(ei)] = float(seen.get(str(ei), 0.0)) + 1.0
 	if caught > 0: notes.append("%d trap%s caught something overnight and need%s resetting." % [caught, "" if caught == 1 else "s", "s" if caught == 1 else ""])
 	if P.level > 22.0 and randf() < (P.level - 22.0) / 90.0:
 		var targets := []
@@ -118,8 +302,8 @@ func night() -> Array:
 	if P.level > 45.0:
 		dirty("boh", 15.0)
 		notes.append("Droppings in the kitchen this morning. It needs cleaning before you open.")
-	if P.level >= 12.0 and caught == 0 and P.laid < traps_wanted():
-		notes.append("Signs of mice. Lay traps and keep the place clean.")
+	if P.level >= 12.0 and caught == 0:
+		notes.append("Signs of mice. Look on the floor plan for droppings and put traps against the wall where they are getting in.")
 	return notes
 
 ## chance per game-minute that a customer sees a mouse during service
@@ -163,7 +347,8 @@ func inspect() -> Dictionary:
 	var rot := Stock.rotation_problems()
 	if rot.is_empty(): score += 0.4
 	else: notes.append("Poor stock rotation: new stock in front of old")
-	if Game.s.pests.laid >= traps_wanted(): score += 0.4
+	if laid() >= traps_wanted() and (coverage() >= 0.5 or float(Game.tier("pest").guard) >= 0.6): score += 0.4
+	elif laid() >= traps_wanted(): notes.append("Traps not placed where pests get in")
 	else: notes.append("Not enough pest control in place")
 	var logs := Checks.log_rate(7)
 	score += 0.6 * logs

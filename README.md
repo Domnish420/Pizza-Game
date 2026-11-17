@@ -74,8 +74,11 @@ and invoices are paid when they fall due.
   the fridge runs warm and food spoils days early, the dry store gets damp and flour goes mouldy. Too much: the fridge
   freezes leaves and soft cheese, and the dry store lets bugs and mice in.
 - **Hygiene and pests.** The kitchen and front of house get dirty through service and are cleaned with time and
-  chemicals. Pests come in when it is dirty, when the dry store is over-ventilated and in cold weather; traps catch
-  them and need resetting; pest proofing keeps them out. Mice chew the dry stock and customers who see one leave.
+  chemicals. Pests come in when it is dirty, when the dry store is over-ventilated and in cold weather; pest proofing
+  keeps them out. Every premises has a floor plan (`data/floorplans.json`) with the ways mice get in: gaps under
+  doors, drains, pipe holes, air bricks. You place each trap on the plan: one flat against a wall close to a way in
+  that mice use catches them; one in the open catches almost nothing. Droppings build up where they are getting in.
+  Sprung traps need resetting. Mice chew the dry stock and customers who see one leave.
   An inspector visits every couple of weeks and gives a 0-5 hygiene rating that changes footfall; 0 or 1 closes you.
 - **Prep.** Toppings have to be prepped before service (grated, sliced, cooked, drained), with a yield and a short
   life once prepped, into 2 and 4 litre tubs that take fridge space and need washing once empty. Doing it by hand
@@ -93,6 +96,20 @@ and invoices are paid when they fall due.
   wood-fired (live fire to feed, turn every pizza), and rotating hearths (they turn for you).
 - **Customers.** Each party judges look, taste, service and value out of 5. Taste is lifted by ingredient grade
   against what your price level promises. Tips depend on all of it. Reviews move your rating, which moves footfall.
+- **Pizza boxes.** Boxes come flat. Fold a stack before you open (by hand, four folds a box, or quickly); takeaway
+  pizzas and baked sides go into a folded box at the pass. With none folded, one is folded on the spot while the
+  customer waits. The kitchen porter or prep cook folds them in the morning, counter staff in quiet moments.
+- **Sides, desserts and drinks** (`data/extras.json`). Garlic bread (with or without mozzarella) and a chocolate
+  hazelnut pizzetta are made on the bench and baked like a pizza, spread with a ladle of garlic butter or finished
+  on the board. A rocket and parmesan salad, tiramisu and ice cream (with a scoop) are plated cold. Drinks need the
+  drinks upgrades: cans and bottled water from the fridge, espresso and cappuccino made at the machine, lager and wine
+  by the glass, spritz and Negroni at the bar. Customers add them to their order; at a table, dessert is ordered after
+  the meal. Each one uses stock you buy (a drinks wholesaler opens at level 3) and can be switched off on the Menu page.
+- **Delivery app** (`data/delivery_app.json`, a fictional app called Hungrr). Join from the kiosk on. During service
+  orders ping on a tablet: accept them in time or they count as missed. A rider is booked to collect each one, waits a
+  short while, and leaves without it if it is not ready. The app keeps 30% of every order, and its rating of you
+  (moved by reviews, lateness, missed and cancelled orders) sets how many orders it sends. Counter staff accept
+  orders for you, but not when the kitchen is swamped. Pause it on the Front page or from the service screen.
 - **Menus.** 14 menus, each run for 14 days and booked in advance.
 - **The van** trades at a different pitch each day: high street, business park, farmers' market, taproom, seafront.
 - **Staff.** Pizzaioli (portion more accurately as they train, and prep when there is no prep cook), prep cook (checks
@@ -126,7 +143,7 @@ and invoices are paid when they fall due.
 
 | File | What it does |
 | --- | --- |
-| `data/*.json` | All game data: ingredients, suppliers, doughs, pizzas, menus, venues, upgrades and ovens, staff, equipment (KitBox) |
+| `data/*.json` | All game data: ingredients, suppliers, doughs, pizzas, sides/desserts/drinks (extras), menus, venues, floor plans, upgrades and ovens, staff, equipment (KitBox), the delivery app |
 | `scripts/data.gd` | Loads the JSON (autoload `Data`) |
 | `scripts/stock.gd` | Lots, rotation, the makeline, the back door, storage and ventilation, dough trays, the books (autoload `Stock`) |
 | `scripts/market.gd` | Supplier catalogues, prices, baskets, orders and arrival times, invoices, par sheet, the manager's ordering (autoload `Market`) |
@@ -147,6 +164,7 @@ and invoices are paid when they fall due.
 | `scripts/story.gd` | The career: the employer, the crew, shift reviews, promotions, going solo (autoload `Story`) |
 | `scripts/equip.gd` | Utensils and small equipment: what you own, what each one does, what you need, KitBox orders and parcels (autoload `Equip`) |
 | `scripts/shop_page.gd` | The KitBox catering-supplies website |
+| `scripts/trap_task.gd`, `fold_task.gd` | Laying traps on the floor plan, folding boxes by hand |
 | `scripts/kit.gd`, `main.gd`, `meter.gd` | UI helpers, screen switching, gauges |
 
 `web-prototype/` holds the first HTML version, kept for reference only.

@@ -7,7 +7,7 @@ extends Control
 
 const W := 640.0
 const H := 320.0
-const BUBBLE := {"order": ["ORDER", Color("f4c64f")], "food": ["FOOD UP", Color("74c47a")], "seat": ["SEAT", Color("8fb7e8")], "bill": ["BILL", Color("f7eed9")], "clear": ["CLEAR", Color("d9a37a")], "delivery": ["DELIVERY", Color("e2a35a")], "complaint": ["COMPLAINT", Color("e2553c")]}
+const BUBBLE := {"order": ["ORDER", Color("f4c64f")], "food": ["FOOD UP", Color("74c47a")], "seat": ["SEAT", Color("8fb7e8")], "bill": ["BILL", Color("f7eed9")], "clear": ["CLEAR", Color("d9a37a")], "delivery": ["DELIVERY", Color("e2a35a")], "complaint": ["COMPLAINT", Color("e2553c")], "rider": ["RIDER", Color("4fc7a8")]}
 var svc: ServiceScreen
 var font: Font
 
@@ -39,6 +39,13 @@ func _sprite(key: String, centre: Vector2, sz: Vector2) -> bool:
 	return true
 
 func _person(pos: Vector2, p: Dictionary, k: float = 1.0) -> void:
+	if p.get("app", false):           # a delivery-app rider in a helmet, with the insulated bag on their back
+		if not _sprite("rider", pos - Vector2(0, 26 * k), Vector2(34, 52) * k):
+			draw_rect(Rect2(pos.x - 9 * k, pos.y - 30 * k, 18 * k, 30 * k), Color("2fa88a"))
+			draw_rect(Rect2(pos.x + 5 * k, pos.y - 34 * k, 14 * k, 16 * k), Color("4fc7a8"))
+			draw_circle(pos - Vector2(0, 38 * k), 9 * k, Color("2b2b2b"))
+		_text(pos + Vector2(0, 12), Data.APP.name, 11, Color("4fc7a8"))
+		return
 	if not _sprite("customer.%d" % p.look, pos - Vector2(0, 26 * k), Vector2(30, 52) * k):
 		var col := Color.from_hsv(p.hue, 0.45, 0.8)
 		draw_rect(Rect2(pos.x - 9 * k, pos.y - 30 * k, 18 * k, 30 * k), col)
@@ -108,7 +115,7 @@ func _draw() -> void:
 				if not _sprite("seated.%d" % ((p.look + i) % 6), tb.pos + a, Vector2(18, 18) * s):
 					draw_circle(tb.pos + a, 7 * s, Color.from_hsv(fmod(p.hue + i * 0.17, 1.0), 0.45, 0.8))
 	# people on their feet, back to front
-	var walkers := svc.parties.filter(func(p): return p.type != "deliv" and not (p.table >= 0 and p.pos.distance_to(svc.tables[p.table].pos) < 6))
+	var walkers := svc.parties.filter(func(p): return (p.type != "deliv" or p.state == "rider") and not (p.table >= 0 and p.pos.distance_to(svc.tables[p.table].pos) < 6))
 	walkers.sort_custom(func(a, b): return a.pos.y < b.pos.y)
 	for p in walkers: _person(p.pos, p, 0.85 if L.dine else 1.0)
 	# what needs doing

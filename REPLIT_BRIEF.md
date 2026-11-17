@@ -144,6 +144,16 @@ product photos (`kit.<id>`), a logo, a basket badge, a delivery banner. The uten
 the peel sliding under a pizza, the wheel or rocker slicing, the ladle pooling and spreading sauce, the colour-coded
 boards at the prep station, day-dots on the tubs. What each item does in the rules is in `scripts/equip.gd`.
 
+### 5b. Traps, boxes, extras and the delivery app
+
+- Pest control is laid out on a floor plan of each premises (`scripts/trap_task.gd`, `data/floorplans.json`). It needs
+  real plans (`plan.<n>`), traps and droppings. Keep the doors, drains, pipe holes and air bricks where the data puts them.
+- Folding a pizza box (`scripts/fold_task.gd`) is four drags; it wants a box blank that folds up in four stages.
+- Sides, desserts and drinks (`data/extras.json`) appear on tickets and the Menu page. Garlic bread and the chocolate
+  pizzetta use the pizza drawing; salad, tiramisu, ice cream and drinks would benefit from small plated/served images.
+- The delivery app is a fictional brand (Hungrr, teal). Its tablet is a pulsing button in the service top bar and its
+  riders wait out front. A proper tablet pop-up with a ping, and a rider on a scooter, would sell it.
+
 ### 6. Screens and UI
 
 All colours, buttons, panels and labels come from `scripts/kit.gd`. Turning that into a Godot `Theme` restyles

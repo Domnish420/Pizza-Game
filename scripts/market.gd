@@ -213,6 +213,12 @@ func need_service(day: int) -> Dictionary:
 		for id in need:
 			var y: float = float(Data.ING[id].prep.yield) if Data.needs_prep(id) else 1.0
 			need[id] = max(0.0, need[id] - (Stock.prepped(id) + Stock.rail_have(id)) / y)
+	for x in Game.extras_on():       # sides, desserts and drinks
+		var per: float = cov * Game.extra_rate(x)
+		if x.make == "oven": per *= 1.0
+		for id in x.spec:
+			var y: float = float(Data.ING[id].prep.yield) if Data.needs_prep(id) else 1.0
+			need[id] = need.get(id, 0.0) + float(x.spec[id]) / y * per
 	var take_share := 1.0 if Game.calc().tables == 0 else 0.5
 	need["box"] = ceil(cov * take_share)
 	if Game.tier("oven").type == "wood": need["wood"] = 10.0
@@ -227,7 +233,7 @@ func need_service(day: int) -> Dictionary:
 		var want := int(ceil(litres / 4.0 * 1.4)) + 2
 		var have_tubs: int = int(Stock.have("tub4")) + int(Stock.have("tub2")) / 2 + Stock.dirty_tubs() + in_use
 		if want > have_tubs: need["tub4"] = float(want - have_tubs)
-	var traps: int = Hygiene.traps_wanted() - int(Game.s.pests.laid) - int(Game.s.pests.sprung)
+	var traps: int = Hygiene.traps_wanted() - Hygiene.traps().size()
 	if traps > 0 and day > Game.s.day: need["traps"] = float(traps)
 	return need
 
@@ -357,12 +363,13 @@ func ref_cost(id: String) -> float:
 ## what a pizza costs to make exactly to its recipe card: {cost, lines: [{id, q, cost}]}
 func recipe_cost(r: Dictionary) -> Dictionary:
 	var out := {"cost": 0.0, "lines": []}
-	var parts := Stock.dough_parts(r.base, Stock.flour_per_ball(r.base))
-	var dough := 0.0
-	for ing in parts:
-		if ing != "water": dough += parts[ing] * ref_cost(ing)
-	out.lines.append({"id": "dough:" + r.base, "q": 1.0, "cost": dough})
-	out.cost += dough
+	if r.has("base"):
+		var parts := Stock.dough_parts(r.base, Stock.flour_per_ball(r.base))
+		var dough := 0.0
+		for ing in parts:
+			if ing != "water": dough += parts[ing] * ref_cost(ing)
+		out.lines.append({"id": "dough:" + r.base, "q": 1.0, "cost": dough})
+		out.cost += dough
 	for id in r.spec:
 		var y: float = float(Data.ING[id].prep.yield) if Data.needs_prep(id) else 1.0
 		var c: float = r.spec[id] / y * ref_cost(id)

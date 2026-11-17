@@ -1,0 +1,22 @@
+{
+ "_about": "Everything on the menu that is not a pizza. course: side, dessert or drink. make: oven = made on the bench and baked like a pizza (base, sauce, cheese, tops, spec in grams, as pizzas.json); cold = plated in mins minutes from the rail or the fridge; hand = a drink taken from the fridge with the order; bar = a drink made at the coffee machine or the bar in mins minutes. tier = the drinks upgrade it needs. tool = a utensil it needs (data/equipment.json). Customers order these on top of their pizzas; desserts at a table come after the meal.",
+ "chance": {"side": {"dine": 0.22, "take": 0.18, "deliv": 0.22}, "dessert": {"dine": 0.3, "take": 0.05, "deliv": 0.08}, "drink": {"dine": 0.8, "take": 0.4, "deliv": 0.25}},
+ "items": [
+  {"id": "garlicbread", "name": "Garlic bread", "course": "side", "make": "oven", "lvl": 1, "price": 4.5, "base": "neapolitan", "sauce": "garlicbutter", "cheese": "", "tops": [], "spec": {"garlicbutter": 30}, "desc": "A dough ball opened out, spread with a 1 oz ladle of garlic butter, baked and sliced."},
+  {"id": "cheesybread", "name": "Garlic bread with mozzarella", "course": "side", "make": "oven", "lvl": 2, "price": 5.5, "base": "neapolitan", "sauce": "garlicbutter", "cheese": "mozz", "tops": [], "spec": {"garlicbutter": 30, "mozz": 70}, "desc": "Garlic bread with a layer of mozzarella."},
+  {"id": "salad", "name": "Rocket and parmesan salad", "course": "side", "make": "cold", "lvl": 3, "price": 5.0, "spec": {"rocket": 40, "cherrytom": 60, "parmesan": 10, "oil": 10}, "mins": 0.7, "desc": "Plated cold from the rail: rocket, halved cherry tomatoes, parmesan, olive oil."},
+  {"id": "chocpizza", "name": "Chocolate hazelnut pizzetta", "course": "dessert", "make": "oven", "lvl": 2, "price": 6.5, "base": "neapolitan", "sauce": "", "cheese": "", "tops": ["chocspread"], "spec": {"chocspread": 70}, "desc": "A plain base baked, then spread with chocolate hazelnut on the board."},
+  {"id": "tiramisu", "name": "Tiramisu", "course": "dessert", "make": "cold", "lvl": 4, "price": 6.0, "spec": {"tiramisu": 1}, "mins": 0.4, "desc": "A portion from the tray in the fridge, plated and dusted."},
+  {"id": "gelato", "name": "Ice cream, two scoops", "course": "dessert", "make": "cold", "lvl": 5, "price": 4.5, "spec": {"gelato": 140}, "mins": 0.5, "tool": "gelato_scoop", "desc": "Two scoops from the tub in the freezer. Needs an ice cream scoop."},
+  {"id": "cola", "name": "Cola", "course": "drink", "make": "hand", "tier": 1, "lvl": 1, "price": 2.5, "spec": {"cola": 1}},
+  {"id": "lemonade", "name": "Lemonade", "course": "drink", "make": "hand", "tier": 1, "lvl": 1, "price": 2.5, "spec": {"lemonade": 1}},
+  {"id": "water", "name": "Bottled water", "course": "drink", "make": "hand", "tier": 1, "lvl": 1, "price": 1.8, "spec": {"water": 1}},
+  {"id": "espresso", "name": "Espresso", "course": "drink", "make": "bar", "tier": 2, "lvl": 1, "price": 2.4, "spec": {"coffee": 18}, "mins": 0.5},
+  {"id": "cappuccino", "name": "Cappuccino", "course": "drink", "make": "bar", "tier": 2, "lvl": 1, "price": 3.2, "spec": {"coffee": 18, "milk": 150}, "mins": 0.8},
+  {"id": "beer", "name": "Bottle of lager", "course": "drink", "make": "hand", "tier": 3, "lvl": 3, "price": 4.8, "spec": {"beer": 1}},
+  {"id": "redwine", "name": "Glass of red", "course": "drink", "make": "hand", "tier": 3, "lvl": 3, "price": 6.5, "spec": {"redwine": 175}},
+  {"id": "whitewine", "name": "Glass of white", "course": "drink", "make": "hand", "tier": 3, "lvl": 3, "price": 6.5, "spec": {"whitewine": 175}},
+  {"id": "spritz", "name": "Spritz", "course": "drink", "make": "bar", "tier": 4, "lvl": 6, "price": 8.5, "spec": {"aperitivo": 50, "prosecco": 100}, "mins": 1.0},
+  {"id": "negroni", "name": "Negroni", "course": "drink", "make": "bar", "tier": 4, "lvl": 6, "price": 9.0, "spec": {"gin": 25, "aperitivo": 25, "vermouth": 25}, "mins": 1.0}
+ ]
+}

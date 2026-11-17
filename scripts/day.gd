@@ -45,6 +45,7 @@ func start_morning() -> Array:
 	notes.append_array(arrivals())
 	notes.append_array(staff_prep())
 	notes.append_array(Story.morning())
+	notes.append_array(staff_fold())
 	return notes
 
 ## spend the player's time. Returns notes about anything that happened meanwhile
@@ -93,6 +94,21 @@ func _waste_text(res: Dictionary) -> String:
 	if res.spoiled.size() > 0: t += " Left out too long and binned: " + ", ".join(res.spoiled.map(func(w): return Data.ING[w.id].name.to_lower())) + "."
 	return t
 
+## the kitchen porter (or a prep cook with time left) folds today's boxes. Returns notes.
+func staff_fold() -> Array:
+	var left: Dictionary = Game.s.get("staff_left", {})
+	var want: int = Stock.boxes_needed() - Stock.folded()
+	if want <= 0: return []
+	var made := 0
+	for role in ["porter", "prep"]:
+		if Game.staff_of(role).is_empty(): continue
+		var n: int = int(min(want - made, floor(float(left.get(role, 0.0)) / Stock.FOLD_MIN)))
+		if n <= 0: continue
+		n = Stock.fold(n)
+		left[role] -= n * Stock.FOLD_MIN
+		made += n
+	return ["%d pizza boxes were folded and stacked by the pass." % made] if made > 0 else []
+
 ## a staff member with the time to handle a job in the morning, or ""
 func _free_handler(minutes: float) -> String:
 	var left: Dictionary = Game.s.get("staff_left", {})
@@ -121,6 +137,9 @@ func prep_list(day: int = -1) -> Array:
 	for r in recs:
 		for id in r.spec:
 			if Data.needs_prep(id): need[id] = need.get(id, 0.0) + r.spec[id] * cov / recs.size()
+	for x in Game.extras_on():
+		for id in x.spec:
+			if Data.needs_prep(id): need[id] = need.get(id, 0.0) + float(x.spec[id]) * Game.covers(d) * Game.extra_rate(x)
 	for id in need:
 		var p = Data.ING[id].prep
 		var have := Stock.prepped(id, d) + (Stock.rail_have(id) if d == Game.s.day else 0.0)
@@ -177,6 +196,10 @@ func line_ids(day: int = -1) -> Array:
 	var use := {}
 	for r in Game.recipes_on(Game.s.day if day < 0 else day):
 		for id in r.spec: use[id] = use.get(id, 0.0) + 1.0
+	for x in Game.extras_on():      # garlic butter, salad leaves... (desserts and drinks come from the fridge)
+		if x.make != "oven" and x.make != "cold": continue
+		for id in x.spec:
+			if ["sauce", "cheese", "top"].has(Data.ING[id].kind): use[id] = use.get(id, 0.0) + 0.5
 	var ids := use.keys()
 	ids.sort_custom(func(a, b): return use[a] > use[b])
 	return ids

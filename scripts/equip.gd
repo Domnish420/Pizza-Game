@@ -338,6 +338,9 @@ func need(id: String) -> int:
 		"cloths": return 20
 		"tableware": return min(G.s.tables, G.venue().tables) * 3
 		"delivery_bag": return G.staff_of("driver").size()
+		"scoop": return 1 if G.s.level >= int(Data.EXTRA.gelato.lvl) and Stock.store_cap("freezer") > 0 and not G.s.get("extra_off", {}).get("gelato", false) else 0
+		"dessert_plate": return G.calc_tables() * 2 if G.extras_on("dessert").size() + G.extras_on("side").size() > 0 else 0
+		"cups": return G.calc_tables() * 2 if G.drinks_tier() >= 2 else 0
 		"compliance": return 0 if id == "handwash" and int(G.s.venue) < 2 else 1
 	return 0
 

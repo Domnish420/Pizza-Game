@@ -1,0 +1,14 @@
+{
+ "_about": "The delivery app (a fictional brand: rename it here). Orders ping on a tablet during service: accept within accept_secs (real seconds at 1x) or the app counts it as missed. You promise it ready prep_secs of service time after you accept it (service time runs fast: one second is about two minutes on the clock); a rider turns up then and waits up to rider_secs. The app keeps commission of everything the customer pays and the delivery fee. Its rating of you (1-5) sets how often you come up in the app: orders a day = (base + per_size x premises size) x (rating / 4.5)^2.",
+ "name": "Hungrr",
+ "venue": 1,
+ "lvl": 3,
+ "join_fee": 150,
+ "commission": 0.3,
+ "accept_secs": 12,
+ "base": 3,
+ "per_size": 3.5,
+ "start_rating": 4.4,
+ "prep_secs": 75,
+ "rider_secs": 35
+}

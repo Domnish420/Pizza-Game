@@ -22,6 +22,10 @@ var UPG := {}          # upgrade track id -> {area, name, tiers}
 var OVENS := {}        # oven type -> how it heats
 var ROLES := {}
 var NAMES := []
+var EXTRAS := []       # sides, desserts and drinks (data/extras.json)
+var EXTRA := {}
+var EXTRA_CHANCE := {} # course -> party type -> chance each person orders one
+var APP := {}          # the delivery app (data/delivery_app.json)
 
 const STORES := ["fridge", "freezer", "dry"]
 const STORE_NAME := {"fridge": "Fridge", "freezer": "Freezer", "dry": "Dry store"}
@@ -96,6 +100,23 @@ func _init() -> void:
 	var eq := _read("equipment")
 	for it in eq.items:
 		if it.rule == "ladle": LADLES.append(int(it.oz))
+	var ex := _read("extras")
+	EXTRAS = ex.items
+	EXTRA_CHANCE = ex.chance
+	for x in EXTRAS:
+		x.lvl = int(x.get("lvl", 1))
+		x.tier = int(x.get("tier", 0))
+		x.price = float(x.price)
+		x.mins = float(x.get("mins", 0.0))
+		x.tool = x.get("tool", "")
+		x.extra = true
+		for i in x.spec: x.lvl = max(x.lvl, ING[i].lvl)
+		if x.make == "oven":
+			x.tops = x.get("tops", [])
+			x.lvl = max(x.lvl, DOUGHS[x.base].lvl)
+			REC[x.id] = x            # baked like a pizza: the bench, the oven and the staff treat it as one
+		EXTRA[x.id] = x
+	APP = _read("delivery_app")
 	var st := _read("staff")
 	ROLES = st.roles
 	NAMES = st.names
