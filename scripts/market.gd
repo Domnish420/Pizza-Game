@@ -3,9 +3,12 @@ extends Node
 ##
 ## Each supplier's catalogue is generated from data/suppliers.json and data/ingredients.json:
 ## what they carry x the qualities they stock x the pack sizes they sell, filtered by your level.
-## Prices move every day (more for fresh produce), dip in season, and each supplier runs weekly offers.
-## You fill a basket per supplier and place it. A cash & carry hands the goods over now; everyone else
-## delivers on their next delivery day, may want a minimum order and a delivery fee, and may invoice you later.
+## Bigger packs are always cheaper per kg. Prices move every day (more for fresh produce), dip in season,
+## and each supplier runs weekly offers.
+## Everything is ordered the day before. You fill a basket per supplier and place it; it arrives on their next
+## delivery day at a time that depends on the supplier, the season and the day of the week, and waits at the
+## back door until someone puts it away (see Day). Suppliers may want a minimum order, charge for delivery,
+## and invoice you later.
 
 var _offer_cache := {}
 
@@ -54,7 +57,9 @@ func product(key: String) -> Dictionary:
 # ---------- prices ----------
 ## the supplier's catalogue price per unit, before the market moves it
 func list_price(sup: Dictionary, id: String, g: int, idx: int) -> float:
-	return Data.ING[id].g[g].price * sup.mult * Data.PACK_DISC[min(idx, Data.PACK_DISC.size() - 1)]
+	var it: Dictionary = Data.ING[id]
+	var units: float = it.packs[min(idx, it.packs.size() - 1)][0]
+	return it.g[g].price * sup.mult * pow(units / it.smallest, -Data.BULK_EXP)
 
 ## today's market level for an ingredient at a supplier (1.0 = catalogue price)
 func market(sup: Dictionary, id: String, day: int = -1) -> float:
@@ -77,7 +82,7 @@ func on_offer(sup: Dictionary, id: String, day: int = -1) -> bool:
 		var ids := range_of(sup)
 		var picks := {}
 		if ids.size() > 3:
-			for j in (3 if sup.lead == 0 else 2):
+			for j in (3 if sup.get("collect", false) else 2):
 				picks[ids[abs(hash("%s:%d:%d" % [sup.id, week, j])) % ids.size()]] = true
 		_offer_cache[ck] = picks
 	return _offer_cache[ck].has(id)
@@ -127,12 +132,22 @@ func summary(sup_id: String) -> Dictionary:
 		out.n += 1
 		out.space[Data.ING[ln.ing].store] += Stock.space_of(ln.ing, ln.units * ln.packs)
 	out.fee = 0.0
-	if out.goods > 0:
-		out.fee = float(sup.get("trip", 0.0)) if sup.lead == 0 else (0.0 if out.goods >= sup.free_over else float(sup.fee))
+	if out.goods > 0: out.fee = 0.0 if out.goods >= sup.free_over else float(sup.fee)
 	out.total = out.goods + out.fee
 	out.min_ok = out.goods >= sup.min
-	out.due = Game.s.day if sup.lead == 0 else next_delivery(sup)
+	out.due = next_delivery(sup)
 	return out
+
+## [earliest, latest] minute this supplier turns up on a given day
+func window(sup: Dictionary, day: int) -> Array:
+	var shift: float = float(sup.get("late", [0, 0, 0, 0])[Game.season(day)]) + float(sup.get("late_days", [0, 0, 0, 0, 0, 0, 0])[Game.weekday(day)])
+	return [(sup.window[0] + shift) * 60.0, (sup.window[1] + shift) * 60.0]
+
+## when an order placed today will actually turn up on `day`, to the nearest 5 minutes
+func eta(sup: Dictionary, day: int) -> float:
+	var w := window(sup, day)
+	var r: float = float(abs(hash("%s:%d:%d" % [sup.id, day, Game.s.oid])) % 1000) / 1000.0
+	return round(lerp(w[0], w[1], r) / 5.0) * 5.0
 
 ## place the basket. Returns "" or why not.
 func place(sup_id: String) -> String:
@@ -140,53 +155,21 @@ func place(sup_id: String) -> String:
 	var sm := summary(sup_id)
 	if sm.n == 0: return "Your basket is empty"
 	if not sm.min_ok: return "%s has a %s minimum order" % [sup.name, Kit.money(sup.min)]
-	var pay_now: bool = sup.lead == 0 or sup.terms == 0
+	var pay_now: bool = sup.terms == 0
 	if pay_now and Game.s.cash < sm.total: return "You cannot afford that. This supplier wants paying up front"
-	if sup.lead == 0:
-		for st in Data.STORES:
-			if sm.space[st] > Stock.store_free(st) + 0.001:
-				return "No room: your %s cannot take all of that" % Data.STORE_NAME[st].to_lower() if Stock.store_cap(st) > 0 else "You have no freezer"
-	var order := {"id": Game.s.oid, "sup": sup_id, "placed": Game.s.day, "due": sm.due, "goods": sm.goods, "fee": sm.fee, "total": sm.total, "paid": pay_now, "lines": []}
+	var order := {"id": Game.s.oid, "sup": sup_id, "placed": Game.s.day, "due": sm.due, "eta": eta(sup, sm.due), "goods": sm.goods, "fee": sm.fee, "total": sm.total, "paid": pay_now, "lines": []}
 	Game.s.oid += 1
 	var uplift: float = 1.0 + sm.fee / sm.goods   # the fee is part of what the goods cost you
 	for ln in lines(sup_id):
-		order.lines.append({"ing": ln.ing, "g": ln.g, "q": ln.units * ln.packs, "c": ln.unit * uplift, "name": ln.name, "what": "%d x %s" % [ln.packs, ln.label]})
+		order.lines.append({"ing": ln.ing, "g": ln.g, "q": ln.units * ln.packs, "c": ln.unit * uplift, "name": ln.name, "what": "%d x %s" % [ln.packs, ln.label], "life": int(Data.ING[ln.ing].g[ln.g].life)})
 	if pay_now: Game.s.cash -= sm.total
 	Game.s.baskets[sup_id] = {}
-	if sup.lead == 0: _receive(order)
-	else: Game.s.orders.append(order)
+	Game.s.orders.append(order)
 	return ""
 
 func cancel(order: Dictionary) -> void:
 	if order.paid: Game.s.cash += order.total
 	Game.s.orders.erase(order)
-
-## put an order into the stores. Anything that does not fit is wasted. Returns [{id, q}] wasted.
-func _receive(order: Dictionary) -> Array:
-	var wasted := []
-	for ln in order.lines:
-		var it: Dictionary = Data.ING[ln.ing]
-		var fits: float = min(ln.q, max(0.0, Stock.store_free(it.store)) / it.space)
-		if it.unit != "g" and it.unit != "ml": fits = floor(fits)
-		Stock.add(ln.ing, fits, int(ln.g), ln.c)
-		if ln.q - fits > ln.q * 0.005:
-			wasted.append({"id": ln.ing, "q": ln.q - fits})
-			Stock.log_waste(ln.ing, ln.q - fits, (ln.q - fits) * ln.c)
-	return wasted
-
-## the morning's deliveries. Returns [{sup, total, n, wasted, invoice_due}]
-func deliver() -> Array:
-	var notes := []
-	for o in Game.s.orders.duplicate():
-		if o.due > Game.s.day: continue
-		Game.s.orders.erase(o)
-		var sup: Dictionary = Data.SUP[o.sup]
-		var note := {"sup": sup.name, "total": o.total, "n": o.lines.size(), "wasted": _receive(o), "invoice_due": 0}
-		if not o.paid:
-			note.invoice_due = Game.s.day + int(sup.terms)
-			Game.s.payables.append({"sup": o.sup, "amount": o.total, "due": note.invoice_due})
-		notes.append(note)
-	return notes
 
 ## invoices that fall due today are taken from the bank. Returns [{sup, amount}]
 func pay_due() -> Array:
@@ -216,17 +199,25 @@ func incoming(id: String, by_day: int) -> float:
 func _merge(into: Dictionary, from: Dictionary) -> void:
 	for k in from: into[k] = into.get(k, 0.0) + from[k]
 
-## what a day's service will use, by recipe card
+## what a day's service will use from the stores, by recipe card (prepped toppings count at their raw weight)
 func need_service(day: int) -> Dictionary:
 	var need := {}
 	var recs := Game.recipes_on(day)
 	if recs.is_empty(): return need
 	var cov: float = Game.covers(day) * 1.1 + 1.0
 	for r in recs:
-		for id in r.spec: need[id] = need.get(id, 0.0) + r.spec[id] * cov / recs.size()
+		for id in r.spec:
+			var y: float = float(Data.ING[id].prep.yield) if Data.needs_prep(id) else 1.0
+			need[id] = need.get(id, 0.0) + r.spec[id] / y * cov / recs.size()
+	if day == Game.s.day:          # what is already prepped does not need buying again
+		for id in need:
+			if Data.needs_prep(id): need[id] = max(0.0, need[id] - Stock.prepped(id) / float(Data.ING[id].prep.yield))
 	var take_share := 1.0 if Game.calc().tables == 0 else 0.5
 	need["box"] = ceil(cov * take_share)
 	if Game.tier("oven").type == "wood": need["wood"] = 10.0
+	need["sanitiser"] = Hygiene.chem_needed("boh") + Hygiene.chem_needed("foh")
+	var traps: int = Hygiene.traps_wanted() - int(Game.s.pests.laid) - int(Game.s.pests.sprung)
+	if traps > 0 and day > Game.s.day: need["traps"] = float(traps)
 	return need
 
 ## what the dough made on `make_day` will use
@@ -290,7 +281,7 @@ func fill_basket(sup_id: String) -> int:
 	var sup: Dictionary = Data.SUP[sup_id]
 	var n := 0
 	for row in par():
-		var short: float = row.short_tomorrow + (row.short_today if sup.lead == 0 else 0.0)
+		var short: float = row.short_tomorrow
 		if short <= 0 or not carries(sup, row.id): continue
 		var ch := choose(sup, row.id, short, Game.s.house_grade)
 		if ch.is_empty(): continue
@@ -304,39 +295,42 @@ func auto_order() -> Array:
 	var day: int = Game.s.day
 	for row in par():
 		if row.short_tomorrow <= 0: continue
-		var best := {}
-		var best_sup := ""
-		var best_score := INF
+		var best := _best_for(row.id, row.short_tomorrow, day, {})
+		if not best.is_empty(): set_qty(best.sup, best.ch.key, max(qty_in(best.sup, best.ch.key), best.ch.packs))
+	# a supplier whose order falls under their minimum gets dropped, and its lines go to whoever else delivers tomorrow
+	var dropped := {}
+	for pass_i in 4:
+		var moved := false
 		for sup in open_suppliers():
-			if sup.lead == 0 or next_delivery(sup) != day + 1 or not carries(sup, row.id): continue
-			var ch := choose(sup, row.id, row.short_tomorrow, Game.s.house_grade)
-			if ch.is_empty(): continue
-			var score: float = abs(ch.g - Game.s.house_grade) * 100000.0 + ch.cost
-			if score < best_score:
-				best_score = score
-				best = ch
-				best_sup = sup.id
-		if best_sup != "": set_qty(best_sup, best.key, max(qty_in(best_sup, best.key), best.packs))
+			var sm := summary(sup.id)
+			if sm.n == 0 or sm.min_ok: continue
+			dropped[sup.id] = true
+			for key in basket(sup.id).keys():
+				var pr := product(key)
+				var alt := _best_for(pr.ing, pr.units * basket(sup.id)[key], day, dropped)
+				if not alt.is_empty(): set_qty(alt.sup, alt.ch.key, max(qty_in(alt.sup, alt.ch.key), alt.ch.packs))
+			Game.s.baskets[sup.id] = {}
+			moved = true
+		if not moved: break
 	for sup in open_suppliers():
-		if sup.lead == 0 or summary(sup.id).n == 0: continue
+		if summary(sup.id).n == 0: continue
 		if place(sup.id) == "": placed.append(sup.name)
 		else: Game.s.baskets[sup.id] = {}
 	return placed
 
-## the general manager's morning job: fetch today's shortfall from the cash & carry. Returns money spent.
-func auto_collect() -> float:
-	var spent := 0.0
+## the best supplier delivering tomorrow for `need` of an ingredient, at the buying standard: {sup, ch} or {}
+func _best_for(id: String, need: float, day: int, exclude: Dictionary) -> Dictionary:
+	var out := {}
+	var best_score := INF
 	for sup in open_suppliers():
-		if sup.lead != 0: continue
-		Game.s.baskets[sup.id] = {}
-		for row in par():
-			if row.short_today <= 0 or not carries(sup, row.id): continue
-			var ch := choose(sup, row.id, row.short_today, Game.s.house_grade)
-			if not ch.is_empty(): set_qty(sup.id, ch.key, ch.packs)
-		var total: float = summary(sup.id).total
-		if summary(sup.id).n > 0 and place(sup.id) == "": spent += total
-		else: Game.s.baskets[sup.id] = {}
-	return spent
+		if exclude.has(sup.id) or next_delivery(sup) != day + 1 or not carries(sup, id): continue
+		var ch := choose(sup, id, need, Game.s.house_grade)
+		if ch.is_empty(): continue
+		var score: float = abs(ch.g - Game.s.house_grade) * 100000.0 + ch.cost - (5.0 if summary(sup.id).n > 0 else 0.0)
+		if score < best_score:
+			best_score = score
+			out = {"sup": sup.id, "ch": ch}
+	return out
 
 ## what a unit of an ingredient costs you: your stock's average, else the cheapest price at your buying standard
 func ref_cost(id: String) -> float:
@@ -359,7 +353,8 @@ func recipe_cost(r: Dictionary) -> Dictionary:
 	out.lines.append({"id": "dough:" + r.base, "q": 1.0, "cost": dough})
 	out.cost += dough
 	for id in r.spec:
-		var c: float = r.spec[id] * ref_cost(id)
+		var y: float = float(Data.ING[id].prep.yield) if Data.needs_prep(id) else 1.0
+		var c: float = r.spec[id] / y * ref_cost(id)
 		out.lines.append({"id": id, "q": r.spec[id], "cost": c})
 		out.cost += c
 	return out

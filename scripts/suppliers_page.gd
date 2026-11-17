@@ -33,7 +33,9 @@ func _ready() -> void:
 	add_child(lsc)
 	for sp in open:
 		var n: int = Market.summary(sp.id).n
-		var when: String = "collect now" if sp.lead == 0 else "next delivery " + Data.DAY_SHORT[Game.weekday(Market.next_delivery(sp))]
+		var nd: int = Market.next_delivery(sp)
+		var w: Array = Market.window(sp, nd)
+		var when: String = "%s %s %s-%s" % ["collect" if sp.get("collect", false) else "delivers", Data.DAY_SHORT[Game.weekday(nd)], Data.hhmm(w[0]), Data.hhmm(w[1])]
 		var b := Kit.button("%s\n%s · %s%s" % [sp.name, sp.kind, when, ("\n%d in basket" % n) if n > 0 else ""], func():
 			sel = sp.id
 			hub.render(), "tab_on" if sp.id == sel else "ghost", 15)
@@ -117,14 +119,25 @@ func _top_grade() -> int:
 
 func _terms(sup: Dictionary) -> String:
 	var parts := []
-	if sup.lead == 0:
-		parts.append("You collect it now")
-		parts.append("%s fuel per trip" % Kit.money(sup.trip))
-		parts.append("pay at the till")
+	var nd: int = Market.next_delivery(sup)
+	var w: Array = Market.window(sup, nd)
+	var days: Array = sup.days.map(func(dd): return Data.DAY_SHORT[int(dd)])
+	if sup.get("collect", false):
+		parts.append("Click and collect, every day")
+		parts.append("ready %s %s-%s" % [Data.DAY_NAME[Game.weekday(nd)], Data.hhmm(w[0]), Data.hhmm(w[1])])
+		parts.append("%s fuel per trip" % Kit.money(sup.fee))
+		parts.append("pay when you order")
 	else:
-		var days: Array = sup.days.map(func(dd): return Data.DAY_SHORT[int(dd)])
-		parts.append("Delivers " + ("Mon to Sat" if days.size() == 6 else ", ".join(days)))
-		parts.append("order now, arrives %s" % Data.DAY_NAME[Game.weekday(Market.next_delivery(sup))])
+		parts.append("Delivers " + ("every day" if days.size() == 7 else ("Mon to Sat" if days.size() == 6 else ", ".join(days))))
+		parts.append("order today, arrives %s between %s and %s" % [Data.DAY_NAME[Game.weekday(nd)], Data.hhmm(w[0]), Data.hhmm(w[1])])
+		var lates := []
+		var late: Array = sup.get("late", [0, 0, 0, 0])
+		var ld: Array = sup.get("late_days", [0, 0, 0, 0, 0, 0, 0])
+		for i in 4:
+			if late[i] > 0: lates.append("in " + Data.SEASON_NAME[i].to_lower())
+		for i in 7:
+			if ld[i] > 0: lates.append("on " + Data.DAY_NAME[i] + "s")
+		if lates.size() > 0: parts.append("runs later " + ", ".join(lates))
 		if sup.min > 0: parts.append("%s minimum" % Kit.money(sup.min))
 		parts.append("%s delivery, free over %s" % [Kit.money(sup.fee), Kit.money(sup.free_over)])
 		parts.append("pay when you order" if sup.terms == 0 else "invoiced, %d days to pay" % sup.terms)
@@ -212,12 +225,12 @@ func _refresh_foot() -> void:
 	var sm := Market.summary(sel)
 	if sm.n == 0:
 		foot_lbl.text = "Basket is empty."
-		place_btn.text = "Collect" if sup.lead == 0 else "Place order"
+		place_btn.text = "Place order"
 		place_btn.disabled = true
 		warn_lbl.text = ""
 		return
-	foot_lbl.text = "%d line%s · goods %s%s" % [sm.n, "" if sm.n == 1 else "s", Kit.cents(sm.goods), (" · %s %s" % ["fuel" if sup.lead == 0 else "delivery", Kit.cents(sm.fee)]) if sm.fee > 0 else ""]
-	place_btn.text = ("Collect now · %s" if sup.lead == 0 else "Place order · %s") % Kit.cents(sm.total)
+	foot_lbl.text = "%d line%s · goods %s%s" % [sm.n, "" if sm.n == 1 else "s", Kit.cents(sm.goods), (" · %s %s" % ["fuel" if sup.get("collect", false) else "delivery", Kit.cents(sm.fee)]) if sm.fee > 0 else ""]
+	place_btn.text = "Order for %s · %s" % [Data.DAY_NAME[Game.weekday(sm.due)], Kit.cents(sm.total)]
 	var warns := []
 	if not sm.min_ok: warns.append("%s short of their %s minimum." % [Kit.cents(sup.min - sm.goods), Kit.money(sup.min)])
 	for st in Data.STORES:
@@ -225,8 +238,8 @@ func _refresh_foot() -> void:
 		var cap := Stock.store_cap(st)
 		var after: float = Stock.store_used(st) + sm.space[st]
 		if cap <= 0: warns.append("You have no freezer: frozen goods will be wasted.")
-		elif after > cap + 0.01: warns.append("%s would be at %d of %d. %s" % [Data.STORE_NAME[st], int(ceil(after)), int(cap), "It will not fit." if sup.lead == 0 else "Whatever does not fit on delivery is wasted."])
-	if (sup.lead == 0 or sup.terms == 0) and sm.total > Game.s.cash: warns.append("You cannot afford it: they want paying now.")
+		elif after > cap + 0.01: warns.append("%s would be at %d of %d. %s" % [Data.STORE_NAME[st], int(ceil(after)), int(cap), "Whatever does not fit when it is put away is wasted."])
+	if sup.terms == 0 and sm.total > Game.s.cash: warns.append("You cannot afford it: they want paying now.")
 	warn_lbl.text = "  ".join(warns)
 	place_btn.disabled = not sm.min_ok
 
@@ -238,7 +251,7 @@ func _place() -> void:
 		Kit.main.toast(err, true)
 		return
 	Art.sfx("cash")
-	if sup.lead == 0: Kit.main.toast("Loaded into the van: %s" % Kit.cents(sm.total))
-	else: Kit.main.toast("Ordered. Arrives %s%s" % [Data.DAY_NAME[Game.weekday(sm.due)], "" if sup.terms == 0 else ", invoice to follow"])
+	var o: Dictionary = Game.s.orders[-1]
+	Kit.main.toast("Ordered. %s %s at about %s%s" % ["Ready to collect" if sup.get("collect", false) else "Arrives", Data.DAY_NAME[Game.weekday(sm.due)], Data.hhmm(o.eta), "" if sup.terms == 0 else ", invoice to follow"])
 	Game.save_game()
 	hub.render()

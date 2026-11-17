@@ -41,6 +41,10 @@ func _local(pos: Vector2) -> Vector2:
 
 # ---------- input ----------
 func _gui_input(e: InputEvent) -> void:
+	if not svc.busy.is_empty():
+		if e is InputEventMouseButton or e is InputEventScreenTouch:
+			if e.pressed: svc.is_free()
+		return
 	if e is InputEventScreenTouch:
 		last_touch = Time.get_ticks_msec()
 		var p := _local(e.position)

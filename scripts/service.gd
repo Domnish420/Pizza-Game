@@ -6,6 +6,11 @@ extends VBoxContainer
 ##
 ## A pizza's journey: ticket (new) -> claimed by you or a pizzaiolo (make) -> oven -> the pass -> handed over.
 ## When a party has everything it ordered it pays, tips and leaves a review (see settle()).
+##
+## The day runs on a clock from the venue's opening to closing time (DAY seconds at 1x). Toppings come off the
+## makeline, which was prepped in the morning. When something runs out you prep more (which ties you up), a
+## prep cook or pizzaiolo does it, or you 86 the pizzas that need it. Deliveries can turn up mid-shift at the
+## back door. The kitchen and dining room get dirtier as you go, and if there are mice, customers may see one.
 
 const DAY := 300.0              # seconds of trading at 1x speed
 
@@ -35,6 +40,13 @@ var r := {}
 var dirty := true
 var done := false
 var pop_t := 0.0
+var busy := {}                   # what you are tied up doing: {label, left, total (seconds), fn}
+var eighty6 := {}                # pizza id -> true: taken off the menu for tonight
+var crew := []                   # prep cooks and kitchen porters: {s, role, job, left, fn}
+var prepping := {}               # ingredient id -> who is prepping it
+var mouse := {}                  # a mouse running across the front: {pos, vel, t}
+var mouse_until := -1.0          # minute until which customers are still talking about the mouse
+var gm := 1.0                    # game minutes per second of play
 
 # ui
 var front: FrontScene
@@ -56,21 +68,34 @@ var auto_btn: Button
 var pop: PanelContainer
 var tick_bars := {}
 var info_rows := []              # [[Label, Callable -> [text, colour]]] refreshed every frame
+var prep_scroll: ScrollContainer
+var prep_box: VBoxContainer
+var busy_panel: PanelContainer
+var busy_wrap: CenterContainer
+var busy_lbl: Label
+var busy_bar: ProgressBar
 var pal_btns := []               # [[Button, ingredient id]]
 
 func _ready() -> void:
 	var G := Game
 	c = G.calc()
 	r = {"day": G.s.day, "served": 0, "mine": 0, "lost": 0, "sold": 0, "food": 0.0, "tips": 0.0, "drinks": 0.0, "deliv": 0.0,
-		"qsum": 0.0, "xp": 0.0, "walked": 0, "gave_up": 0, "rep0": G.s.rep, "lvl0": G.s.level, "cats": {"look": 0.0, "taste": 0.0, "service": 0.0, "value": 0.0}, "n_rev": 0}
+		"qsum": 0.0, "xp": 0.0, "walked": 0, "gave_up": 0, "rep0": G.s.rep, "lvl0": G.s.level, "cats": {"look": 0.0, "taste": 0.0, "service": 0.0, "value": 0.0}, "n_rev": 0,
+		"mice": 0, "eighty6": [], "inspect": {}, "closed": false, "boh0": Hygiene.level("boh"), "foh0": Hygiene.level("foh"), "notes": []}
+	gm = (c.close - c.open) / DAY
+	# opened late: the start of the day has gone
+	t = clamp((float(G.s.clock) - c.open) / (c.close - c.open), 0.0, 0.9) * DAY
+	G.s.phase = "service"
 	oven = Oven.new(G.tier("oven"))
 	if oven.def.feeds:
 		var lit := Stock.take("wood", 3.0)       # lighting the oven before service
 		oven.fire = 0.35 + 0.25 * lit.got
 		if lit.got > 0: oven.wood_grade = lit.g
-	for x in G.staff_of("pizzaiolo"): workers.append({"s": x, "job": null, "left": 0.0})
+	for x in G.staff_of("pizzaiolo"): workers.append({"s": x, "job": null, "left": 0.0, "prep": "", "raw": 0.0})
 	for role in ["cashier", "server", "host", "porter", "driver"]:
 		for x in G.staff_of(role): foh.append({"s": x, "role": role, "cd": 1.0})
+	for role in ["prep", "porter"]:
+		for x in G.staff_of(role): crew.append({"s": x, "role": role, "job": "", "left": 0.0, "fn": Callable()})
 	_layout()
 	_build_ui()
 	set_view("front")
@@ -82,9 +107,11 @@ func _layout() -> void:
 	if n == 0:
 		L.win = Vector2(232, 170)
 		L.spawn = Vector2(680, 235)
+		L.back = Vector2(46, 262)
 	else:
 		L.win = Vector2(62, 70)
 		L.spawn = Vector2(625, 345)
+		L.back = Vector2(24, 300)
 		var cols := int(ceil(sqrt(n * 1.9)))
 		var rows := int(ceil(float(n) / cols))
 		var cw := 430.0 / cols
@@ -140,7 +167,7 @@ func _build_ui() -> void:
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_child(mid)
 	var tabs := Kit.hbox(6)
-	for k in ["front", "bench", "oven", "board"]:
+	for k in ["front", "bench", "oven", "board", "prep"]:
 		var b := Kit.button("", set_view.bind(k), "tab", 19)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tabs.add_child(b)
@@ -162,6 +189,27 @@ func _build_ui() -> void:
 	stack.add_child(bench_ui)
 	oven_ui = OvenView.new(self)
 	stack.add_child(oven_ui)
+	prep_scroll = ScrollContainer.new()
+	prep_scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	prep_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	prep_box = Kit.vbox(8)
+	prep_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	prep_scroll.add_child(prep_box)
+	stack.add_child(prep_scroll)
+	busy_wrap = CenterContainer.new()
+	busy_wrap.set_anchors_preset(Control.PRESET_FULL_RECT)
+	busy_wrap.visible = false
+	busy_panel = Kit.panel(Color(0.05, 0.08, 0.06, 0.92), 18)
+	var bv := Kit.vbox(8)
+	busy_lbl = Kit.label("", 22, Kit.INK, true)
+	busy_lbl.custom_minimum_size.x = 380
+	bv.add_child(busy_lbl)
+	busy_bar = Kit.bar(0, Kit.CHEESE, 14)
+	bv.add_child(busy_bar)
+	bv.add_child(Kit.button("Stop and leave it", stop_busy, "ghost", 18))
+	busy_panel.add_child(bv)
+	busy_wrap.add_child(busy_panel)
+	stack.add_child(busy_wrap)
 	btn_row = Kit.hbox(8)
 	bin_btn = Kit.button("Bin", bin, "ghost", 22)
 	btn_row.add_child(bin_btn)
@@ -193,6 +241,34 @@ func _build_ui() -> void:
 	pop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pop.top_level = true
 	add_child(pop)
+
+## the clock, in minutes after midnight
+func minute() -> float:
+	return c.open + t * gm
+
+## seconds of play that `mins` game minutes take
+func secs(mins: float) -> float:
+	return mins / gm
+
+# ---------- being tied up ----------
+## true if you are free; otherwise says what you are doing and returns false
+func is_free() -> bool:
+	if busy.is_empty(): return true
+	Kit.main.toast("You are busy: %s" % busy.label.to_lower(), true)
+	return false
+
+func start_busy(label: String, mins: float, fn: Callable) -> void:
+	busy = {"label": label, "left": secs(mins), "total": secs(mins), "fn": fn}
+	dirty = true
+
+## stop what you are doing: the job is left part-done
+func stop_busy() -> void:
+	if busy.is_empty(): return
+	var frac: float = 1.0 - busy.left / max(busy.total, 0.001)
+	var fn: Callable = busy.fn
+	busy = {}
+	fn.call(frac)
+	dirty = true
 
 func set_view(v: String) -> void:
 	view = v
@@ -253,10 +329,15 @@ func _pending() -> Dictionary:
 	return pend
 
 func can_promise(rec: Dictionary, pend: Dictionary) -> bool:
+	if eighty6.has(rec.id): return false
 	if Stock.dough_ready(rec.base) - pend.get("d:" + rec.base, 0.0) < 1: return false
 	for i in rec.spec:
-		if Stock.have(i) - pend.get(i, 0.0) < rec.spec[i] * 0.7: return false
+		if Stock.potential(i) - pend.get(i, 0.0) < rec.spec[i] * 0.7: return false
 	return true
+
+## could this pizza still be sold tonight at all (dough, and the toppings in stock or on the line)
+func sellable(rec: Dictionary) -> bool:
+	return can_promise(rec, {})
 
 ## the party orders a pizza each. false = there was nothing left to sell them.
 func order(p: Dictionary) -> bool:
@@ -384,6 +465,14 @@ func settle(p: Dictionary, walked: bool) -> void:
 		service -= 30.0
 		notes.push_front("No box to take it home in")
 	if walked: service -= 30.0
+	var foh_clean := Hygiene.level("foh")
+	if foh_clean < 60.0:
+		service -= (60.0 - foh_clean) * 0.7
+		notes.push_front("Sticky tables" if dine else "Grubby counter")
+	if minute() < mouse_until:
+		service -= 25.0
+		notes.push_front("Saw a mouse!")
+	Hygiene.dirty("foh", (1.5 if dine else 0.6) * 30.0 * n / max(10.0, float(c.total)))
 	service = clamp(service, 0.0, 100.0)
 	var value: float = clamp(55.0 + (taste - 65.0) * 0.9 + [16.0, 0.0, -16.0][G.s.price], 0.0, 100.0)
 	var overall := look * 0.2 + taste * 0.4 + service * 0.25 + value * 0.15
@@ -440,7 +529,7 @@ func _waste_pizza(pz: Pizza) -> void:
 	use["dough:" + pz.rec.base] = 1.0
 	Stock.log_binned(use, pz.cost)
 
-func expire(p: Dictionary) -> void:
+func expire(p: Dictionary, why: String = "Gave up waiting") -> void:
 	var G := Game
 	if p.state == "bill":
 		var tb = tables[p.table]
@@ -460,7 +549,7 @@ func expire(p: Dictionary) -> void:
 		if w.job != null and w.job.gone: w.job = null
 	oven.items = oven.items.filter(func(o): return not (o.owner == "staff" and o.tk.gone))
 	var tb = tables[p.table] if p.table >= 0 else null
-	float_text(p.pos, "Gave up waiting", Kit.TOMATO)
+	float_text(p.pos, why, Kit.TOMATO)
 	if p.got > 0: settle(p, true)
 	leave(p)
 	if tb != null and p.got > 0: tb.dirty = true
@@ -497,6 +586,10 @@ func do_action(a: Dictionary, by_player: bool) -> void:
 		"clear": a.tb.dirty = false
 
 func tap_scene(pos: Vector2) -> void:
+	if L.back.distance_to(pos + Vector2(0, 14)) < 50 and Game.s.dock.size() > 0:
+		set_view("prep")
+		return
+	if not is_free(): return
 	var best = null
 	for a in actionables():
 		var dd: float = a.pos.distance_to(pos + Vector2(0, 14))
@@ -523,6 +616,38 @@ func _process(delta: float) -> void:
 func step(dt: float) -> void:
 	var G := Game
 	t += dt
+	var now := minute()
+	if not busy.is_empty():
+		busy.left -= dt
+		if busy.left <= 0:
+			var fn: Callable = busy.fn
+			busy = {}
+			fn.call(1.0)
+			dirty = true
+	# deliveries turning up at the back door
+	if Day.next_arrival() >= 0 and Day.next_arrival() <= now:
+		for nt in Day.arrivals(now): r.notes.append(nt)
+		Kit.main.toast("A delivery is at the back door")
+		Art.sfx("ding")
+		dirty = true
+	_crew_step(dt)
+	# the inspector
+	var at: float = G.s.hygiene.get("at", -1.0)
+	if at >= 0 and at <= now and not done:
+		r.inspect = Hygiene.inspect()
+		var res: Dictionary = r.inspect
+		Kit.main.message("Food hygiene inspection", "The inspector called in at %s and rated you %s.%s" % [Data.hhmm(now), Hygiene.rating_text(), ("\n\n" + "\n".join(res.notes)) if res.notes.size() > 0 else "\n\nNo problems found."] + ("\n\nYou are closed until you sort it out." if res.closed else ""), "OK")
+		if res.closed:
+			r.closed = true
+			finish(false)
+			return
+	# mice
+	if mouse.is_empty() and randf() < Hygiene.sighting_rate() * gm * dt:
+		_mouse()
+	if not mouse.is_empty():
+		mouse.t -= dt
+		mouse.pos += mouse.vel * dt
+		if mouse.t <= 0: mouse = {}
 	if t < DAY * 0.94:
 		acc += c.total / DAY * (0.55 + 0.9 * sin(PI * t / DAY)) / 1.123 / 0.94 * dt
 		while acc >= 1.0: acc -= spawn_party()
@@ -586,9 +711,18 @@ func step(dt: float) -> void:
 				oven.load_staff(w.job, slot)
 				w.job.state = "oven"
 				w.job = null
+		if w.get("prep", "") != "":
+			w.left -= dt
+			if w.left <= 0:
+				Stock.prep(w.prep, w.raw)
+				prepping.erase(w.prep)
+				w.prep = ""
+				dirty = true
+			continue
 		if w.job == null:
 			for tk in tickets:
-				if tk.state == "new" and tk.owner == "" and tk.age > 1.2 and G.can_make(tk.rec):
+				if tk.state != "new" or tk.owner != "" or tk.age <= 1.2: continue
+				if G.can_make(tk.rec):
 					tk.made = staff_make(w.s, tk.rec)
 					tk.owner = w.s.name
 					tk.state = "make"
@@ -596,6 +730,17 @@ func step(dt: float) -> void:
 					w.left = 10.0 * (1.25 - 0.1 * w.s.skill) / c.prep_speed
 					dirty = true
 					break
+				# the line has run out of something: with no prep cook on, the pizzaiolo preps it
+				if G.staff_of("prep").is_empty():
+					var need: Array = G.needs_prepping(tk.rec).filter(func(i): return not prepping.has(i))
+					if need.size() > 0:
+						var id: String = need[0]
+						w.prep = id
+						w.raw = batch_raw(id)
+						w.left = secs(Stock.prep_minutes(id, w.raw, Day.prep_mult() * (1.25 - 0.08 * w.s.skill)))
+						prepping[id] = w.s.name
+						dirty = true
+						break
 	# oven
 	for o in oven.step(dt, c.bake / oven.bake_time): to_pass(o.tk, staff_result(o.tk))
 	if c.fornaio:
@@ -609,7 +754,7 @@ func step(dt: float) -> void:
 	var idle: bool = tickets.is_empty() and bench == null and board.is_empty() and oven.items.is_empty() and oven.shelf.is_empty()
 	var anyone := parties.any(func(p): return p.state != "leave")
 	if idle and not anyone and t >= DAY: finish(false)
-	elif idle and t > 5 and not anyone and not G.active_recipes().any(func(rc): return G.can_make(rc)): finish(true)
+	elif idle and t > 5 and not anyone and busy.is_empty() and not G.active_recipes().any(func(rc): return sellable(rc)): finish(true)
 
 ## a pizzaiolo takes the dough and weighs out the toppings. Less skilled cooks are heavier-handed.
 func staff_make(x: Dictionary, rec: Dictionary) -> Dictionary:
@@ -620,7 +765,7 @@ func staff_make(x: Dictionary, rec: Dictionary) -> Dictionary:
 	var gw: float = Data.DOUGHS[rec.base].ball * 0.4
 	var gsum: float = dq.g * gw
 	for id in rec.spec:
-		var got := Stock.take(id, rec.spec[id] * (1.0 + over))
+		var got := Stock.take_use(id, rec.spec[id] * (1.0 + over))
 		m.use[id] = got.got
 		m.cost += got.cost
 		m.spec_cost += rec.spec[id] * (got.cost / got.got if got.got > 0 else 0.0)
@@ -640,6 +785,7 @@ func staff_result(tk: Dictionary) -> Dictionary:
 
 func to_pass(tk: Dictionary, res: Dictionary) -> void:
 	dirty = true
+	Hygiene.dirty("boh", 45.0 / max(10.0, float(c.total)))
 	if tk.gone:
 		Stock.log_binned(res.use, res.cost)
 		return
@@ -651,6 +797,7 @@ func to_pass(tk: Dictionary, res: Dictionary) -> void:
 # ---------- your bench ----------
 func claim(tk: Dictionary) -> void:
 	if tk.state != "new" or tk.owner != "": return
+	if not is_free(): return
 	if bench != null:
 		Kit.main.toast("Finish the pizza on your bench first", true)
 		return
@@ -671,6 +818,7 @@ func _first_tool(pz: Pizza) -> String:
 	return ""
 
 func next() -> void:
+	if not is_free(): return
 	if view == "board":
 		serve()
 		return
@@ -717,6 +865,7 @@ func sheeter() -> void:
 
 ## your hand with whatever is in it, at p on the pizza (prev = where it was a moment ago, or null for a tap)
 func apply_tool(p: Vector2, prev) -> void:
+	if not busy.is_empty(): return
 	var on_board: bool = view == "board"
 	var pz: Pizza = (board[0] if board.size() > 0 else null) if on_board else bench
 	if pz == null or tool == "" or (not on_board and pz.stage != "top"): return
@@ -741,7 +890,7 @@ func _ran_out() -> void:
 
 ## a swipe of the pizza wheel from a to b
 func cut(a: Vector2, b: Vector2) -> void:
-	if view != "board" or board.is_empty(): return
+	if view != "board" or board.is_empty() or not is_free(): return
 	var pz: Pizza = board[0]
 	var ln := a.distance_to(b)
 	if ln < pz.base.R * 1.2: return
@@ -754,6 +903,7 @@ func cut(a: Vector2, b: Vector2) -> void:
 
 # ---------- your oven ----------
 func oven_load(pz: Pizza, slot: int) -> void:
+	if not is_free(): return
 	oven.load_pizza(pz, slot, false)
 	pz.tk.state = "oven"
 	dirty = true
@@ -816,7 +966,7 @@ func _show_result(pz: Pizza, a: Dictionary) -> void:
 func _refresh() -> void:
 	var G := Game
 	clock.value = clamp(t / DAY, 0, 1)
-	top_lbl.time.text = "Last orders" if t >= DAY else ["Lunch", "Afternoon", "Dinner rush", "Late"][min(3, int(t / DAY * 4))]
+	top_lbl.time.text = ("Last orders " if t >= DAY else "") + Data.hhmm(min(minute(), c.close))
 	top_lbl.cash.text = Kit.money(G.s.cash)
 	top_lbl.rep.text = "Rating %.1f" % G.s.rep
 	top_lbl.count.text = "Served %d · Lost %d" % [r.served, r.lost + r.sold]
@@ -840,13 +990,24 @@ func _refresh() -> void:
 	var in_oven: int = oven.mine().size() + oven.shelf.size()
 	tab_btns.oven.text = "Oven" + (" (%d)" % in_oven if in_oven > 0 else "") + flag
 	tab_btns.board.text = "Board (%d)" % board.size()
+	var low := 0
+	for id in line_items():
+		if Stock.prepped(id) < per_pizza(id) * 3.0: low += 1
+	tab_btns.prep.text = "Prep" + (" (%d low)" % low if low > 0 else "") + ("  DELIVERY" if Game.s.dock.size() > 0 else "")
+	busy_wrap.visible = not busy.is_empty() and view != "front"
+	if not busy.is_empty():
+		busy_lbl.text = busy.label + "\n%d s left" % ceil(busy.left)
+		busy_bar.value = 1.0 - busy.left / max(busy.total, 0.001)
 	for row in info_rows:
 		if not is_instance_valid(row[0]): continue
 		var res: Array = row[1].call()
 		row[0].text = res[0]
 		row[0].add_theme_color_override("font_color", res[1])
 	for e in pal_btns:
-		if is_instance_valid(e[0]): e[0].text = "%s\n%s" % [Data.ING[e[1]].name, Data.qty(e[1], Stock.have(e[1]))]
+		if not is_instance_valid(e[0]): continue
+		var id: String = e[1]
+		var a := Stock.avail(id)
+		e[0].text = "%s\n%s" % [Data.ING[id].name, Data.qty(id, a) if a > 0 or not Data.needs_prep(id) else "needs prep"]
 	if not dirty: return
 	dirty = false
 	for k in tab_btns:
@@ -857,8 +1018,10 @@ func _refresh() -> void:
 	kitchen.visible = view != "front"
 	bench_ui.visible = view == "bench" or view == "board"
 	oven_ui.visible = view == "oven"
+	prep_scroll.visible = view == "prep"
 	_build_tickets()
 	_build_side()
+	_build_prep()
 
 func _build_tickets() -> void:
 	Kit.clear(tick_box)
@@ -919,6 +1082,10 @@ func _tool_button(id: String, need: bool) -> Button:
 	var fgc := Color.BLACK if bg.get_luminance() > 0.5 else Color.WHITE
 	for cn in ["font_color", "font_hover_color", "font_pressed_color"]: b.add_theme_color_override(cn, fgc)
 	b.pressed.connect(func():
+		if Data.needs_prep(id) and Stock.prepped(id) <= 0.0:
+			Kit.main.toast("No %s %s on the line. Prep some, or 86 the pizzas that need it." % [Data.ING[id].prep.as, Data.ING[id].name.to_lower()], true)
+			set_view("prep")
+			return
 		tool = id
 		dirty = true)
 	pal_btns.append([b, id])
@@ -933,7 +1100,7 @@ func _build_side() -> void:
 	var pz: Pizza = null
 	if view == "board" and board.size() > 0: pz = board[0]
 	elif view == "bench": pz = bench
-	btn_row.visible = view != "oven"
+	btn_row.visible = view != "oven" and view != "prep"
 	next_btn.visible = pz != null
 	bin_btn.visible = pz != null
 	auto_btn.visible = pz != null and view == "bench" and pz.stage == "shape" and pz.base.method == "roll" and c.roll_auto > 0
@@ -949,6 +1116,9 @@ func _build_side() -> void:
 		if oven.shelf.size() > 0: mini_box.add_child(Kit.label("%d waiting on the shelf" % oven.shelf.size(), 16, Kit.CHEESE))
 	if view == "oven":
 		_side_oven()
+		return
+	if view == "prep":
+		_side_prep()
 		return
 	if pz == null:
 		info.add_child(Kit.label("Tap an order on the left to start it. Open the base, top it by weight, bake it, slice it, send it to the pass.", 17, Kit.MUTED, true))
@@ -1019,11 +1189,219 @@ func _side_oven() -> void:
 			var rng: Array = o.pz.bake_range()
 			return ["%s: %s, %d%% done (%d%% to %d%%)" % [o.pz.rec.name, oven.status(o), o.pz.bake_avg() * 100, rng[0] * 100, rng[1] * 100], Kit.INK])
 
+# ---------- the makeline, prep and the back door ----------
+## toppings on tonight's line that have to be prepped
+func line_items() -> Array:
+	var out := []
+	for rc in Game.active_recipes():
+		if eighty6.has(rc.id): continue
+		for id in rc.spec:
+			if Data.needs_prep(id) and not out.has(id): out.append(id)
+	return out
+
+## grams of a topping one pizza takes, averaged over tonight's pizzas that use it
+func per_pizza(id: String) -> float:
+	var t := 0.0
+	var n := 0
+	for rc in Game.active_recipes():
+		if rc.spec.has(id):
+			t += rc.spec[id]
+			n += 1
+	return t / n if n > 0 else 0.0
+
+## how much raw stock to prep in one go mid-service: the rest of tonight, at least 8 pizzas' worth
+func batch_raw(id: String, pizzas: int = -1) -> float:
+	var y: float = float(Data.ING[id].prep.yield)
+	var want: float
+	if pizzas > 0:
+		want = per_pizza(id) * pizzas
+	else:
+		var all: int = max(1, Game.active_recipes().size())
+		var users := 0
+		for rc in Game.active_recipes():
+			if rc.spec.has(id) and not eighty6.has(rc.id): users += 1
+		want = max(per_pizza(id) * users * c.total * max(0.1, 1.0 - t / DAY) * 1.1 / all - Stock.prepped(id), per_pizza(id) * 8.0)
+	return min(Stock.have(id), want / y)
+
+## you prep something: you are tied up until it is done
+func prep_now(id: String, raw: float) -> void:
+	if raw <= 0.0 or not is_free(): return
+	var p = Data.ING[id].prep
+	var mins := Stock.prep_minutes(id, raw, Day.prep_mult())
+	prepping[id] = "you"
+	start_busy("%s: %s %s" % [p.task, Data.qty(id, raw), Data.ING[id].name.to_lower()], mins, func(frac):
+		Stock.prep(id, raw * frac)
+		prepping.erase(id))
+
+## you put a delivery away
+func put_away_now(e: Dictionary, rotate: bool) -> void:
+	if not is_free(): return
+	e.handling = "you"
+	start_busy("Putting %s's delivery away%s" % [Data.SUP[e.sup].name, "" if rotate else " (stacked in front)"], Stock.dock_minutes(e, rotate), func(frac):
+		if frac < 1.0:
+			e.erase("handling")
+			return
+		var res := Stock.put_away(e, rotate, minute())
+		var txt := Day._waste_text(res)
+		if txt != "": Kit.main.toast(txt.strip_edges(), true))
+
+## prep cooks and kitchen porters: deliveries first, then the line (prep cook) or the washing up (porter)
+func _crew_step(dt: float) -> void:
+	for w in crew:
+		if w.job != "":
+			w.left -= dt
+			if w.left <= 0:
+				w.fn.call()
+				w.job = ""
+				dirty = true
+			continue
+		for e in Game.s.dock:
+			if e.has("handling"): continue
+			e.handling = w.s.name
+			w.job = "delivery"
+			w.left = secs(Stock.dock_minutes(e, true) * (1.2 - 0.08 * w.s.skill))
+			w.fn = func():
+				var res := Stock.put_away(e, true, minute())
+				r.notes.append("%s put %s's delivery away and rotated the stock.%s" % [w.s.name, Data.SUP[e.sup].name, Day._waste_text(res)])
+			break
+		if w.job != "": continue
+		if w.role == "prep":
+			for id in line_items():
+				if prepping.has(id) or Stock.have(id) <= 0.0: continue
+				if Stock.prepped(id) >= per_pizza(id) * 6.0: continue
+				var raw := batch_raw(id)
+				if raw < 10.0: continue
+				prepping[id] = w.s.name
+				w.job = "prep"
+				w.left = secs(Stock.prep_minutes(id, raw, Day.prep_mult() * (1.25 - 0.08 * w.s.skill)))
+				w.fn = func():
+					Stock.prep(id, raw)
+					prepping.erase(id)
+				break
+		if w.job == "" and w.role == "porter": Hygiene.tidy("boh", 0.3 * gm * dt)
+	var servers := Game.staff_of("server").size()
+	if servers > 0: Hygiene.tidy("foh", 0.05 * servers * gm * dt)
+
+## a mouse runs across the front: whoever sees it leaves, and everyone talks about it
+func _mouse() -> void:
+	r.mice += 1
+	mouse_until = minute() + 45.0
+	mouse = {"pos": Vector2(-20, 300), "vel": Vector2(240, -6), "t": 3.2}
+	var near: Array = parties.filter(func(p): return p.state in ["queue", "door", "ask", "wait"])
+	if near.size() > 0:
+		var p: Dictionary = near.pick_random()
+		expire(p, "Saw a mouse!")
+		r.mouse_lost = r.get("mouse_lost", 0) + p.n
+	Game.s.rep += (1.0 - Game.s.rep) * max(0.02, 1.0 / (Game.s.ratings + 6)) * 0.6
+	Kit.main.toast("A customer saw a mouse!", true)
+
+## the Prep tab: the back door, the makeline, and tonight's menu
+func _build_prep() -> void:
+	Kit.clear(prep_box)
+	if view != "prep": return
+	if Game.s.dock.size() > 0:
+		prep_box.add_child(Kit.label("AT THE BACK DOOR", 15, Kit.MUTED))
+		for e in Game.s.dock:
+			var sup: Dictionary = Data.SUP[e.sup]
+			var pc := Kit.panel(Kit.PANEL, 10)
+			var v := Kit.vbox(4)
+			pc.add_child(v)
+			v.add_child(Kit.label("%s · arrived %s" % [sup.name, Data.hhmm(e.arrived)], 19))
+			v.add_child(Kit.label(", ".join(e.lines.map(func(ln): return "%s %s" % [ln.what, ln.name])), 14, Kit.MUTED, true))
+			var wl := Kit.label("", 15, Kit.INK, true)
+			v.add_child(wl)
+			info_rows.append([wl, func():
+				var waited: float = minute() - e.arrived
+				return ["Waiting %d minutes. Chilled food starts to spoil after 30, and is binned after 3 hours." % waited, Kit.TOMATO if waited > 30 else Kit.MUTED]])
+			if e.has("handling"):
+				v.add_child(Kit.label(("You are" if e.handling == "you" else e.handling + " is") + " putting it away.", 16, Kit.BASIL))
+			else:
+				var h := Kit.hbox(8)
+				h.add_child(Kit.button("Put away and rotate (%d min)" % Stock.dock_minutes(e, true), put_away_now.bind(e, true), "primary", 16))
+				h.add_child(Kit.button("Stack it in front (%d min)" % Stock.dock_minutes(e, false), put_away_now.bind(e, false), "ghost", 16))
+				v.add_child(h)
+			prep_box.add_child(pc)
+	prep_box.add_child(Kit.label("THE MAKELINE", 15, Kit.MUTED))
+	var ids := []
+	for rc in Game.active_recipes():
+		for id in rc.spec:
+			if not ids.has(id): ids.append(id)
+	ids.sort_custom(func(a, b): return Data.needs_prep(a) and not Data.needs_prep(b) if Data.needs_prep(a) != Data.needs_prep(b) else Data.ING[a].name < Data.ING[b].name)
+	for id in ids:
+		var it: Dictionary = Data.ING[id]
+		var pc := Kit.panel(Kit.PANEL, 8, 10)
+		var h := Kit.hbox(8)
+		pc.add_child(h)
+		h.add_child(Kit.swatch(id, 18))
+		var v := Kit.vbox(0)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.add_child(Kit.label(it.name, 17))
+		var st := Kit.label("", 14, Kit.MUTED, true)
+		v.add_child(st)
+		h.add_child(v)
+		var pp := per_pizza(id)
+		if not Data.needs_prep(id):
+			info_rows.append([st, func():
+				var a := Stock.have(id)
+				return ["Ready to use · %s in stock (about %d pizzas)" % [Data.qty(id, a), a / max(pp, 0.01)], Kit.TOMATO if a < pp * 3 else Kit.MUTED]])
+		else:
+			info_rows.append([st, func():
+				var a := Stock.prepped(id)
+				var who: String = prepping.get(id, "")
+				return ["%s %s on the line (about %d pizzas) · %s raw in stock%s" % [Data.qty(id, a), it.prep.as, a / max(pp, 0.01), Data.qty(id, Stock.have(id)), ("  ·  " + ("you are" if who == "you" else who + " is") + " prepping it") if who != "" else ""],
+					Kit.TOMATO if a < pp * 3 else (Kit.CHEESE if a < pp * 8 else Kit.MUTED)]])
+			if prepping.has(id) or Stock.have(id) <= 0.0:
+				pass
+			else:
+				var small := batch_raw(id, 10)
+				var rest := batch_raw(id)
+				h.add_child(Kit.button("10 pizzas · %d min" % ceil(Stock.prep_minutes(id, small, Day.prep_mult())), prep_now.bind(id, small), "ghost", 15))
+				if rest > small * 1.3:
+					h.add_child(Kit.button("Rest of tonight · %d min" % ceil(Stock.prep_minutes(id, rest, Day.prep_mult())), prep_now.bind(id, rest), "primary", 15))
+		prep_box.add_child(pc)
+	prep_box.add_child(Kit.label("TONIGHT'S MENU", 15, Kit.MUTED))
+	for rc in Game.active_recipes():
+		var h := Kit.hbox(8)
+		var nm := Kit.label(rc.name, 17)
+		nm.custom_minimum_size.x = 210
+		h.add_child(nm)
+		var st := Kit.label("", 15, Kit.MUTED, true)
+		h.add_child(st)
+		info_rows.append([st, func():
+			if eighty6.has(rc.id): return ["86'd: off the menu tonight", Kit.TOMATO]
+			if Stock.dough_ready(rc.base) < 1: return ["Sold out: no %s dough left" % Data.DOUGHS[rc.base].name, Kit.TOMATO]
+			if not sellable(rc): return ["Sold out: not enough left in stock", Kit.TOMATO]
+			var np := Game.needs_prepping(rc)
+			if np.size() > 0: return ["Customers can order it but the line is out of " + ", ".join(np.map(func(i): return Data.ING[i].name.to_lower())), Kit.CHEESE]
+			return ["On", Kit.BASIL]])
+		var off: bool = eighty6.has(rc.id)
+		h.add_child(Kit.button("Back on" if off else "86 it", func():
+			if off: eighty6.erase(rc.id)
+			else: eighty6[rc.id] = true
+			dirty = true, "primary" if off else "ghost", 15))
+		prep_box.add_child(h)
+
+func _side_prep() -> void:
+	info.add_child(Kit.label("Prep and stock", 21))
+	info.add_child(Kit.label("Toppings come off the makeline. When something runs low, prep more (you are tied up while you do), let a prep cook or pizzaiolo do it, or 86 the pizzas that need it. Deliveries that arrive mid-shift wait at the back door until someone puts them away.", 15, Kit.MUTED, true))
+	for w in crew:
+		_info(func(): return ["%s (%s): %s" % [w.s.name, Data.ROLES[w.s.role].name.to_lower(), {"": "keeping on top of things", "prep": "prepping", "delivery": "putting a delivery away"}[w.job]], Kit.INK], 15)
+	for w in workers:
+		_info(func(): return ["%s (pizzaiolo): %s" % [w.s.name, ("prepping " + Data.ING[w.prep].name.to_lower()) if w.prep != "" else ("making a pizza" if w.job != null else "waiting for tickets")], Kit.INK], 15)
+	_info(func():
+		var l := Hygiene.level("boh")
+		return ["Kitchen %d%% clean" % l, Kit.BASIL if l >= 70 else (Kit.CHEESE if l >= 45 else Kit.TOMATO)], 16)
+	_info(func():
+		var l := Hygiene.level("foh")
+		return ["Front of house %d%% clean" % l, Kit.BASIL if l >= 70 else (Kit.CHEESE if l >= 45 else Kit.TOMATO)], 16)
+
 # ---------- close ----------
 func finish(sold_out: bool) -> void:
 	if done: return
 	done = true
 	var G := Game
+	if not busy.is_empty(): stop_busy()
+	for e in G.s.dock: e.erase("handling")
 	for p in parties:
 		if p.state == "eat" or p.state == "bill": settle(p, false)
 		elif p.state != "leave": r.lost += p.n - p.got
@@ -1058,8 +1436,12 @@ func finish(sold_out: bool) -> void:
 		r.best = "%.1f stars: %s" % [sorted[0].stars, sorted[0].text]
 		if sorted.size() > 1 and sorted[-1].stars < sorted[0].stars - 0.25: r.worst = "%.1f stars: %s" % [sorted[-1].stars, sorted[-1].text]
 	r.profit = r.food + r.tips + r.drinks + r.deliv - r.cost_used - r.cost_waste - r.rent - r.wages - r.util - r.interest
-	G.s.last = r
+	r.eighty6 = eighty6.keys().map(func(id): return Data.REC[id].name)
+	r.boh1 = Hygiene.level("boh")
+	r.foh1 = Hygiene.level("foh")
 	G.s.phase = "evening"
+	r.notes.append_array(Day.start_evening())
+	G.s.last = r
 	G.save_game()
 	Kit.main.show_hub("home")
 	_summary()
@@ -1101,7 +1483,15 @@ func _summary() -> void:
 			cv.add_child(h)
 		g.add_child(cv)
 	v.add_child(g)
+	if r.get("mouse_lost", 0) > 0: why.append("%d left after seeing a mouse" % r.mouse_lost)
 	if why.size() > 0: v.add_child(Kit.label("Lost customers: " + ", ".join(why) + ".", 17, Kit.TOMATO if r.lost > r.served * 0.2 else Kit.MUTED, true))
+	if r.closed: v.add_child(Kit.label("The hygiene inspector closed you down at %s. Clean up, deal with the pests, and you can open again tomorrow." % Data.hhmm(minute()), 18, Kit.TOMATO, true))
+	elif not r.inspect.is_empty(): v.add_child(Kit.label("Hygiene inspection: rated %s." % Hygiene.rating_text(), 17, Kit.CHEESE if r.inspect.rating < 4 else Kit.BASIL, true))
+	var clean_line := "Kitchen %d%% clean (was %d%%), front of house %d%% (was %d%%)." % [r.boh1, r.boh0, r.foh1, r.foh0]
+	if r.mice > 0: clean_line += "  Mice seen: %d." % r.mice
+	if r.eighty6.size() > 0: clean_line += "  86'd: " + ", ".join(r.eighty6) + "."
+	v.add_child(Kit.label(clean_line, 16, Kit.MUTED, true))
+	if r.notes.size() > 0: v.add_child(Kit.label("\n".join(r.notes.slice(max(0, r.notes.size() - 4))), 14, Kit.MUTED, true))
 	if r.food > 0:
 		var over: float = r.cost_used - r.cost_spec
 		var pct: float = r.cost_used / r.food * 100.0

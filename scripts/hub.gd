@@ -1,10 +1,11 @@
 class_name Hub
 extends VBoxContainer
 ## The management screens between services:
-## Today, Suppliers, Stores, Dough, Menu, Kitchen, Front, Staff, Property.
-## Morning: stock up and open. Evening: make tomorrow's dough, place tomorrow's orders, lock up.
+## Today, Jobs, Suppliers, Stores, Dough, Menu, Kitchen, Front, Staff, Property.
+## Morning (from 07:00): deliveries, prep, cleaning, then open. Evening: clean down, make tomorrow's dough,
+## order tomorrow's stock, lock up. Jobs take time on the clock.
 
-const TABS := [["home", "Today"], ["suppliers", "Suppliers"], ["stores", "Stores"], ["dough", "Dough"], ["menu", "Menu"],
+const TABS := [["home", "Today"], ["jobs", "Jobs"], ["suppliers", "Suppliers"], ["stores", "Stores"], ["dough", "Dough"], ["menu", "Menu"],
 	["boh", "Kitchen"], ["foh", "Front"], ["staff", "Staff"], ["property", "Property"]]
 var tab := "home"
 var top: HBoxContainer
@@ -49,14 +50,18 @@ func render() -> void:
 	name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_l.clip_text = true
 	top.add_child(name_l)
-	top.add_child(Kit.chip("%s · day %d · %s" % [Data.DAY_SHORT[G.weekday()], G.s.day, "evening" if G.s.phase == "evening" else "morning"], Kit.PANEL, Kit.INK, 17))
+	top.add_child(Kit.chip("%s · day %d" % [Data.DAY_SHORT[G.weekday()], G.s.day], Kit.PANEL, Kit.INK, 17))
+	var late: bool = G.s.phase == "morning" and Day.now() > Day.open_time()
+	top.add_child(Kit.chip(Data.hhmm(Day.now()) + (("  ·  opens " + Data.hhmm(Day.open_time())) if G.s.phase == "morning" else "  ·  evening"), Kit.TOMATO if late else Kit.PANEL, Color.WHITE if late else Kit.CHEESE, 17))
 	top.add_child(Kit.chip("%.1f / 5" % G.s.rep, Kit.PANEL, Kit.INK, 17))
 	top.add_child(Kit.chip("Level %d  (%d / %d)" % [G.s.level, G.s.xp, G.xp_need(G.s.level)], Kit.PANEL, Kit.INK, 17))
 	top.add_child(Kit.label(Kit.money(G.s.cash), 28, Kit.TOMATO if G.s.cash < 0 else Kit.CHEESE))
 	if G.s.phase == "evening":
 		top.add_child(Kit.button("Lock up & sleep", _sleep, "primary", 22))
+	elif G.s.hygiene.get("closed_day", -1) == G.s.day:
+		top.add_child(Kit.button("Closed today", _closed_day, "ghost", 22))
 	else:
-		top.add_child(Kit.button("Open for service", _open, "danger", 22))
+		top.add_child(Kit.button("Open at " + Data.hhmm(max(Day.now(), Day.open_time())), _open, "danger", 22))
 	for t in TABS:
 		var b := Kit.button(t[1], go.bind(t[0]), "tab_on" if tab == t[0] else "tab", 20)
 		b.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -87,6 +92,9 @@ func _page_suppliers() -> void:
 func _page_stores() -> void:
 	page.add_child(StoresPage.new(self))
 
+func _page_jobs() -> void:
+	page.add_child(JobsPage.new(self))
+
 # ---------- Today ----------
 func _page_home() -> void:
 	var G := Game
@@ -100,6 +108,7 @@ func _page_home() -> void:
 		"%s %s" % ["Pitch fee" if G.pitch() != null else v.rentName, Kit.money(G.rent())], "Gas & electric %s" % Kit.money(G.utilities())]
 	if c.tables > 0: st.append("%d tables" % c.tables)
 	if Market.owed() > 0: st.append("Owe suppliers %s" % Kit.money(Market.owed()))
+	st.append("Hygiene rating " + (str(G.s.hygiene.rating) if G.s.hygiene.rating >= 0 else "not yet inspected"))
 	_stats(hero[1], st)
 	g.add_child(hero[0])
 
@@ -118,9 +127,14 @@ func _page_home() -> void:
 			else: lines.append(["ok", "%d %s dough balls ready." % [n, dn]])
 		var short := []
 		for row in Market.par():
-			if row.short_today > 0: short.append("%s (%s short)" % [Data.ING[row.id].name, Data.qty(row.id, row.short_today)])
-		if short.size() > 0: lines.append(["bad", "Not enough for today: " + ", ".join(short) + ". Only the cash & carry can get it to you before service."])
+			if row.short_today > 0 and Market.incoming(row.id, G.s.day) <= 0: short.append("%s (%s short)" % [Data.ING[row.id].name, Data.qty(row.id, row.short_today)])
+		if short.size() > 0: lines.append(["bad", "Not enough for today: " + ", ".join(short) + ". It is too late to order for today: plan to 86 what you cannot make."])
 		else: lines.append(["ok", "The stores cover today's service by recipe card."])
+		var todo_prep := 0.0
+		for row in Day.prep_list(): todo_prep += row.minutes
+		if todo_prep > 1.0: lines.append(["warn", "About %d minutes of prep to do before you open. See Jobs." % ceil(todo_prep)])
+		if G.s.dock.size() > 0: lines.append(["bad", "%d deliver%s waiting at the back door to be put away." % [G.s.dock.size(), "y" if G.s.dock.size() == 1 else "ies"]])
+		for o in Day.pending(): lines.append(["info", "%s due at about %s%s." % [Data.SUP[o.sup].name, Data.hhmm(o.eta), " (during service)" if o.eta >= Day.open_time() else ""]])
 	var plan := G.dough_plan()
 	for sty in plan:
 		if plan[sty] > 0:
@@ -128,12 +142,21 @@ func _page_home() -> void:
 	var short_tm := 0
 	for row in Market.par():
 		if row.short_tomorrow > 0: short_tm += 1
-	if short_tm > 0: lines.append(["warn", "%d ingredients will be short tomorrow. Order today for delivery in the morning, or collect from the cash & carry." % short_tm])
+	if short_tm > 0: lines.append(["warn", "%d ingredients will be short tomorrow. Order today: everything is bought the day before." % short_tm])
 	for o in G.s.orders:
 		if int(o.due) == G.s.day + 1: lines.append(["info", "%s delivers tomorrow morning (%s)." % [Data.SUP[o.sup].name, Kit.cents(o.total)]])
 	for p in G.s.payables:
 		if p.due - G.s.day <= 2: lines.append(["warn", "%s invoice of %s is due %s." % [Data.SUP[p.sup].name, Kit.cents(p.amount), "tomorrow" if p.due - G.s.day <= 1 else "in 2 days"]])
 	if G.tier("oven").type == "wood" and Stock.have("wood") < 6: lines.append(["bad", "Only %d logs left for the wood oven." % int(Stock.have("wood"))])
+	for store in ["fridge", "dry"]:
+		var cl := Stock.climate(store)
+		if cl[1] != "ok": lines.append([cl[1], "%s: %s. Adjust the vents on the Stores page." % [Data.STORE_NAME[store], cl[0]]])
+	for area in ["boh", "foh"]:
+		var hs := Hygiene.state(area)
+		if hs[1] != "ok" and not (area == "foh" and G.venue().tables == 0 and Hygiene.level(area) > 40): lines.append([hs[1], "%s: %s (%d%%)." % ["Kitchen" if area == "boh" else "Front of house", hs[0].to_lower(), Hygiene.level(area)]])
+	var ps := Hygiene.pest_state()
+	if ps[1] != "ok": lines.append([ps[1], "%s. Causes: %s." % [ps[0], ", ".join(Hygiene.pest_causes())] if Hygiene.pest_causes().size() > 0 else ps[0] + "."])
+	if int(G.s.pests.sprung) > 0: lines.append(["warn", "%d sprung trap%s to reset." % [G.s.pests.sprung, "" if G.s.pests.sprung == 1 else "s"]])
 	if G.cycle_left() <= 3:
 		lines.append(["warn", "The menu changes in %d day%s. %s" % [G.cycle_left(), "" if G.cycle_left() == 1 else "s", "Run your stock down." if G.s.next_menu != "" else "Book the next one on the Menu page or you fall back to House Classics."]])
 	if G.s.cash < 0: lines.append(["bad", "Overdrawn: the bank charges 5% a day."])
@@ -474,16 +497,25 @@ func _page_property() -> void:
 		g.add_child(cd[0])
 
 # ---------- day flow ----------
+func _closed_day() -> void:
+	Kit.main.confirm("Closed by the inspector", "You cannot trade today. Clean the kitchen and front of house, lay traps and sort the stores out. Rent, wages and bills are still due.", "Close up for the day", func():
+		Game.s.phase = "evening"
+		Game.save_game()
+		Kit.main.show_hub("jobs"))
+
 func _open() -> void:
 	var G := Game
-	if G.calc().manager:
-		var spent := Market.auto_collect()
-		if spent > 0: Kit.main.toast("Your manager fetched %s of stock from the cash & carry" % Kit.cents(spent))
+	if Day.now() > Day.close_time() - 90.0:
+		Kit.main.message("Too late to open", "It is %s. There is no point opening now." % Data.hhmm(Day.now()), "OK")
+		return
 	var ok := false
 	var any_dough := false
 	for r in G.active_recipes():
-		if G.can_make(r): ok = true
 		if Stock.dough_ready(r.base) > 0: any_dough = true
+		var can := Stock.dough_ready(r.base) > 0
+		for i in r.spec:
+			if Stock.potential(i) < r.spec[i] * 0.7: can = false
+		if can: ok = true
 	if not ok:
 		if any_dough:
 			Kit.main.toast("You are missing ingredients for every pizza on the menu", true)
@@ -494,12 +526,35 @@ func _open() -> void:
 				Game.save_game()
 				Kit.main.show_hub("dough"))
 		return
+	var warn := []
 	if G.tier("oven").type == "wood" and Stock.have("wood") < 1:
-		Kit.main.confirm("No firewood", "With nothing to light the oven it will barely get warm and every pizza will take three times as long.", "Open anyway", func():
+		warn.append("There is no firewood: the oven will barely get warm.")
+	var unprepped := []
+	for row in Day.prep_list():
+		if row.have < row.need * 0.25 and row.raw > 0: unprepped.append(Data.ING[row.id].name.to_lower())
+	if unprepped.size() > 0: warn.append("Not prepped: %s. You will have to prep mid-shift or 86 the pizzas that use them." % ", ".join(unprepped))
+	if G.s.dock.size() > 0: warn.append("There is a delivery still waiting at the back door.")
+	if warn.size() > 0:
+		Kit.main.confirm("Open now?", "\n".join(warn), "Open anyway", _go_open)
+		return
+	_go_open()
+
+func _go_open() -> void:
+	var notes := Day.wait_until(Day.open_time())
+	if Hygiene.level("boh") > 0: pass
+	var at: float = Game.s.hygiene.get("at", -1.0)
+	if at >= 0 and at <= Day.now():      # the inspector called in during the morning
+		var res := Hygiene.inspect()
+		Game.save_game()
+		if res.closed:
+			Game.s.hygiene.closed_day = Game.s.day
+			Kit.main.message("Closed by the inspector", "The food hygiene inspector rated you %s.\n\n%s\n\nYou cannot open today." % [Hygiene.rating_text(), "\n".join(res.notes)], "OK", func(): render())
+			return
+		Kit.main.message("Food hygiene inspection", "The inspector called in this morning and rated you %s.%s" % [Hygiene.rating_text(), ("\n\n" + "\n".join(res.notes)) if res.notes.size() > 0 else ""], "Open up", func():
 			Game.save_game()
 			Kit.main.start_service())
 		return
-	G.save_game()
+	Game.save_game()
 	Kit.main.start_service()
 
 func _sleep() -> void:
@@ -526,11 +581,7 @@ func _do_sleep() -> void:
 		lines.append("You stayed shut. Rent, wages and bills came to %s." % Kit.money(due))
 	var n := G.nightfall()
 	G.save_game()
-	for dl in n.delivered:
-		var txt := "%s delivered %d lines (%s)%s." % [dl.sup, dl.n, Kit.cents(dl.total), (", invoice due day %d" % dl.invoice_due) if dl.invoice_due > 0 else ""]
-		if dl.wasted.size() > 0:
-			txt += " NO ROOM for " + ", ".join(dl.wasted.map(func(w): return "%s %s" % [Data.qty(w.id, w.q), Data.ING[w.id].name.to_lower()])) + ": wasted."
-		lines.append(txt)
+	lines.append_array(n.notes)
 	for pd in n.paid: lines.append("Paid %s's invoice: %s." % [pd.sup, Kit.cents(pd.amount)])
 	if n.binned.size() > 0:
 		var cost := 0.0
@@ -539,6 +590,7 @@ func _do_sleep() -> void:
 	if n.dough_lost > 0: lines.append("%d dough balls overproofed and were binned." % n.dough_lost)
 	if n.rotated: lines.append("New menu today: %s. Check your stock and dough styles." % G.menu_now().name)
 	if n.pitch_reset: lines.append("Your pitch does not trade today, so you are back on the High Street.")
-	if lines.is_empty(): lines.append("A quiet night. Nothing delivered, nothing spoiled.")
+	lines.append_array(n.morning)
+	if lines.is_empty(): lines.append("A quiet night. Nothing spoiled.")
 	Kit.main.show_hub("home")
 	Kit.main.message(G.date_text(), "\n".join(lines), "Good morning")

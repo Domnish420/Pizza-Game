@@ -70,7 +70,7 @@ func inside(p: Vector2) -> bool:
 
 ## take grams of an ingredient out of stock and onto the pizza. Returns grams actually got.
 func use(ing: String, g: float) -> float:
-	var t := Stock.take(ing, g)
+	var t := Stock.take_use(ing, g)
 	if t.got <= 0.0: return 0.0
 	grams[ing] = grams.get(ing, 0.0) + t.got
 	costs[ing] = costs.get(ing, 0.0) + t.cost
@@ -92,13 +92,13 @@ func _g_per_amt(ing: String) -> float:
 func spread(ing: String, p: Vector2, seg: float, brush: float) -> bool:
 	var is_sauce: bool = Data.ING[ing].kind == "sauce"
 	if is_sauce:
-		if sauce == "": 
-			if Stock.have(ing) <= 0.0: return false
+		if sauce == "":
+			if Stock.avail(ing) <= 0.0: return false
 			sauce = ing
 		elif sauce != ing: return true
 	else:
 		if cheese == "":
-			if Stock.have(ing) <= 0.0: return false
+			if Stock.avail(ing) <= 0.0: return false
 			cheese = ing
 		elif cheese != ing: return true
 	var amt: Dictionary = sauce_amt if is_sauce else cheese_amt
@@ -311,7 +311,8 @@ func assess(c: Dictionary) -> Dictionary:
 	a.spec["dough:" + rec.base] = 1.0
 	for ing in rec.spec:
 		var g: float = grams.get(ing, 0.0)
-		a.spec_cost += rec.spec[ing] * (costs[ing] / g if g > 0.0 else Market.ref_cost(ing))
+		var y: float = float(Data.ING[ing].prep.yield) if Data.needs_prep(ing) else 1.0
+		a.spec_cost += rec.spec[ing] * (costs[ing] / g if g > 0.0 else Market.ref_cost(ing) / y)
 	return a
 
 func _portion_note(notes: Array, ing: String) -> void:

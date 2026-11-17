@@ -277,6 +277,8 @@ func _finish() -> void:
 	var grade: float = gsum / gw if gw > 0 else 2.0
 	var per_ball: float = _spent_total() / max(1, balls)
 	var fitted := Stock.add_dough(style, balls, q, speed, grade, per_ball)
+	var mins: float = ceil(15.0 + 6.0 * kg / c.knead)
+	var notes := Day.spend(mins)
 	if fitted < balls: Stock.log_waste("dough:" + style, balls - fitted, (balls - fitted) * per_ball)
 	Game.save_game()
 	Art.sfx("up")
@@ -286,7 +288,8 @@ func _finish() -> void:
 	add_child(Kit.label("%d %s dough balls in the fridge" % [fitted, d.name], 28))
 	add_child(Kit.label("Quality %d / 100" % int(q), 34, Kit.CHEESE))
 	add_child(Kit.label("Weighing %d (hydration %d%%, recipe %d%%)  ·  Kneading %d  ·  Balling %d%s" % [scores.measure, scores.hyd, _want("water"), scores.knead, cut_s, ("  ·  proofing kit +%d" % c.proof_q) if c.proof_q > 0 else ""], 18, Kit.MUTED, true))
-	add_child(Kit.label("%s grade flour. Each ball cost %s to make." % [Data.grade_name(grade), Kit.cents(per_ball)], 18, Kit.MUTED, true))
+	add_child(Kit.label("%s grade flour. Each ball cost %s to make. It took %d minutes; it is now %s." % [Data.grade_name(grade), Kit.cents(per_ball), mins, Data.hhmm(Day.now())], 18, Kit.MUTED, true))
+	if notes.size() > 0: add_child(Kit.label("\n".join(notes), 16, Kit.CHEESE, true))
 	var note := "It cold-proofs overnight and is ready tomorrow."
 	if speed > 0: note = "Heavy on the yeast: it will be ready tomorrow but overproofs a day early."
 	elif speed < 0: note = "Light on the yeast: it needs two nights before it is ready."

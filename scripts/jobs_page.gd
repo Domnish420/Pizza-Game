@@ -1,0 +1,166 @@
+class_name JobsPage
+extends VBoxContainer
+## The jobs that fill the morning before you open and the evening after you close.
+## Every job takes time on the clock (Day). In the morning that time comes out of the hours before opening;
+## in the evening, working past midnight means a late start tomorrow.
+
+var hub: Hub
+
+func _init(h: Hub) -> void:
+	hub = h
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	add_theme_constant_override("separation", 10)
+
+func _do(minutes: float, fn: Callable, done_text: String = "") -> void:
+	fn.call()
+	var notes := Day.spend(minutes)
+	Game.save_game()
+	if notes.size() > 0: Kit.main.message("Meanwhile", "\n".join(notes), "OK")
+	elif done_text != "": Kit.main.toast(done_text)
+	hub.render()
+
+func _row(parent: Node, text: String, sub: String, col: Color = Kit.INK) -> HBoxContainer:
+	var h := Kit.hbox(8)
+	var v := Kit.vbox(0)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.add_child(Kit.label(text, 18, col, true))
+	if sub != "": v.add_child(Kit.label(sub, 14, Kit.MUTED, true))
+	h.add_child(v)
+	parent.add_child(h)
+	return h
+
+## when an ingredient on order is due in today, or -1
+func _due(id: String) -> float:
+	for o in Day.pending():
+		for ln in o.lines:
+			if ln.ing == id: return o.eta
+	return -1.0
+
+func _ready() -> void:
+	var G := Game
+	var morning: bool = G.s.phase == "morning"
+	var now := Day.now()
+
+	# the clock
+	var hc = Kit.card()
+	if morning:
+		var left: float = Day.open_time() - now
+		hc[1].add_child(Kit.label("%s. You open at %s: %s." % [Data.hhmm(now), Data.hhmm(Day.open_time()), ("%d h %02d min to go" % [int(left) / 60, int(left) % 60]) if left > 0 else "you are late opening"], 22, Kit.INK if left > 0 else Kit.TOMATO, true))
+		var nxt := Day.next_arrival()
+		if nxt >= 0 and nxt < Day.close_time():
+			var o: Dictionary = Day.pending()[0]
+			var h := Kit.hbox(8)
+			h.add_child(Kit.label("Next: %s at about %s%s." % [Data.SUP[o.sup].name, Data.hhmm(nxt), " (after you open)" if nxt >= Day.open_time() else ""], 16, Kit.MUTED, true))
+			if nxt > now and nxt < Day.open_time():
+				h.add_child(Kit.button("Wait for it", func():
+					var notes := Day.wait_until(nxt)
+					Game.save_game()
+					if notes.size() > 0: Kit.main.message(Data.hhmm(Day.now()), "\n".join(notes), "OK")
+					hub.render(), "ghost", 16))
+			hc[1].add_child(h)
+	else:
+		hc[1].add_child(Kit.label("%s. Closed for the night." % Data.hhmm(now), 22, Kit.INK, true))
+		hc[1].add_child(Kit.label("Clean down, make tomorrow's dough, order tomorrow's stock. Work past midnight and you start late tomorrow.", 15, Kit.MUTED, true))
+	if G.s.notes.size() > 0 and morning:
+		hc[1].add_child(Kit.label("\n".join(G.s.notes), 15, Kit.MUTED, true))
+	add_child(hc[0])
+
+	# the back door
+	if G.s.dock.size() > 0:
+		var dc = Kit.card("At the back door")
+		for e in G.s.dock:
+			var sup: Dictionary = Data.SUP[e.sup]
+			var waited: float = max(0.0, now - e.arrived)
+			var h := _row(dc[1], "%s · arrived %s" % [sup.name, Data.hhmm(e.arrived)],
+				", ".join(e.lines.map(func(ln): return "%s %s" % [ln.what, ln.name])) + ". Waiting %d min: chilled food spoils after 30." % waited, Kit.TOMATO if waited > 30 else Kit.INK)
+			var rm := Stock.dock_minutes(e, true)
+			var qm := Stock.dock_minutes(e, false)
+			h.add_child(Kit.button("Put away & rotate · %d min" % rm, func():
+				var res := Day.put_away(e, true)
+				Game.save_game()
+				var msg: String = ("\n".join(res.notes) + "\n" if res.notes.size() > 0 else "") + res.text
+				if msg.strip_edges() != "": Kit.main.message("Put away", msg.strip_edges(), "OK")
+				hub.render(), "primary", 15))
+			h.add_child(Kit.button("Stack in front · %d min" % qm, func():
+				var res := Day.put_away(e, false)
+				Game.save_game()
+				Kit.main.toast("Stacked in front of the old stock. Rotate it later or the old stock will go off at the back.")
+				hub.render(), "ghost", 15))
+		add_child(dc[0])
+
+	# prep
+	var day: int = G.s.day if morning else G.s.day + 1
+	var pc = Kit.card("Prep list" + ("" if morning else " for tomorrow"))
+	pc[1].add_child(Kit.label("Toppings come off the makeline. Prep what the day needs: too little and you are prepping mid-shift; too much and it goes off (prepped food keeps 1 to 4 days)." + ("" if morning else " Prepping tonight saves time tomorrow but uses up a day of its life."), 14, Kit.MUTED, true))
+	var rows := Day.prep_list(day)
+	var total := 0.0
+	for row in rows:
+		var it: Dictionary = Data.ING[row.id]
+		var sub := "%s: need %s, %s on the line, %s raw in stock" % [it.prep.task, Data.qty(row.id, row.need), Data.qty(row.id, row.have), Data.qty(row.id, row.raw_have)]
+		var h := _row(pc[1], it.name, sub, Kit.BASIL if row.todo <= 0.5 else (Kit.TOMATO if row.raw_have <= 0 else Kit.INK))
+		if row.todo <= 0.5:
+			h.add_child(Kit.label("Done", 15, Kit.BASIL))
+		elif row.raw <= 0:
+			var at_door := false
+			for e in G.s.dock:
+				for ln in e.lines:
+					if ln.ing == row.id: at_door = true
+			h.add_child(Kit.label("Put the delivery away first" if at_door else ("Due in at %s" % Data.hhmm(_due(row.id)) if _due(row.id) >= 0 else "Nothing to prep it from"), 15, Kit.CHEESE if at_door or _due(row.id) >= 0 else Kit.TOMATO))
+		else:
+			total += row.minutes
+			h.add_child(Kit.button("Prep %s · %d min" % [Data.qty(row.id, row.raw), ceil(row.minutes)], func():
+				_do(ceil(row.minutes), func(): Stock.prep(row.id, row.raw), "Prepped the %s" % it.name.to_lower()), "primary", 15))
+	if rows.is_empty(): pc[1].add_child(Kit.label("Nothing on the menu needs prep.", 15, Kit.MUTED))
+	elif total > 0:
+		pc[1].add_child(Kit.button("Do all the prep · %d min" % ceil(total), func():
+			_do(ceil(total), func():
+				for row in Day.prep_list(day):
+					if row.raw > 0: Stock.prep(row.id, row.raw), "Prep done"), "primary", 17))
+	add_child(pc[0])
+
+	# cleaning
+	var cc = Kit.card("Cleaning")
+	for area in ["boh", "foh"]:
+		if area == "foh" and G.venue().tables == 0 and G.s.venue == 0:
+			pass
+		var nm: String = "Kitchen" if area == "boh" else ("Hatch and counter" if G.venue().tables == 0 else "Dining room")
+		var hs := Hygiene.state(area)
+		var mins := Hygiene.clean_minutes(area)
+		var h := _row(cc[1], "%s: %s (%d%%)" % [nm, hs[0].to_lower(), Hygiene.level(area)], "Uses about %s of cleaning chemicals" % Data.qty("sanitiser", Hygiene.chem_needed(area)), {"ok": Kit.BASIL, "warn": Kit.CHEESE, "bad": Kit.TOMATO}[hs[1]])
+		if Hygiene.level(area) < 99.0:
+			h.add_child(Kit.button("Clean · %d min" % mins, func():
+				var msg := ""
+				_do(mins, func(): msg = Hygiene.clean(area))
+				if msg != "": Kit.main.toast(msg, true), "primary", 15))
+	cc[1].add_child(Kit.label("Cleaning chemicals in stock: %s." % Data.qty("sanitiser", Stock.have("sanitiser")), 14, Kit.TOMATO if Stock.have("sanitiser") < Hygiene.chem_needed("boh") else Kit.MUTED))
+	add_child(cc[0])
+
+	# pests
+	var kc = Kit.card("Pest control")
+	var ps := Hygiene.pest_state()
+	_row(kc[1], ps[0], ("Drawing them in: " + ", ".join(Hygiene.pest_causes()) + ".") if Hygiene.pest_causes().size() > 0 else "Keep it clean, keep the traps down.", {"ok": Kit.BASIL, "warn": Kit.CHEESE, "bad": Kit.TOMATO}[ps[1]])
+	var P: Dictionary = G.s.pests
+	var h2 := _row(kc[1], "Traps down: %d of the %d this place needs" % [P.laid, Hygiene.traps_wanted()], "%s in stock. %s" % [Data.qty("traps", Stock.have("traps")), "Proofing: " + G.tier("pest").n], Kit.INK if P.laid >= Hygiene.traps_wanted() else Kit.CHEESE)
+	if P.laid < Hygiene.traps_wanted():
+		var b := Kit.button("Lay a trap · 5 min", func(): _do(5, func(): Hygiene.lay_trap(), "Trap laid"), "primary", 15)
+		b.disabled = Stock.have("traps") < 1
+		h2.add_child(b)
+	if int(P.sprung) > 0:
+		var h3 := _row(kc[1], "%d sprung trap%s" % [P.sprung, "" if P.sprung == 1 else "s"], "Empty them and set them again.", Kit.CHEESE)
+		h3.add_child(Kit.button("Reset · %d min" % (2 * int(P.sprung)), func(): _do(2 * int(P.sprung), func(): Hygiene.reset_traps(), "Traps reset"), "primary", 15))
+	add_child(kc[0])
+
+	# stock rotation and the stores' climate
+	var rc = Kit.card("The stores")
+	var probs := Stock.rotation_problems()
+	if probs.is_empty():
+		_row(rc[1], "Stock is rotated: oldest at the front.", "", Kit.BASIL)
+	else:
+		var h4 := _row(rc[1], "New stock stacked in front of older stock", ", ".join(probs.map(func(p): return "%s (%s behind)" % [Data.ING[p.id].name.to_lower(), Data.qty(p.id, p.behind)])) + ". The old stock will go off at the back.", Kit.CHEESE)
+		var rm := Stock.rotate_minutes()
+		h4.add_child(Kit.button("Rotate · %d min" % rm, func(): _do(rm, func(): Stock.rotate_all(), "Stores rotated"), "primary", 15))
+	for store in ["fridge", "dry"]:
+		var cl := Stock.climate(store)
+		var h5 := _row(rc[1], "%s: %s" % [Data.STORE_NAME[store], cl[0]], "Vents %s. %d%% full." % [Stock.VENT_NAME[Stock.vent(store)].to_lower(), Stock.fill(store) * 100], {"ok": Kit.BASIL, "warn": Kit.CHEESE, "bad": Kit.TOMATO}[cl[1]])
+		h5.add_child(Kit.button("Vents", hub.go.bind("stores"), "ghost", 15))
+	add_child(rc[0])

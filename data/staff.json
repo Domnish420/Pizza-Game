@@ -2,16 +2,16 @@
  "_about": "Staff roles and the pool of first names.",
  "roles": {
   "pizzaiolo": {"area": "boh", "name": "Pizzaiolo", "wage": 48, "v": 0, "lvl": 2, "desc": "Makes pizzas off the ticket rail. Better trained pizzaioli portion more accurately and make better-looking pizzas.", "max": 0, "needs": ""},
-  "prep": {"area": "boh", "name": "Prep Cook", "wage": 40, "v": 1, "desc": "Makes tomorrow’s dough at close every night and keeps the line 8% faster.", "lvl": 1, "max": 0, "needs": ""},
+  "prep": {"area": "boh", "name": "Prep Cook", "wage": 40, "v": 1, "desc": "Starts at 7: checks in and rotates the deliveries, does the morning prep, preps again mid-shift when the makeline runs low, and makes tomorrow's dough at close.", "lvl": 1, "max": 0, "needs": ""},
   "fornaio": {"area": "boh", "name": "Oven Tender", "wage": 45, "v": 1, "max": 1, "desc": "Loads, turns and pulls every pizza and keeps the fire fed. Bakes 10% faster.", "lvl": 1, "needs": ""},
-  "porter": {"area": "boh", "name": "Kitchen Porter", "wage": 32, "v": 2, "desc": "Washes up and clears dirty tables.", "lvl": 1, "max": 0, "needs": ""},
+  "porter": {"area": "boh", "name": "Kitchen Porter", "wage": 32, "v": 2, "desc": "Washes up, keeps the kitchen clean through service and deep-cleans it at close, resets the traps, and puts deliveries away.", "lvl": 1, "max": 0, "needs": ""},
   "headchef": {"area": "boh", "name": "Head Chef", "wage": 120, "v": 3, "max": 1, "desc": "Lifts the quality of every pizza the brigade makes and tightens their portioning.", "lvl": 1, "needs": ""},
   "cashier": {"area": "foh", "name": "Counter Assistant", "wage": 35, "v": 0, "lvl": 2, "desc": "Takes orders at the counter and hands over takeaways.", "max": 0, "needs": ""},
-  "server": {"area": "foh", "name": "Server", "wage": 38, "v": 2, "desc": "Seats guests, takes table orders, runs food, brings the bill, clears.", "lvl": 1, "max": 0, "needs": ""},
+  "server": {"area": "foh", "name": "Server", "wage": 38, "v": 2, "desc": "Seats guests, takes table orders, runs food, brings the bill, clears, and cleans the dining room at close.", "lvl": 1, "max": 0, "needs": ""},
   "driver": {"area": "foh", "name": "Delivery Driver", "wage": 36, "v": 2, "needs": "delivery", "desc": "Brings in delivery orders (needs a Delivery upgrade).", "lvl": 1, "max": 0},
   "host": {"area": "foh", "name": "Host", "wage": 42, "v": 3, "max": 1, "desc": "Seats guests the moment they arrive. More customers.", "lvl": 1, "needs": ""},
   "bartender": {"area": "foh", "name": "Bartender", "wage": 48, "v": 3, "desc": "Runs the bar. Needed for beer taps and cocktails.", "lvl": 1, "max": 0, "needs": ""},
-  "manager": {"area": "foh", "name": "General Manager", "wage": 140, "v": 3, "max": 1, "desc": "Places tomorrow's supplier orders every night to your buying standard, tops up from the cash & carry in the morning, and keeps the team 10% faster.", "lvl": 1, "needs": ""}
+  "manager": {"area": "foh", "name": "General Manager", "wage": 140, "v": 3, "max": 1, "desc": "Places tomorrow's supplier orders every night to your buying standard, takes things off the menu when they run out, and keeps the team 10% faster.", "lvl": 1, "needs": ""}
  },
  "names": ["Marco", "Giulia", "Luca", "Sofia", "Matteo", "Chiara", "Enzo", "Aisha", "Tom", "Priya", "Dani", "Nico", "Rosa", "Kofi", "Mei", "Sam", "Elena", "Jorge", "Fatima", "Ben", "Lola", "Pietro", "Yuki", "Amara", "Leo", "Ines", "Omar", "Greta", "Viktor", "Nina", "Paolo", "Carmen", "Dev", "Zoe", "Bruno", "Tess"]
 }

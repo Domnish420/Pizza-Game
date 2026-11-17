@@ -27,10 +27,24 @@ func _ready() -> void:
 		var cap := Stock.store_cap(st)
 		var used := Stock.store_used(st)
 		var full: bool = cap > 0 and used / cap > 0.9
-		v.add_child(Kit.label(("%s  %d of %d" % [Data.STORE_NAME[st], int(ceil(used)), int(cap)]) if cap > 0 else "No freezer", 18, Kit.TOMATO if full else Kit.INK))
+		v.add_child(Kit.label(("%s  %d of %d litres" % [Data.STORE_NAME[st], int(ceil(used)), int(cap)]) if cap > 0 else "No freezer", 18, Kit.TOMATO if full else Kit.INK))
 		v.add_child(Kit.bar(used / cap if cap > 0 else 0.0, Kit.TOMATO if full else Kit.BASIL))
+		var cl := Stock.climate(st)
+		v.add_child(Kit.label(cl[0], 16, {"ok": Kit.BASIL, "warn": Kit.CHEESE, "bad": Kit.TOMATO}[cl[1]], true))
+		if st != "freezer":
+			var vh := Kit.hbox(3)
+			for i in 5:
+				var b := Kit.button(["Shut", "Low", "Med", "High", "Max"][i], func():
+					Game.s.vent[st] = i
+					Game.save_game()
+					hub.render(), "primary" if Stock.vent(st) == i else "ghost", 14)
+				b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				vh.add_child(b)
+			v.add_child(vh)
+			v.add_child(Kit.label("This full, it wants the vents about %s." % Stock.VENT_NAME[int(round(Stock.vent_need(st)))].to_lower(), 13, Kit.MUTED, true))
 		bars.add_child(v)
 	cp[1].add_child(bars)
+	cp[1].add_child(Kit.label("Airflow: a fridge with too little runs warm and food spoils early; too much and it freezes leaves and soft cheese. The fuller it is, the more air it needs, and past 90% full nothing helps. A dry store with too little gets damp and mouldy; too much lets bugs and mice in.", 14, Kit.MUTED, true))
 	var bh := Kit.hbox(6)
 	bh.add_child(Kit.label("Buying standard:", 17, Kit.MUTED))
 	for g in range(1, 6):
@@ -40,12 +54,12 @@ func _ready() -> void:
 			Game.save_game()
 			hub.render(), "primary" if G.s.house_grade == g else "ghost", 16))
 	cp[1].add_child(bh)
-	cp[1].add_child(Kit.label("The grade the par sheet and your manager buy at. A kilo of chilled food takes about 10 spaces; a dough ball takes half a space.", 14, Kit.MUTED, true))
+	cp[1].add_child(Kit.label("The grade the par sheet and your manager buy at.", 14, Kit.MUTED, true))
 	add_child(cp[0])
 
 	# par sheet
 	var pc = Kit.card("Par sheet")
-	pc[1].add_child(Kit.label("What the next two days need by recipe card, against what you hold." + ("" if G.s.phase == "morning" else "  Today's column is tonight's dough."), 14, Kit.MUTED, true))
+	pc[1].add_child(Kit.label("What the next two days need by recipe card (prepped toppings at their raw weight), against what you hold. Everything is ordered the day before, so tomorrow's column is the one you can still fix." + ("" if G.s.phase == "morning" else "  Today's column is tonight's dough."), 14, Kit.MUTED, true))
 	var pg := Kit.grid(6, 12)
 	for hd in ["", "In stock", "Need today", "Need tomorrow", "On order", "Short"]: _cell(pg, hd, Kit.MUTED, hd != "", 14)
 	var short_n := 0
@@ -80,6 +94,28 @@ func _ready() -> void:
 			oc[1].add_child(Kit.label("Invoice: %s · %s · due %s (day %d)" % [Data.SUP[p.sup].name, Kit.cents(p.amount), Data.DAY_NAME[G.weekday(int(p.due))], p.due], 15, Kit.CHEESE))
 		add_child(oc[0])
 
+	# the makeline
+	var prepped := []
+	for id in G.s.prepped:
+		if Stock.prepped(id) > 0: prepped.append(id)
+	if prepped.size() > 0:
+		var mc = Kit.card("On the makeline (prepped)")
+		for id in prepped:
+			var ls: Array = Stock.prepped_lots(id).map(func(l): return "%s, %s" % [Data.qty(id, l.q), "bin tonight" if l.x <= G.s.day + 1 else "%d days" % floor(l.x - G.s.day)])
+			mc[1].add_child(Kit.label("%s %s   (%s)" % [Data.ING[id].prep.as.capitalize(), Data.ING[id].name.to_lower(), "; ".join(ls)], 16, Kit.INK, true))
+		add_child(mc[0])
+	var probs := Stock.rotation_problems()
+	if probs.size() > 0:
+		var rc = Kit.card("Needs rotating")
+		rc[1].add_child(Kit.label("New stock is stacked in front of older stock of " + ", ".join(probs.map(func(p): return Data.ING[p.id].name.to_lower())) + ". It gets used first and the old stock goes off at the back.", 15, Kit.CHEESE, true))
+		var rm := Stock.rotate_minutes()
+		rc[1].add_child(Kit.button("Rotate the stores · %d min" % rm, func():
+			Stock.rotate_all()
+			var notes := Day.spend(rm)
+			Game.save_game()
+			if notes.size() > 0: Kit.main.message("Meanwhile", "\n".join(notes), "OK")
+			hub.render(), "primary", 16))
+		add_child(rc[0])
 	# what is on the shelves
 	for st in Data.STORES:
 		var ids := []
@@ -96,7 +132,7 @@ func _ready() -> void:
 		for id in ids:
 			var h := Kit.hbox(8)
 			h.add_child(Kit.swatch(id, 18))
-			var lots: Array = Stock.lots(id).map(func(l): return "%s %s, %s" % [Data.qty(id, l.q), Data.GRADES[int(l.g)], ("bin tonight" if l.x <= G.s.day + 1 else "%d days" % (l.x - G.s.day)) if l.x < G.s.day + 900 else "keeps"])
+			var lots: Array = Stock.lots(id).map(func(l): return "%s %s, %s%s" % [Data.qty(id, l.q), Data.GRADES[int(l.g)], ("bin tonight" if l.x <= G.s.day + 1 else "%d days" % floor(l.x - G.s.day)) if l.x < G.s.day + 900 else "keeps", ", in front" if l.get("f", false) else ""])
 			var l := Kit.label("%s   %s   (%s)" % [Data.ING[id].name, Data.qty(id, Stock.have(id)), "; ".join(lots)], 16, Kit.TOMATO if Stock.expiring(id) > 0 else Kit.INK, true)
 			h.add_child(l)
 			h.add_child(Kit.label(Kit.cents(Stock.value(id)), 15, Kit.MUTED))

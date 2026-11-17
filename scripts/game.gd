@@ -1,9 +1,10 @@
 extends Node
 ## Autoload `Game`: the save file (`s`) and the rules of the business around it:
 ## the calendar, money and XP, the venue and its pitch, menus, upgrades, staff, and the nightly roll-over.
-## Stock lives in `Stock`, buying lives in `Market`, a day's trading lives in `ServiceScreen`.
+## Stock lives in `Stock`, buying in `Market`, the clock in `Day`, cleaning and pests in `Hygiene`,
+## a day's trading in `ServiceScreen`.
 
-const SAVE_PATH := "user://crust_empire_v3.json"
+const SAVE_PATH := "user://crust_empire_v4.json"
 var s := {}
 
 func _ready() -> void:
@@ -12,7 +13,7 @@ func _ready() -> void:
 
 # ---------- save ----------
 func new_book() -> Dictionary:
-	return {"used": {}, "spec": {}, "waste": {}, "cost_used": 0.0, "cost_spec": 0.0, "cost_waste": 0.0, "sold": 0, "binned": 0, "sales": 0.0}
+	return {"used": {}, "spec": {}, "waste": {}, "trim": {}, "cost_used": 0.0, "cost_spec": 0.0, "cost_waste": 0.0, "sold": 0, "binned": 0, "sales": 0.0}
 
 func new_game() -> void:
 	var upg := {}
@@ -21,17 +22,21 @@ func new_game() -> void:
 		"day": 1, "phase": "morning", "cash": 200.0, "xp": 0, "level": 1, "rep": 3.0, "ratings": 0,
 		"venue": 0, "pitch": 0, "upg": upg, "tables": 0,
 		"stock": {}, "dough": [], "baskets": {}, "orders": [], "payables": [], "house_grade": 2,
+		"clock": Day.START, "late_start": 0, "staff_left": {}, "dock": [], "prepped": {}, "notes": [],
+		"vent": {"fridge": 2, "dry": 2}, "clean": {"boh": 85.0, "foh": 85.0},
+		"pests": {"level": 8.0, "laid": 0, "sprung": 0}, "hygiene": {"rating": -1, "day": 0, "notes": [], "next": randi_range(6, 12), "at": -1.0},
 		"book": new_book(), "books": [],
 		"menu_id": "classics", "next_menu": "", "offers": [], "cycle_start": 1, "off": {}, "price": 1,
 		"staff": [], "cands": [], "last": {}, "sid": 1, "oid": 1, "mute": false, "pizzas": 0, "earned": 0.0,
 	}
 	# what the last owner left in the van
-	for e in [["flour00", 2000, 2], ["yeast", 42, 2], ["salt", 750, 1], ["tomato", 800, 2], ["mozz", 1000, 2],
-			["basil", 30, 2], ["pepperoni", 500, 2], ["mushroom", 250, 2], ["box", 25, 2]]:
+	for e in [["flour00", 3000, 2], ["yeast", 42, 2], ["salt", 750, 1], ["tomato", 1200, 2], ["mozz", 1000, 2],
+			["basil", 30, 2], ["pepperoni", 500, 2], ["mushroom", 250, 2], ["box", 25, 2], ["sanitiser", 1500, 1], ["traps", 2, 2]]:
 		Stock.add(e[0], e[1], e[2], Data.ING[e[0]].g[e[2]].price)
 	s.dough.append({"style": "neapolitan", "n": 8, "q": 65, "d": 0, "speed": 0, "g": 2.0, "c": 0.25})
 	gen_offers()
 	gen_cands()
+	s.notes = Day.start_morning()
 	save_game()
 
 func save_game() -> void:
@@ -41,10 +46,10 @@ func save_game() -> void:
 func load_game() -> bool:
 	if not FileAccess.file_exists(SAVE_PATH): return false
 	var d = JSON.parse_string(FileAccess.open(SAVE_PATH, FileAccess.READ).get_as_text())
-	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("book"): return false
+	if typeof(d) != TYPE_DICTIONARY or not d.has("upg") or not d.has("clock"): return false
 	s = d
 	for k in Data.UPG: s.upg[k] = int(s.upg.get(k, 0))
-	for k in ["day", "level", "venue", "pitch", "tables", "price", "sid", "oid", "cycle_start", "ratings", "xp", "house_grade"]:
+	for k in ["day", "level", "venue", "pitch", "tables", "price", "sid", "oid", "cycle_start", "ratings", "xp", "house_grade", "clock", "late_start"]:
 		s[k] = int(s[k])
 	return true
 
@@ -126,7 +131,7 @@ func rent() -> float:
 	return p.fee if p != null else venue().rent
 
 func utilities() -> float:
-	return tier("oven").util + int(s.upg.fridge) * 1.5 + int(s.upg.freezer) * 2.0
+	return tier("oven").util + int(s.upg.fridge) * 1.5 + int(s.upg.freezer) * 2.0 + float(tier("pest").fee)
 
 func wages() -> float:
 	var t := 0.0
@@ -187,12 +192,19 @@ func rotate_menu() -> void:
 	s.off = {}
 	gen_offers()
 
-## can this pizza be made right now: a dough ball of the right style and most of each ingredient
+## can this pizza be made right now: a dough ball of the right style and most of each topping, prepped
 func can_make(r: Dictionary) -> bool:
 	if Stock.dough_ready(r.base) < 1: return false
 	for i in r.spec:
-		if Stock.have(i) < r.spec[i] * 0.7: return false
+		if Stock.avail(i) < r.spec[i] * 0.7: return false
 	return true
+
+## the toppings of a pizza that have run out on the makeline but could still be prepped from stock
+func needs_prepping(r: Dictionary) -> Array:
+	var out := []
+	for i in r.spec:
+		if Data.needs_prep(i) and Stock.prepped(i) < r.spec[i] * 0.7 and Stock.have(i) > 0: out.append(i)
+	return out
 
 # ---------- everything the upgrades and staff add up to ----------
 func traffic_mult() -> float:
@@ -205,7 +217,7 @@ func delivery_covers(day: int = -1) -> int:
 
 ## pizzas you can expect to sell on a given day
 func covers(day: int = -1) -> int:
-	return int(round(venue().traffic * traffic_mult() * day_factor(day))) + delivery_covers(day)
+	return int(round(venue().traffic * traffic_mult() * day_factor(day) * Hygiene.footfall())) + delivery_covers(day)
 
 func calc() -> Dictionary:
 	var v := venue()
@@ -231,7 +243,9 @@ func calc() -> Dictionary:
 	c.rep_mult = 0.4 + s.rep * 0.22
 	c.day_factor = day_factor()
 	c.delivery = delivery_covers()
-	c.customers = int(round(v.traffic * traffic_mult() * c.day_factor))
+	c.customers = int(round(v.traffic * traffic_mult() * c.day_factor * Hygiene.footfall()))
+	c.open = Day.open_time()
+	c.close = Day.close_time()
 	c.total = c.customers + c.delivery
 	c.tables = int(min(s.tables, v.tables))
 	var dt := int(s.upg.drinks)
@@ -309,9 +323,13 @@ func close_book() -> void:
 	while s.books.size() > 14: s.books.pop_front()
 	s.book = new_book()
 
-## bin what is out of date, close the books, move to tomorrow, take deliveries, pay invoices
+## the night: the stores' climate and pests do their work, out-of-date stock is binned, the books close,
+## and the next morning starts (deliveries, invoices, the prep cook)
 func nightfall() -> Dictionary:
-	var out := {"binned": Stock.night(), "dough_lost": Stock.dough_night(), "rotated": false, "pitch_reset": false}
+	var st := Stock.night()
+	var out := {"binned": st.binned, "notes": st.notes, "dough_lost": Stock.dough_night(), "rotated": false, "pitch_reset": false}
+	out.notes.append_array(Hygiene.night())
+	Day.sleep()
 	close_book()
 	s.day += 1
 	s.phase = "morning"
@@ -322,9 +340,9 @@ func nightfall() -> Dictionary:
 	if p != null and not pitch_open(p):
 		s.pitch = 0
 		out.pitch_reset = true
-	out.delivered = Market.deliver()
 	out.paid = Market.pay_due()
 	gen_cands()
+	out.morning = Day.start_morning()
 	return out
 
 # ---------- upgrades ----------

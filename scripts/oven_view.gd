@@ -34,6 +34,10 @@ func _pizza_r(pz: Pizza) -> float:
 
 # ---------- input ----------
 func _gui_input(e: InputEvent) -> void:
+	if not svc.busy.is_empty():
+		if e is InputEventMouseButton or e is InputEventScreenTouch:
+			if e.pressed: svc.is_free()
+		return
 	if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
 		var p := _local(e.position)
 		if e.pressed: _down(p)

@@ -18,7 +18,9 @@ the oven is 400 x 320. Supply images at 3x those sizes or larger.
 | `customer.0` .. `customer.5` | 30x52 | A standing customer, front view, six looks |
 | `seated.0` .. `seated.5` | 18x18 | A seated guest seen from above, six looks |
 | `table.clean`, `table.food`, `table.dirty` | 44x34 | A table from above: laid, with pizzas on it, with dirty plates |
-| `bubble.order`, `bubble.food`, `bubble.seat`, `bubble.bill`, `bubble.clear` | 30x30 | The marker over anyone (or any table) that needs you |
+| `bubble.order`, `bubble.food`, `bubble.seat`, `bubble.bill`, `bubble.clear`, `bubble.delivery` | 30x30 | The marker over anyone (or any table, or the back door) that needs you |
+| `crates` | 36x28 | A delivery stacked at the back door (bottom left of the van scene, by the pass in dining rooms) |
+| `mouse` | 22x12 | A mouse running across the floor, facing right |
 
 ## Kitchen bench and cutting board (`scripts/bench.gd`, `scripts/pizza_draw.gd`)
 
@@ -47,7 +49,7 @@ Pizza spots on the deck are laid out by code (`Oven._init`).
 
 | Key | Size | What it is |
 | --- | --- | --- |
-| `icon.<id>` | 22x22 | Ingredient icon in the supplier catalogue and stock lists. All 69 ids are in `data/ingredients.json` |
+| `icon.<id>` | 22x22 | Ingredient icon in the supplier catalogue and stock lists. All 71 ids are in `data/ingredients.json` |
 
 ## Sound (`scripts/art.gd`)
 

@@ -7,7 +7,7 @@ extends Control
 
 const W := 640.0
 const H := 320.0
-const BUBBLE := {"order": ["ORDER", Color("f4c64f")], "food": ["FOOD UP", Color("74c47a")], "seat": ["SEAT", Color("8fb7e8")], "bill": ["BILL", Color("f7eed9")], "clear": ["CLEAR", Color("d9a37a")]}
+const BUBBLE := {"order": ["ORDER", Color("f4c64f")], "food": ["FOOD UP", Color("74c47a")], "seat": ["SEAT", Color("8fb7e8")], "bill": ["BILL", Color("f7eed9")], "clear": ["CLEAR", Color("d9a37a")], "delivery": ["DELIVERY", Color("e2a35a")]}
 var svc: ServiceScreen
 var font: Font
 
@@ -115,6 +115,20 @@ func _draw() -> void:
 		var frac := -1.0
 		if a.has("p"): frac = a.p.pat / max(1.0, a.p.max)
 		_bubble(a.pos + (Vector2(0, 30) if a.has("tb") or (a.has("p") and a.p.table >= 0) else Vector2.ZERO), a.kind, frac)
+	# a delivery waiting at the back door
+	if Game.s.dock.size() > 0:
+		var bp: Vector2 = svc.L.back
+		if not _sprite("crates", bp - Vector2(0, 10), Vector2(36, 28)):
+			draw_rect(Rect2(bp.x - 16, bp.y - 22, 32, 24), Color("9c7a4e"))
+			draw_rect(Rect2(bp.x - 16, bp.y - 22, 32, 24), Color("6b4f2e"), false, 2.0)
+		_bubble(bp + Vector2(0, 8), "delivery", -1.0)
+	# a mouse
+	if not svc.mouse.is_empty():
+		var mp: Vector2 = svc.mouse.pos
+		if not _sprite("mouse", mp, Vector2(22, 12)):
+			draw_circle(mp, 6, Color("6d6a66"))
+			draw_circle(mp + Vector2(6, -2), 4, Color("6d6a66"))
+			draw_line(mp - Vector2(6, 0), mp - Vector2(16, -3), Color("6d6a66"), 1.5)
 	for f in svc.floats:
 		_text(Vector2(clamp(f.pos.x, 90, W - 90), f.pos.y - 50), f.text, 13, Color(f.col, clamp(f.t, 0, 1)))
 	if svc.parties.is_empty() and svc.t < 6:

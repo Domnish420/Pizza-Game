@@ -7,7 +7,7 @@ var ING := {}          # ingredient id -> ingredient. The loader adds: id, g{gra
 var CATS := []         # [[category id, label]]
 var GRADES := []       # quality names, index 1..5
 var GRADE_LVL := []    # player level at which each quality appears in catalogues
-var PACK_DISC := []    # price multiplier for pack size 0 (small) .. 2 (bulk)
+var BULK_EXP := 0.085  # bigger packs are cheaper per unit: price x (pack / smallest pack) ^ -BULK_EXP
 var SUPPLIERS := []
 var SUP := {}
 var DOUGHS := {}       # dough style id -> recipe
@@ -38,7 +38,7 @@ func _init() -> void:
 	CATS = d.categories
 	GRADES = d.grades
 	GRADE_LVL = d.grade_lvl
-	PACK_DISC = d.pack_discount
+	BULK_EXP = float(d.bulk_exponent)
 	ING = d.items
 	for id in ING:
 		var it: Dictionary = ING[id]
@@ -48,7 +48,12 @@ func _init() -> void:
 		it.after = bool(it.get("after", false))
 		it.season = int(it.get("season", -1))
 		it.vol = float(it.get("vol", d.volatility[it.cat]))
-		it.space = float(it.space_kg) / per
+		it.space = float(it.litres) / per                       # litres per unit (g, ml or item)
+		it.prep = it.get("prep", null)                           # what has to be done to it before service, or null
+		it.frost = it.get("frost", "")                           # "bin" / "hurt": what freezing does to it
+		it.damp = bool(it.get("damp", false))
+		it.pests = bool(it.get("pests", false))
+		it.smallest = float(it.packs[0][0])
 		it.portion = float(it.get("portion", 0.0))
 		it.piece = float(it.get("piece", 0.0))
 		it.shape = it.get("shape", "disc")
@@ -93,6 +98,14 @@ func _init() -> void:
 	NAMES = st.names
 
 # ---------- small helpers everything uses ----------
+## "07:40" from minutes after midnight
+func hhmm(m: float) -> String:
+	var mi := int(round(m))
+	return "%02d:%02d" % [(mi / 60) % 24, mi % 60]
+
+func needs_prep(id: String) -> bool:
+	return ING[id].prep != null
+
 func grade_name(g: float) -> String:
 	return GRADES[int(clamp(round(g), 1, 5))]
 
@@ -108,6 +121,7 @@ func qty(id: String, q: float) -> String:
 		return ("%.1f" % q if q < 10 and abs(q - round(q)) > 0.05 else str(int(round(q)))) + " " + u
 	var n := int(round(q))
 	if u == "box": return "%d box%s" % [n, "" if n == 1 else "es"]
+	if u == "trap": return "%d trap%s" % [n, "" if n == 1 else "s"]
 	return "%d %s%s" % [n, u, "" if n == 1 else "s"]
 
 ## "$7.50/kg", "$11.00/l", "$0.20 each"

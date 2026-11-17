@@ -26,6 +26,18 @@ Read `README.md` for how a day works and a map of the code, and `ART_KEYS.md` fo
   valid choice when money is short.
 - "Keep to a stock list so you're not over-using and losing money on the pizzas."
 - "Customers rate the look of your pizza, giving tips and ratings depending on everything that made service."
+- "Buying in larger amounts is always cheaper no matter the product. Some products you can only buy in bulk, like
+  flour: only large 25 kg bags."
+- "Watch out for stock rotation and spoilage, making sure ventilation is occurring in areas that need it. Not enough in
+  fridges causes spoilage earlier and too much makes the fridges freeze. Not enough in the dry store causes spoilage
+  and too much allows bugs and pests in (and rodents getting in if the kitchen and front of house aren't cleaned
+  properly and traps aren't laid)."
+- "Stock is always bought the day before, but suppliers deliver at varying times depending on the season and day of
+  the week. Some only deliver on certain days, some are next-day. It's all about rotating stock correctly and not
+  over-supplying."
+- "Prep is done in the morning. If you run out of prep mid-shift, you have to prep it, or take it off the menu if
+  there isn't time or you don't have the staff to prep while you're serving."
+- "I want a fully immersive experience."
 
 ## How the code is split (keep it this way)
 
@@ -86,12 +98,22 @@ every customer (`parties[].pos` and `.target`), seats them, and tracks waiting, 
 venue (van on a street, kiosk in a market, then dining rooms), walking, sitting and eating animations, speech
 bubbles, the hatch, and the pizza being handed over. Layout rules for the backgrounds are in `ART_KEYS.md`.
 
-### 5. Screens and UI
+### 5. The back of house between services
+
+The morning and evening are a list of jobs on the clock (`scripts/jobs_page.gd`, rules in `scripts/day.gd`):
+deliveries at the back door, the prep list, cleaning, traps, rotating the stores, and the vents on the Stores page.
+They work as buttons now. They would be far more immersive as scenes: a walk-in fridge and dry store you can see
+filling up (with frost when the vents are too open and condensation when too closed), crates to unpack onto shelves
+(new stock behind old), a prep bench with knife work for slicing and grating, mops and spray, traps to set by hand.
+The data each scene needs is already there: lots per shelf with dates and the in-front flag, fill level, temperature
+and humidity, cleanliness per area, pest level, traps down and sprung.
+
+### 6. Screens and UI
 
 All colours, buttons, panels and labels come from `scripts/kit.gd`. Turning that into a Godot `Theme` restyles
 every screen at once. The supplier catalogue, stores and recipe cards are data-heavy; keep them readable on a phone.
 
-### 6. Sound and feel
+### 7. Sound and feel
 
 `Art.sfx(name)` plays `assets/sfx/<name>.wav` if it exists (ding, cash, bad, tap, up). Add more where it helps:
 dough slaps, the sauce ladle, the oven door, the fire, the pizza wheel, a busy dining room.
@@ -108,7 +130,8 @@ dough slaps, the sauce ladle, the oven door, the fire, the pizza wheel, a busy d
 - A tutorial or first-day walkthrough. The game currently explains itself in text on each screen.
 - A settings screen, save slots, cloud saves.
 - Showing pizzas made by staff on the bench (they are simulated, not drawn).
-- Delivery drivers on the road.
+- Delivery drivers on the road, and the van driving to the cash & carry.
+- A freezer that needs defrosting, and frozen food that needs defrosting the day before.
 - Weather and events. Seasons only change prices and what is available.
 
 ## Balance
