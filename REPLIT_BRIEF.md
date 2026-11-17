@@ -38,6 +38,15 @@ Read `README.md` for how a day works and a map of the code, and `ART_KEYS.md` fo
 - "Prep is done in the morning. If you run out of prep mid-shift, you have to prep it, or take it off the menu if
   there isn't time or you don't have the staff to prep while you're serving."
 - "I want a fully immersive experience."
+- "Prep is done into tubs (2 L and 4 L), and these are put into gastros on top of the fridge. The pizza counter has a
+  marble base, which is the top we need for stretching dough, and the glass counter is where we put our toppings."
+- The story mode: start as an employed pizzaiolo making pizzas and prep to a checklist, then senior pizzaiolo running
+  the back-of-house checks, ordering and checklists, then go solo in the van and work up to your own restaurant
+  (see `ROADMAP.md`).
+
+The owner supplied reference photos of the real kit: white 2 L and 4 L deli tubs, and a stainless pizza prep counter
+with a granite/marble top, drawers and doors below, and a refrigerated rail of about ten gastronorm pans under a glass
+sneeze guard. Ask the owner for the photos; the counter, tubs and rail should look like them.
 
 ## How the code is split (keep it this way)
 
@@ -97,6 +106,13 @@ pizzas, heat shimmer, and a clear "done" moment.
 every customer (`parties[].pos` and `.target`), seats them, and tracks waiting, eating and paying. Wanted: a scene per
 venue (van on a street, kiosk in a market, then dining rooms), walking, sitting and eating animations, speech
 bubbles, the hatch, and the pizza being handed over. Layout rules for the backgrounds are in `ART_KEYS.md`.
+
+### 4b. The counter and the hands-on jobs
+
+The bench is the marble top of the pizza counter, with the rail of gastro pans above it (`scripts/rail_view.gd`).
+Prep (`prep_task.gd`: knife, grater, picking, pouring, stirring), cleaning (`clean_task.gd`) and unpacking deliveries
+(`shelf_task.gd`) are hands-on minigames with placeholder drawing. They need real art and animation: the knife
+through a mushroom, cheese shredding off the grater, a tub filling, a day-dot sticker going on the lid.
 
 ### 5. The back of house between services
 

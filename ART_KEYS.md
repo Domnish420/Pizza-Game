@@ -19,6 +19,7 @@ the oven is 400 x 320. Supply images at 3x those sizes or larger.
 | `seated.0` .. `seated.5` | 18x18 | A seated guest seen from above, six looks |
 | `table.clean`, `table.food`, `table.dirty` | 44x34 | A table from above: laid, with pizzas on it, with dirty plates |
 | `bubble.order`, `bubble.food`, `bubble.seat`, `bubble.bill`, `bubble.clear`, `bubble.delivery` | 30x30 | The marker over anyone (or any table, or the back door) that needs you |
+| `bubble.complaint` | 30x30 | A customer complaining |
 | `crates` | 36x28 | A delivery stacked at the back door (bottom left of the van scene, by the pass in dining rooms) |
 | `mouse` | 22x12 | A mouse running across the floor, facing right |
 
@@ -26,12 +27,16 @@ the oven is 400 x 320. Supply images at 3x those sizes or larger.
 
 | Key | Size | What it is |
 | --- | --- | --- |
-| `bench.bg` | 320x320 | Floured steel prep bench, top-down |
+| `bench.bg` | 320x320 | The marble top of the pizza counter, floured, top-down |
 | `board.bg` | 320x320 | Wooden cutting board, top-down |
 | `pan` | 220x220 | Round deep pizza pan, top-down (deep-pan and gluten-free bases) |
 | `pin` | 150x26 | Rolling pin, top-down, horizontal |
 | `top.<id>` | 24x24 | One piece of a topping, top-down. Ids: parmesan, gorgonzola, ricotta, pecorino, goatcheese, burrata, taleggio, pepperoni, ham, prosciutto, salami, spicysalami, sausage, nduja, pancetta, guanciale, chicken, meatball, speck, mortadella, anchovy, tuna, prawn, seafood, salmon, mushroom, porcini, pepper, onion, olive, artichoke, rocket, spinach, cherrytom, sundried, aubergine, courgette, sweetcorn, pineapple, chilli, jalapeno, garlic, potato, friarielli, caper, truffle, basil, oregano, rosemary, honey, pistachio |
 | `dough.blob` | 180x180 | A ball of dough, for the kneading step |
+| `rail` | full width x 78 | The chilled rail of the pizza counter under its glass sneeze guard, seen from the front |
+| `pan` | about 90x60 | One stainless gastronorm pan, empty |
+| `fill.<id>` | about 90x40 | The food in a pan (grated mozzarella, sliced mushrooms, sauce...), drawn to how full it is |
+| `clean.boh`, `clean.foh` | 640x280 | The surface being scrubbed: stainless and marble in the kitchen, the counter or tables in front |
 
 The base, sauce, cheese, browning and cuts are drawn by code because they change shape as you work.
 See `PizzaDraw.draw()`; each layer is a separate block and can be swapped for shaders or textures one at a time.
