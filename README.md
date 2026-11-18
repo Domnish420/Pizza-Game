@@ -79,9 +79,24 @@ trays, the mop and the spray (clean), the box of traps (pest control on the floo
 (the checklist) and the sign at the hatch (open up in the morning, lock up and go home at night). Labels over them say
 how each stands. Ordering, KitBox, the menu, staff and premises are on your phone (the Phone button).
 
+**The clock runs the day.** It sits top left: between services it says what tapping it does ("07:00 · open at
+11:30", then "21:15 · lock up" at night) and tapping it does that; in service, tap it to close up early (at closing
+time the day ends by itself). There are no separate open or close buttons.
+
+**Looking around.** A thumb stick in the bottom-left corner turns your head (push further to turn faster); let go
+near a station and you settle on it, tap it to look back at your station. It never touches the work, so looking and
+making a pizza do not fight. The station buttons beside it still jump straight to each station, dragging on the room
+still looks around, and turning the phone still turns your head.
+
+**A quiet screen.** Your hands are just hands (no arms reaching into the work). The recipe card is short by default:
+the pizza, its size, the grams and the one thing to do next; More opens the full card (with the explanations, the
+cost so far and today's served and dough counts). Names over things show only when they matter: the pans' names at
+the counter, the pass when a pizza is ready to go, the bin when you have a pizza in hand, a table when it needs
+clearing or someone is waiting to be seated.
+
 **Service is 3D and first person** (`scripts/fp/`): you stand at the counter in the van or the kitchen, seen from a
 chest-mounted wide camera, with the hatch or the pass ahead, the oven and cutting board on your right and the prep
-station on your left. The station buttons turn your head; drag on the room to look around (or turn the phone). Tap
+station on your left. The stick and the station buttons turn your head (see Looking around above). Tap
 customers, tickets on the ticket rail, the pans on the rail and the ladles on their rack where they are; the bench,
 board, oven and prep tablet take your fingers directly, so two-finger stretching happens on the marble in front of
 you. The classic 2D layout can be switched back on from the Today page.

@@ -748,19 +748,20 @@ for _key, _c in PEOPLE.items():
 
 
 def _hand(side, pose="open"):
-    """a chunky cartoon forearm and hand, palm down, pointing -Z, fingertips at the origin (side 1 = right hand).
+    """a chunky cartoon hand (no arm), palm down, pointing -Z, fingertips at the origin (side 1 = right hand).
     pose: "open" (pressing and stretching dough), "pinch" (finger and thumb together, holding a topping),
     "grip" (a fist round a handle: the ladle, the peel).
     The palm and wrist are one soft shape; each finger is its own rounded tube curling slightly down, so they read
-    as separate fingers from above; nails on the tips; the rolled cuff of a chef's jacket with red piping."""
+    as separate fingers from above; nails on the tips; the wrist rounded off."""
     skin = mat("skin", "#efbd96", rough=0.55)
     nail = mat("nail", "#fbe3d6", rough=0.35)
     s = side
-    # palm, the knuckle ridge, the thumb's root and the forearm, blended
+    # palm, the knuckle ridge, the thumb's root and a rounded wrist, blended (just the hand: no forearm or sleeve to
+    # get between you and the pizza)
     blobs([("ellipsoid", (0.0, 0.0, 0.118), 0.056, (1.0, 0.45, 0.95)),
            ("ellipsoid", (0.0, 0.004, 0.08), 0.05, (1.0, 0.36, 0.5)),
            ("ellipsoid", (-0.046 * s, -0.004, 0.122), 0.026, (1.0, 0.8, 1.3)),
-           ("capsule", (0.004 * s, 0.008, 0.27), 0.043, 0.115, (0, 90, 0))], skin, res=0.005, name="palm", tris=1100)
+           ("ellipsoid", (0.004 * s, 0.006, 0.168), 0.042, (0.95, 0.62, 0.8))], skin, res=0.005, name="palm", tris=1000)
     fingers = [(-0.034, 0.012, 0.075), (-0.0115, 0.0126, 0.083), (0.0115, 0.012, 0.078), (0.032, 0.0106, 0.063)]   # chunky
     for k, (fx, r, length) in enumerate(fingers):
         x0 = fx * s
@@ -787,10 +788,6 @@ def _hand(side, pose="open"):
     tube(th, 0.0135, skin, seg=10, radii=[0.0145, 0.0135, 0.0125], caps=False, name="thumb")
     sphere(0.0125, th[-1], skin, seg=10, rings=6, name="thumb_tip")
     sphere(0.008, (th[-1][0], th[-1][1] + 0.008, th[-1][2] - 0.002), nail, seg=10, rings=5, scale=(1.0, 0.3, 1.15), name="nail")
-    whites = mat("chef_whites", "#f8f7f2", rough=0.8)
-    cyl(0.06, 0.15, (0.004 * s, 0.008, 0.44), whites, axis="z", seg=18, name="sleeve")
-    torus(0.06, 0.016, (0.004 * s, 0.008, 0.365), whites, seg=18, rseg=8, rot=(90, 0, 0), name="cuff")
-    torus(0.061, 0.004, (0.004 * s, 0.008, 0.348), mat("cuff_piping", TOMATO, rough=0.5), seg=18, rseg=5, rot=(90, 0, 0), name="piping")
 
 
 model("hand.right", side=1)(_hand)

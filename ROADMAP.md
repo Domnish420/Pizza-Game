@@ -103,6 +103,8 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [x] Proper oven doors between services; the prep list on the prep tablet; the 2D layout can light the wood oven
 - [x] Each person is one mesh per joint (about half the draw calls)
 - [ ] Lower-detail versions of the people for far tables in a busy dining room
+- [x] A look stick for the camera; hands without arms; a sparse HUD (the clock opens and closes, a short recipe
+      card, labels only when they matter)
 - [x] Hands that change pose with what they hold (open, pinch, grip)
 - [ ] Hand-made models to replace the generated ones; keyframed animation (waving, paying, leaving with a box)
 - [x] The morning and evening in the same 3D kitchen: every job a prop you tap (deliveries, prep, wash-up, counter,

@@ -50,7 +50,7 @@ their own origin (base at y = 0). If no model exists for a key, the game builds 
 | `fp.pan` | One gastronorm pan, 0.1 m wide x 0.2 deep, rim at y +0.03. The game stretches its width to fit the slot; the fill is drawn by code |
 | `fp.ladle.1` .. `fp.ladle.8` | Portion ladles by size in oz, hanging from the hook at the origin (placed on the ladle rail at y 1.3), bowl at the bottom facing +Z |
 | `fp.ticket` | A paper order ticket, 0.19 x 0.26 m, centred on its origin and facing +Z; the text and the colour bars are drawn by code just in front of it |
-| `fp.hand.right`, `fp.hand.left` | Chunky cartoon forearm and hand in a chef's-white sleeve, palm down, attached to the camera, pointing forward (-Z), fingertips at the origin |
+| `fp.hand.right`, `fp.hand.left` | A chunky cartoon hand, just the hand (no forearm or sleeve: arms got in the way of the work), the wrist rounded off, palm down, attached to the camera, pointing forward (-Z), fingertips at the origin |
 | `fp.hand.right.pinch`, `fp.hand.left.pinch`, `fp.hand.right.grip`, `fp.hand.left.grip` | The same hands posed: finger and thumb pinched together (holding a topping), and a fist round a handle (the ladle, the peel). The game shows whichever fits what you hold |
 | `fp.mouse` | A mouse running across the floor |
 | `fp.pass` | The heated pass shelf behind the cutting board where finished pizzas go out (tap target), at (1.5, 0.92, -1.02) |

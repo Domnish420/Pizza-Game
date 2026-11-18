@@ -55,6 +55,8 @@ var tablet := []                 # delivery-app orders pinging on the tablet: {n
 var app_acc := 0.0
 var training := false            # a training day: no customers of its own, nobody else takes the tickets (see Tutor)
 var helps := []                  # the steps of your pizzas Marco does today (Story.marco_does): stretch, top, oven, board
+var card_full := false           # the recipe card shows everything (otherwise the short version)
+var stats_row: HBoxContainer
 var marco_board_t := 0.0         # Marco cutting and sending what has come off the oven
 var carried: Pizza = null        # the pizza you took from the bench to the oven and have not loaded yet
 var spiked := []                 # tickets that have just gone (walked out, collected): {tk, why, until (msec)} - they stay on the rail a moment
@@ -157,17 +159,20 @@ func d_pos(i: int) -> Vector2:
 # ---------- ui ----------
 func _build_ui() -> void:
 	add_theme_constant_override("separation", 8)
+	fp_mode = Game.s.get("view3d", true)
 	var top := Kit.hbox(12)
 	add_child(top)
-	top_lbl.time = Kit.label("", 20)
+	# the clock is the control: tap it to close up early (at closing time the day ends by itself)
+	top_lbl.time = Kit.button("", _ask_close, "ghost", 20)
 	top_lbl.time.custom_minimum_size.x = 120
+	top_lbl.time.tooltip_text = "Tap the clock to close up early"
 	top.add_child(top_lbl.time)
 	clock = Kit.bar(0, Kit.CHEESE, 12)
 	clock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(clock)
 	for k in ["count", "dough", "rep"]:
 		top_lbl[k] = Kit.label("", 19, Kit.MUTED)
-		top.add_child(top_lbl[k])
+		if not fp_mode or k == "rep": top.add_child(top_lbl[k])     # in 3D, served and dough are on the full card
 	top_lbl.cash = Kit.label("", 26, Kit.CHEESE)
 	top.add_child(top_lbl.cash)
 	top_lbl.phone = Kit.button("Phone ringing", answer_phone, "danger", 19)
@@ -181,11 +186,9 @@ func _build_ui() -> void:
 			Game.s.app.paused = not Game.s.app.paused
 			dirty = true, "ghost", 17)
 		top.add_child(top_lbl.app)
-	top_lbl.speed = Kit.button("1x speed", _speed, "primary", 19)
+	top_lbl.speed = Kit.button("1x", _speed, "primary", 19)
 	top.add_child(top_lbl.speed)
-	top.add_child(Kit.button("Close up", func(): Kit.main.confirm("Close early?", "Anyone still waiting leaves unserved, and anything half-made goes in the bin.", "Close up", func(): finish(false)), "ghost", 19))
 
-	fp_mode = Game.s.get("view3d", true)
 	if fp_mode: _build_fp_body()
 	else: _build_2d_body()
 
@@ -278,6 +281,11 @@ func _build_2d_body() -> void:
 	var sv := Kit.vbox(6)
 	info = Kit.vbox(3)
 	palette = Kit.vbox(5)
+	stats_row = Kit.hbox(10)                   # served and dough, on the full card only
+	stats_row.add_child(top_lbl.count)
+	stats_row.add_child(top_lbl.dough)
+	stats_row.visible = false
+	sv.add_child(stats_row)
 	sv.add_child(info)
 	sv.add_child(palette)
 	sp.add_child(sv)
@@ -324,18 +332,25 @@ func _build_fp_body() -> void:
 	tl.add_child(tick_box)
 	tl.visible = false
 	stack.add_child(tl)
-	# turning your head: one button per station
-	var tabs := Kit.hbox(6)
+	# looking around: the stick in the corner, and one button per station beside it
+	var stk := LookStick.new(fp.world)
+	stk.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	stk.offset_left = 10
+	stk.offset_top = -126
+	stk.offset_right = 126
+	stk.offset_bottom = -10
+	stack.add_child(stk)
+	var tabs := Kit.hbox(5)
 	tabs.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	tabs.offset_top = -58
-	tabs.offset_left = 8
+	tabs.offset_top = -54
+	tabs.offset_left = 136
 	for k in ["front", "bench", "oven", "board", "prep"]:
-		var b := Kit.button("", set_view.bind(k), "tab", 18)
-		b.custom_minimum_size = Vector2(96, 50)
+		var b := Kit.button("", set_view.bind(k), "tab", 16)
+		b.custom_minimum_size = Vector2(84, 46)
 		tabs.add_child(b)
 		tab_btns[k] = b
-	var lb := Kit.button("List", func(): tl.visible = not tl.visible, "ghost", 16)
-	lb.custom_minimum_size = Vector2(60, 50)
+	var lb := Kit.button("List", func(): tl.visible = not tl.visible, "ghost", 15)
+	lb.custom_minimum_size = Vector2(56, 46)
 	tabs.add_child(lb)
 	stack.add_child(tabs)
 	btn_row = Kit.hbox(8)
@@ -360,6 +375,11 @@ func _build_fp_body() -> void:
 	var sv := Kit.vbox(6)
 	info = Kit.vbox(3)
 	palette = Kit.vbox(5)
+	stats_row = Kit.hbox(10)                   # served and dough, on the full card only
+	stats_row.add_child(top_lbl.count)
+	stats_row.add_child(top_lbl.dough)
+	stats_row.visible = false
+	sv.add_child(stats_row)
 	sv.add_child(info)
 	sv.add_child(palette)
 	mini_panel = Kit.panel(Color("3a2a22"), 8)
@@ -368,7 +388,13 @@ func _build_fp_body() -> void:
 	sv.add_child(mini_panel)
 	card.add_child(sv)
 	stack.add_child(card)
-	var cb := Kit.button("Card", func(): card.visible = not card.visible, "ghost", 15)
+	# the card is short by default (the pizza, its size and grams, the one thing to do next); tap for the full card
+	var cb := Kit.button("More", func(): pass, "ghost", 15)
+	cb.pressed.connect(func():
+		card_full = not card_full
+		cb.text = "Less" if card_full else "More"
+		stats_row.visible = card_full
+		_build_side())
 	cb.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	cb.offset_left = -400
 	cb.offset_right = -338
@@ -432,10 +458,15 @@ func set_view(v: String) -> void:
 	if v == "board": tool = ""
 	dirty = true
 
+## the clock tapped: close up early?
+func _ask_close() -> void:
+	if done: return
+	Kit.main.confirm("Close early?", "Anyone still waiting leaves unserved, and anything half-made goes in the bin.", "Close up", func(): finish(false))
+
 func _speed() -> void:
 	var mx := 8 if workers.size() > 0 else 4
 	speed = 1 if speed >= mx else speed * 2
-	top_lbl.speed.text = "%dx speed" % speed
+	top_lbl.speed.text = "%dx" % speed
 
 # ---------- customers ----------
 func set_pat(p: Dictionary, secs: float) -> void:
@@ -2079,6 +2110,11 @@ func _info(fn: Callable, size: int = 17) -> void:
 	info.add_child(l)
 	info_rows.append([l, fn])
 
+## something for the full card only (the explanations): the short card keeps to what you need right now
+func _detail(c: Control) -> void:
+	if card_full or not fp_mode: info.add_child(c)
+	else: c.free()
+
 func _gram_row(pz: Pizza, id: String) -> void:
 	_info(func():
 		var g: float = pz.grams.get(id, 0.0)
@@ -2144,13 +2180,14 @@ func _build_side() -> void:
 		_side_prep()
 		return
 	if pz == null:
-		info.add_child(Kit.label(("Tap a ticket on the rail above the counter to start it." if fp_mode else "Tap an order on the left to start it.") + " Open the base, top it by weight, bake it, slice it, send it to the pass.", 17, Kit.MUTED, true))
+		info.add_child(Kit.label("Tap a ticket on the rail above the counter to start it." if fp_mode else "Tap an order on the left to start it.", 17, Kit.MUTED, true))
+		_detail(Kit.label("Open the base, top it by weight, bake it, slice it, send it to the pass.", 15, Kit.MUTED, true))
 		return
 	info.add_child(Kit.label("#%d %s" % [pz.tk.id, pz.rec.name], 21))
 	if view == "board":
 		next_btn.text = "Send to the pass"
 		var finishing: Array = pz.rec.tops.filter(func(id): return Data.ING[id].after)
-		info.add_child(Kit.label("Hand empty: swipe across the pizza to slice it, three cuts through the middle. Anything you pick up goes on wherever you put it." + ("  The finishing toppings go on now." if finishing.size() > 0 else "") + ("  Tap the pass to send it out." if fp_mode else ""), 16, Kit.MUTED, true))
+		_detail(Kit.label("Hand empty: swipe across the pizza to slice it, three cuts through the middle. Anything you pick up goes on wherever you put it." + ("  The finishing toppings go on now." if finishing.size() > 0 else "") + ("  Tap the pass to send it out." if fp_mode else ""), 16, Kit.MUTED, true))
 		_info(func(): return ["Cuts: %d of 3" % pz.cuts.size(), Kit.BASIL if pz.cuts.size() >= 3 else Kit.INK])
 		for id in finishing: _gram_row(pz, id)
 		if finishing.size() > 0 and not fp_mode:
@@ -2170,9 +2207,9 @@ func _build_side() -> void:
 		"roll": "Hand empty: roll the pin across the dough with a finger, changing direction so it stays round.",
 		"press": "Hand empty: rub the dough outward to the wall of the pan."}[b.method]
 	var topping := "" if helps.has("top") else " Tap a pan to pick up a topping (tap it again to put it back); one finger then puts it on."
-	info.add_child(Kit.label(how + topping + " %s" % ("Turn to the oven and the pizza comes with you on the peel." if fp_mode else "Go to the Oven tab and the pizza comes with you."), 14, Kit.MUTED, true))
+	_detail(Kit.label(how + topping + " %s" % ("Turn to the oven and the pizza comes with you on the peel." if fp_mode else "Go to the Oven tab and the pizza comes with you."), 14, Kit.MUTED, true))
 	if b.method == "hand" and not DisplayServer.is_touchscreen_available():
-		info.add_child(Kit.label("With a mouse: left button is one finger, right button is two.", 13, Kit.MUTED, true))
+		_detail(Kit.label("With a mouse: left button is one finger, right button is two.", 13, Kit.MUTED, true))
 	_info(func(): return ["Size %.1f of %d cm · rim %.1f (aim %.1f) · %d%%" % [b.diameter_cm(), pz.d.size_cm, b.crust_cm(), pz.d.crust_cm, b.score().total * 100], Kit.BASIL if b.score().total >= 0.8 else Kit.CHEESE], 16)
 	next_btn.text = "To the oven"
 	if helps.has("top"):
@@ -2185,8 +2222,9 @@ func _build_side() -> void:
 			info.add_child(Kit.label("%s   goes on after the oven" % Data.ING[id].name, 16, Kit.MUTED))
 		else:
 			_gram_row(pz, id)
-	_info(func(): return ["On the pizza so far: %s" % Kit.cents(pz.cost), Kit.MUTED], 15)
-	info.add_child(Kit.label("Tap a pan on the rail to pick up that topping, then spread or place it on the pizza." + ((" In your hand: " + Data.ING[tool].name.to_lower() + ".") if tool != "" else ""), 15, Kit.CHEESE if tool == "" else Kit.MUTED, true))
+	if card_full or not fp_mode: _info(func(): return ["On the pizza so far: %s" % Kit.cents(pz.cost), Kit.MUTED], 15)
+	if tool != "": info.add_child(Kit.label("In your hand: " + Data.ING[tool].name.to_lower(), 15, Kit.CHEESE, true))
+	else: _detail(Kit.label("Tap a pan on the rail to pick up that topping, then spread or place it on the pizza.", 15, Kit.CHEESE, true))
 	if pz.rec.sauce != "" and not fp_mode:          # in 3D the ladles hang on their rack and you tap the sauce pan to scoop
 		var lh := Kit.hbox(6)
 		lh.add_child(Kit.label("Ladle:", 16, Kit.MUTED))
@@ -2212,7 +2250,7 @@ func _build_side() -> void:
 
 func _side_oven() -> void:
 	info.add_child(Kit.label(oven.tier.n, 20))
-	info.add_child(Kit.label(oven.def.help, 15, Kit.MUTED, true))
+	_detail(Kit.label(oven.def.help, 15, Kit.MUTED, true))
 	if c.fornaio: info.add_child(Kit.label("Your oven tender is loading, turning and pulling for you.", 15, Kit.BASIL, true))
 	if oven.def.feeds:
 		_info(func():

@@ -116,12 +116,14 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
 
 - **The camera** (`FPWorld._camera`, `STATION_LEAN`, `STATION_AT`, `STATION_FOV`): eye height 1.62 m, standing at the
   origin facing -Z. Five stations: front (the hatch or the pass), bench, board, oven and prep. Station buttons turn your
-  head and lean you in. You can also drag on anything that isn't a surface to look around (let go near a station and you
-  settle on it), or turn the phone, which uses the gyroscope. Keep the wide, slightly low chest-cam framing: the hands
-  should be in shot.
-- **The hands** (`hand.right`, `hand.left`): the right hand follows your first finger on a surface and the left your
-  second (two-finger stretching uses both). Replace them with rigged forearms: pressing, stretching, holding the ladle,
-  the peel, the wheel. Drive the pose from which tool is in use (`svc.tool`, `svc.view`).
+  head and lean you in. A thumb stick (`scripts/fp/look_stick.gd`, bottom left) turns the head without touching the
+  work (let go near a station to settle on it, tap to recentre); you can also drag on anything that isn't a surface,
+  or turn the phone (gyroscope). Keep the wide, slightly low chest-cam framing.
+- **The hands** (`hand.right`, `hand.left`): just hands, no forearms (the owner found the arms got in the way of the
+  pizza). The right hand follows your first finger on a surface and the left your second (two-finger stretching uses
+  both). Poses: open, pinch, grip; driven by which tool is in use (`svc.tool`, `svc.view`).
+- **The HUD is deliberately sparse**: the clock is the open / close / lock-up control (top left), the recipe card is
+  short unless you ask for More, and labels in the room show only when they matter. Keep it that way.
 - **The surfaces**: the marble bench, the cutting board, the oven mouth and the prep tablet each show the game's 2D
   control (Bench, OvenView, the prep list) rendered onto a flat quad, with touches projected through. Every mechanic
   already works in 3D this way.

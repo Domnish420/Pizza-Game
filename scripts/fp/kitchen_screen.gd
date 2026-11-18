@@ -59,10 +59,13 @@ func _build() -> void:
 	var col := Kit.vbox(4)
 	col.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(col)
-	# the strip along the top: the time, the day, your money, the phone and what to do next
+	# the strip along the top: the clock (tap it to open, or to lock up at night), where and when, your money, the phone
 	var top := Kit.hbox(10)
 	col.add_child(top)
-	top_l = Kit.label("", 20)
+	act_btn = Kit.button("", func(): job("open", {}), "danger", 20)
+	act_btn.tooltip_text = "Tap the clock to open (or, at night, to lock up)"
+	top.add_child(act_btn)
+	top_l = Kit.label("", 17, Kit.MUTED)
 	top_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_l.clip_text = true
 	top.add_child(top_l)
@@ -70,8 +73,6 @@ func _build() -> void:
 	top.add_child(cash_l)
 	phone_btn = Kit.button("Phone", func(): open_phone("home"), "primary", 20)
 	top.add_child(phone_btn)
-	act_btn = Kit.button("", func(): job("open", {}), "danger", 20)
-	top.add_child(act_btn)
 	var stack := Control.new()
 	stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	col.add_child(stack)
@@ -79,18 +80,25 @@ func _build() -> void:
 	fp.set_anchors_preset(Control.PRESET_FULL_RECT)
 	stack.add_child(fp)
 	world = fp.world
-	# where to look
-	var tabs := Kit.hbox(6)
+	# where to look: the stick in the corner, and one button per station beside it
+	var stk := LookStick.new(world)
+	stk.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	stk.offset_left = 10
+	stk.offset_top = -126
+	stk.offset_right = 126
+	stk.offset_bottom = -10
+	stack.add_child(stk)
+	var tabs := Kit.hbox(5)
 	tabs.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	tabs.offset_top = -58
-	tabs.offset_left = 8
+	tabs.offset_top = -54
+	tabs.offset_left = 136
 	for k in [["front", "Hatch" if Game.calc_tables() == 0 else "Pass"], ["bench", "Counter"], ["oven", "Oven"], ["prep", "Prep"], ["stores", "Stores"]]:
-		var b := Kit.button(k[1], world.goto.bind(k[0]), "tab", 18)
-		b.custom_minimum_size = Vector2(100, 50)
+		var b := Kit.button(k[1], world.goto.bind(k[0]), "tab", 16)
+		b.custom_minimum_size = Vector2(88, 46)
 		tabs.add_child(b)
 		tab_btns[k[0]] = b
-	var cl := Kit.button("Checklist", func(): list_panel.visible = not list_panel.visible, "ghost", 16)
-	cl.custom_minimum_size = Vector2(100, 50)
+	var cl := Kit.button("Checklist", func(): list_panel.visible = not list_panel.visible, "ghost", 15)
+	cl.custom_minimum_size = Vector2(92, 46)
 	tabs.add_child(cl)
 	stack.add_child(tabs)
 	# what is still to do today, in the corner
@@ -157,12 +165,14 @@ func _refresh() -> void:
 	var G := Game
 	var morning: bool = G.s.phase == "morning"
 	var late: bool = morning and Day.now() > Day.open_time()
-	top_l.text = "%s  ·  %s%s  ·  %s  ·  Level %d" % [Story.EMPLOYER if Story.employed() else G.venue().name, Data.hhmm(Day.now()), ("  (opens %s)" % Data.hhmm(Day.open_time())) if morning else "  ·  evening", "%s day %d" % [Data.DAY_SHORT[G.weekday()], G.s.day], G.s.level]
-	top_l.add_theme_color_override("font_color", Kit.TOMATO if late else Kit.INK)
+	top_l.text = "%s  ·  %s  ·  Level %d" % [Story.EMPLOYER if Story.employed() else G.venue().name, "%s day %d" % [Data.DAY_SHORT[G.weekday()], G.s.day], G.s.level]
 	cash_l.text = ("Savings " + Kit.money(G.s.story.savings)) if Story.employed() else Kit.money(G.s.cash)
-	if G.s.hygiene.get("closed_day", -1) == G.s.day and morning: act_btn.text = "Closed today"
-	elif morning: act_btn.text = ("Start service " if Story.employed() else "Open at ") + Data.hhmm(max(Day.now(), Day.open_time()))
-	else: act_btn.text = "Clock off" if Story.employed() else "Lock up & go home"
+	# the clock: the time now, and what tapping it does
+	var now := Data.hhmm(Day.now())
+	if G.s.hygiene.get("closed_day", -1) == G.s.day and morning: act_btn.text = "%s  ·  closed today" % now
+	elif morning and late: act_btn.text = "%s  ·  open now" % now
+	elif morning: act_btn.text = "%s  ·  %s %s" % [now, "service at" if Story.employed() else "open at", Data.hhmm(Day.open_time())]
+	else: act_btn.text = "%s  ·  %s" % [now, "clock off" if Story.employed() else "lock up"]
 	for k in tab_btns:
 		var on: bool = world.cur_view() == k
 		tab_btns[k].add_theme_stylebox_override("normal", Kit.box(Kit.PANEL2 if on else Kit.PANEL, 10, 8))
@@ -170,9 +180,9 @@ func _refresh() -> void:
 	Kit.clear(list_box)
 	var items := Checks.items("open" if morning else "close")
 	list_box.add_child(Kit.label(("Before you open" if morning else "Before you go home") + " (%d/%d)" % [items.filter(func(x): return x.done).size(), items.size()], 16, Kit.CHEESE))
-	for it in items:
-		if it.done: continue
-		list_box.add_child(Kit.label("·  " + it.text, 14, Kit.INK))
+	var left := items.filter(func(x): return not x.done)
+	for it in left.slice(0, 3): list_box.add_child(Kit.label("·  " + it.text, 14, Kit.INK))
+	if left.size() > 3: list_box.add_child(Kit.label("   and %d more (Checklist)" % (left.size() - 3), 13, Kit.MUTED))
 
 ## something in the kitchen was tapped
 func job(name: String, act: Dictionary) -> void:

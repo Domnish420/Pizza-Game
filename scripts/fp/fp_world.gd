@@ -22,9 +22,9 @@ extends Node3D
 const EYE := 1.62
 const LOOK := 0.11                     # degrees of head turn per pixel of drag
 ## each station: where you lean to (from where you stand), what you look at, and how wide the view is there
-const STATION_LEAN := {"front": Vector3(0, 0, 0), "bench": Vector3(0, -0.08, -0.14), "board": Vector3(0.5, -0.14, -0.26), "oven": Vector3(0.4, -0.2, 0.2), "prep": Vector3(-0.72, -0.18, -0.4), "stores": Vector3(0, -0.05, 0.15)}
+const STATION_LEAN := {"front": Vector3(0, 0, 0), "bench": Vector3(0, -0.13, -0.24), "board": Vector3(0.6, -0.17, -0.32), "oven": Vector3(0.4, -0.2, 0.2), "prep": Vector3(-0.72, -0.18, -0.4), "stores": Vector3(0, -0.05, 0.15)}
 const STATION_AT := {"front": Vector3(0, 1.35, -3.0), "bench": Vector3(0, 0.92, -0.62), "board": Vector3(1.16, 0.94, -0.72), "oven": Vector3(1.28, 0.8, 0.2), "prep": Vector3(-1.6, 1.42, -0.42), "stores": Vector3(-0.1, 1.15, 1.3)}
-const STATION_FOV := {"front": 74.0, "bench": 70.0, "board": 64.0, "oven": 64.0, "prep": 60.0, "stores": 76.0}
+const STATION_FOV := {"front": 74.0, "bench": 66.0, "board": 58.0, "oven": 64.0, "prep": 60.0, "stores": 76.0}
 var STATIONS := {}                     # station -> Vector2(yaw, pitch), worked out from the lean and the target
 ## between services the prep station is about the counter (tubs, sink, mixer), not the service tablet on the wall
 const CLOSED_AT := {"prep": Vector3(-1.38, 0.98, -0.5), "oven": Vector3(1.04, 1.05, 0.2)}
@@ -59,6 +59,7 @@ var pitch := -9.0
 var t_yaw := 0.0
 var t_pitch := -9.0
 var gyro := Vector2.ZERO
+var stick := Vector2.ZERO               # the look stick (LookStick): -1..1 each way, held = turning
 var lean := Vector3.ZERO
 var t_lean := Vector3.ZERO
 var t_fov := 74.0
@@ -267,14 +268,17 @@ func _counter() -> void:
 	job_nodes.pass = pass_n
 	_tappable(pass_n, Vector3(0.32, 0.16, 0.24), Vector3(0, 0.06, 0), {"kind": "pass"})
 	job_labels.pass = _small_label("Pass", Vector3(0, 0.2, 0), pass_n)
+	job_labels.pass.no_depth_test = true          # shown only when it is what you need next, so always readable
 	var bin_n := _prop("bin", Vector3(-0.62, 0.92, -0.78), _mk_bin)
 	job_nodes.bin = bin_n
 	_tappable(bin_n, Vector3(0.18, 0.2, 0.18), Vector3(0, 0.08, 0), {"kind": "bin"})
 	job_labels.bin = _small_label("Bin", Vector3(0, 0.22, 0), bin_n)
+	job_labels.bin.no_depth_test = true          # shown only when it is what you need next, so always readable
 	if float(Game.tier("roller").auto) > 0.0:
 		var sh := _prop("sheeter", Vector3(-0.62, 0.92, -0.45), _mk_sheeter)
 		_tappable(sh, Vector3(0.3, 0.3, 0.3), Vector3(0, 0.12, 0), {"kind": "sheeter"})
 		job_labels.sheeter = _small_label("Sheeter", Vector3(0, 0.36, 0), sh)
+		job_labels.sheeter.no_depth_test = true      # shown only when it is what you need next, so always readable
 	if svc == null: return
 	var s := FPSurface.new()
 	s.setup("bench", ctrls.bench, Vector2i(640, 640), Vector2(0.6, 0.6), true, true)
@@ -731,8 +735,8 @@ func _dining_room() -> void:
 		_cyl(0.13, 0.02, Vector3(0.1, 0.78, 0.1), Color("c9c2b0"), dirt)
 		_box(Vector3(0.08, 0.02, 0.05), Vector3(-0.15, 0.79, -0.1), Color("8a7a60"), dirt)
 		_tappable(root, Vector3(1.0, 0.9, 1.0), Vector3(0, 0.45, 0), {"kind": "table", "i": tb.i})
-		_label("Table %d" % (tb.i + 1), Vector3(0, 1.0, 0), 34, Color(1, 1, 1, 0.6), root, true, 0.003)
-		table_nodes.append({"root": root, "plates": plates, "dirt": dirt, "tb": tb})
+		var tl := _label("Table %d" % (tb.i + 1), Vector3(0, 1.0, 0), 30, Color(1, 1, 1, 0.55), root, true, 0.0028)
+		table_nodes.append({"root": root, "plates": plates, "dirt": dirt, "tb": tb, "lbl": tl})
 
 func _mk_dining(r: Node3D) -> void:
 	_box(Vector3(14, 0.1, 13), Vector3(0, -0.05, -7.6), Color("8a6a4a"), r)                     # floor
@@ -963,7 +967,12 @@ func _sync_jobs() -> void:
 	var here: Array = JOBS_AT.get(cur_view(), [])
 	for j in L:
 		if j in ["open", "pass", "bin", "sheeter", "logs"]:
-			L[j].visible = (svc != null or j == "open") and (j != "logs" or cur_view() == "oven")
+			match j:
+				"open": L[j].visible = true
+				"logs": L[j].visible = svc != null and cur_view() == "oven"
+				"pass": L[j].visible = svc != null and (svc.board.size() > 0 or svc.tickets.any(func(tk): return tk.state == "pass"))
+				"bin": L[j].visible = svc != null and cur_view() in ["bench", "board"] and (svc.bench != null or svc.board.size() > 0)
+				"sheeter": L[j].visible = svc != null and cur_view() == "bench" and svc.bench != null
 			continue
 		if j == "oven":
 			L[j].visible = svc == null and cur_view() == "oven" and L[j].text != ""
@@ -981,11 +990,11 @@ func _camera() -> void:
 	cam.far = 80.0
 	cam.current = true
 	head.add_child(cam)
-	# your forearms and hands, low in the frame like a chest camera sees them
+	# your hands (just hands: no forearms in the way of the work), low in the frame like a chest camera sees them
 	for side in [1, -1]:
 		var nm := "right" if side == 1 else "left"
 		var h := _prop("hand." + nm, Vector3.ZERO, _mk_hand, cam)
-		var rest := Vector3(0.21 * side, -0.215, -0.42)          # low in the frame, as a chest camera sees your hands
+		var rest := Vector3(0.23 * side, -0.235, -0.44)          # low in the corners of the frame: just your hands, no arms
 		h.position = rest
 		# the hand's poses: open (dough), a pinch (a topping), a grip (the ladle, the peel)
 		var poses := {}
@@ -1041,6 +1050,11 @@ func _process(dt: float) -> void:
 	if g.length() > 0.02 and Game.s.get("gyro", true):
 		gyro.x += rad_to_deg(g.x) * dt
 		gyro.y = clamp(gyro.y + rad_to_deg(g.y) * dt * (-1.0 if DisplayServer.screen_get_orientation() == DisplayServer.SCREEN_REVERSE_LANDSCAPE else 1.0), -60.0, 60.0)
+	if stick != Vector2.ZERO:
+		# the look stick: the further you push, the faster you turn (eased so small pushes are fine aiming)
+		var sp := stick * stick.length()
+		t_yaw -= sp.x * 120.0 * dt
+		t_pitch = clamp(t_pitch - sp.y * 80.0 * dt, -85.0, 40.0)
 	var k := 1.0 - exp(-dt * 9.0)
 	yaw = lerp_angle(deg_to_rad(yaw), deg_to_rad(t_yaw + gyro.x), k) * 180.0 / PI
 	pitch = lerp(pitch, clamp(t_pitch + gyro.y, -85.0, 40.0), k)
@@ -1321,6 +1335,8 @@ func _sync_tables() -> void:
 		var tb: Dictionary = e.tb
 		e.plates.visible = tb.party != null and tb.party.state in ["eat", "bill"]
 		e.dirt.visible = tb.dirty
+		# a table's name only when it needs you: dirty, or free while people wait at the door to be seated
+		e.lbl.visible = tb.dirty or (svc != null and tb.party == null and svc.door.size() > 0)
 
 func _sync_pans() -> void:
 	var r := Stock.rail()
@@ -1347,8 +1363,10 @@ func _sync_pans() -> void:
 			lb.rotation_degrees.x = -55
 			lb.outline_size = 6
 			_tappable(root, Vector3(pw * 0.95, 0.12, 0.24), Vector3.ZERO, {"kind": "pan", "i": i})
-			pan_nodes.append({"root": root, "fill": fill, "ring": ring, "i": i})
+			pan_nodes.append({"root": root, "fill": fill, "ring": ring, "i": i, "lbl": lb})
+	var at_bench := cur_view() == "bench"
 	for e in pan_nodes:
+		e.lbl.visible = at_bench                        # the pans' names only at the counter, where you pick from them
 		var pan: Dictionary = r[e.i]
 		var frac: float = 0.0 if pan.ing == "" else clamp(pan.q / max(1.0, Stock.pan_cap(pan.ing)), 0.0, 1.0)
 		e.fill.scale.y = max(0.02, frac)
@@ -1615,6 +1633,14 @@ func _move(index: int, pos: Vector2, rel: Vector2) -> void:
 			var k: float = LOOK * 720.0 / max(1.0, get_viewport().get_visible_rect().size.y)
 			t_yaw -= rel.x * k
 			t_pitch = clamp(t_pitch - rel.y * k, -85.0, 40.0)
+
+## the look stick let go: settle on a station if you are looking near one
+func settle_look() -> void:
+	_settle()
+
+## the look stick tapped: look back at the station you are at
+func recentre() -> void:
+	_look_at(cur_view())
 
 ## let go of a free look near a station and you settle on it
 func _settle() -> void:

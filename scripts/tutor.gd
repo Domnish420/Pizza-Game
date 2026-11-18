@@ -277,7 +277,7 @@ func _day1() -> Array:
 		{"say": "Morning! I'm %s, and this is %s. Drag your finger across the screen to look around the kitchen." % [Story.BOSS, Story.EMPLOYER],
 			"setup": func(): mark.yaw = _world().yaw,
 			"done": func(): return abs(angle_difference(deg_to_rad(_world().yaw), deg_to_rad(mark.yaw))) > deg_to_rad(30.0) or _view() != "front"},
-		{"say": "%s has done the prep and set up the counter. Today you do one job: you stretch the bases, and I do the rest. When you are ready, tap the sign above the pass to open." % Story.JUNIOR, "at": "job:open",
+		{"say": "%s has done the prep and set up the counter. Today you do one job: you stretch the bases, and I do the rest. When you are ready, tap the sign above the pass (or the clock, top left) to open." % Story.JUNIOR, "at": "job:open",
 			"done": func(): return _svc() != null},
 		{"say": "Tickets hang on the rail above the counter. Here is your first: tap it to start it. The dough ball goes on the marble.", "at": "ticket",
 			"setup": func(): _svc().training_order("margherita"),
