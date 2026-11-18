@@ -1,7 +1,7 @@
 """Build Crust Empire's 3D models.
 
-    blender -b --factory-startup -P tools/models/build.py -- all
-    blender -b --factory-startup -P tools/models/build.py -- counter oven.wood
+    blender -b --factory-startup --python-exit-code 1 --python tools/models/build.py -- all
+    blender -b --factory-startup --python-exit-code 1 --python tools/models/build.py -- counter oven.wood
 
 Each key is written to assets/models/fp-<key with dots as dashes>.glb, where the game picks it up
 (Art.model("fp.<key>")). See ART_KEYS.md for what each key is and where it stands in the room."""
@@ -35,3 +35,5 @@ for k in keys:
         traceback.print_exc()
         failed.append(k)
 print("BUILD DONE", len(keys) - len(failed), "ok", ("FAILED: " + " ".join(failed)) if failed else "")
+if failed:
+    raise RuntimeError("models failed to build: " + " ".join(failed))       # with --python-exit-code 1, exit 1

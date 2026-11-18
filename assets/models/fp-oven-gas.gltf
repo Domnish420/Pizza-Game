@@ -318,7 +318,7 @@
 			"count":72,
 			"max":[
 				1.540000081062317,
-				0.25,
+				0.23000000417232513,
 				0.2199999988079071
 			],
 			"min":[
@@ -509,9 +509,9 @@
 		{
 			"bufferView":29,
 			"componentType":5126,
-			"count":539,
+			"count":526,
 			"max":[
-				1.0369999408721924,
+				1.0449999570846558,
 				1.5534600019454956,
 				0.7369999885559082
 			],
@@ -525,19 +525,19 @@
 		{
 			"bufferView":30,
 			"componentType":5126,
-			"count":539,
+			"count":526,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":31,
 			"componentType":5126,
-			"count":539,
+			"count":526,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":32,
 			"componentType":5126,
-			"count":539,
+			"count":526,
 			"type":"VEC2"
 		},
 		{
@@ -804,92 +804,92 @@
 		},
 		{
 			"buffer":0,
-			"byteLength":6468,
+			"byteLength":6312,
 			"byteOffset":85680,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":6468,
-			"byteOffset":92148,
+			"byteLength":6312,
+			"byteOffset":91992,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4312,
-			"byteOffset":98616,
+			"byteLength":4208,
+			"byteOffset":98304,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4312,
-			"byteOffset":102928,
+			"byteLength":4208,
+			"byteOffset":102512,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":2472,
-			"byteOffset":107240,
+			"byteOffset":106720,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":984,
-			"byteOffset":109712,
+			"byteOffset":109192,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":984,
-			"byteOffset":110696,
+			"byteOffset":110176,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":656,
-			"byteOffset":111680,
+			"byteOffset":111160,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":656,
-			"byteOffset":112336,
+			"byteOffset":111816,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":480,
-			"byteOffset":112992,
+			"byteOffset":112472,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":600,
-			"byteOffset":113472,
+			"byteOffset":112952,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":600,
-			"byteOffset":114072,
+			"byteOffset":113552,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":400,
-			"byteOffset":114672,
+			"byteOffset":114152,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":400,
-			"byteOffset":115072,
+			"byteOffset":114552,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":240,
-			"byteOffset":115472,
+			"byteOffset":114952,
 			"target":34963
 		}
 	],
@@ -901,7 +901,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":115712,
+			"byteLength":115192,
 			"uri":"fp-oven-gas.bin"
 		}
 	]

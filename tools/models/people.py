@@ -29,6 +29,8 @@ def _leg(side, legs_m, shoe_m):
     thigh.parent = hip
     shin = blobs([("capsule", (x, (KNEE_Y + 0.1) / 2, 0), 0.056, (KNEE_Y - 0.1) / 2, (0, 0, 90))], legs_m, res=0.02, name="shin_" + tag, tris=140)
     shoe = blobs([("ellipsoid", (x, 0.045, 0.035), 0.06, (0.8, 0.62, 1.55))], shoe_m, res=0.015, name="shoe_" + tag, tris=90)
+    sole = min(v.co.y for v in shoe.data.vertices)
+    shoe.data.transform(Matrix.Translation(Vector((0, -sole, 0))))     # the sole exactly on the ground
     lower = join([shin, shoe], "lower_" + tag)
     lower.data.transform(Matrix.Translation(Vector((-x, -KNEE_Y, 0))))
     lower.parent = knee
@@ -36,7 +38,7 @@ def _leg(side, legs_m, shoe_m):
 
 def _hair(look, hm, skin_m):
     h = look["hair"]
-    if h in ("short", "bun", "curly", "long", "cap"):
+    if h in ("short", "bun", "curly", "long"):
         blobs([("ellipsoid", (0, 1.675, -0.012), 0.112, (0.97, 0.82, 1.02))], hm, res=0.012, name="hair", tris=260)
     if h == "bun":
         blobs([("ball", (0, 1.72, -0.11), 0.05)], hm, res=0.01, name="bun", tris=80)
@@ -51,10 +53,12 @@ def _hair(look, hm, skin_m):
     if h == "beard":
         blobs([("ellipsoid", (0, 1.565, 0.05), 0.07, (1.05, 0.75, 0.8)), ("ellipsoid", (0, 1.69, -0.02), 0.1, (0.95, 0.5, 0.95))], hm, res=0.012, name="beard", tris=300)
     if h == "cap":
+        # hair only below the cap at the back and sides, and a cap big enough to cover the crown
+        blobs([("ellipsoid", (0, 1.63, -0.03), 0.1, (0.98, 0.75, 0.95))], hm, res=0.012, name="hair", tris=220)
         cm = mat("cap", look["cap"], rough=0.6)
-        prof = [(math.cos(math.pi / 2 * i / 8) * 0.112, math.sin(math.pi / 2 * i / 8) * 0.09) for i in range(9)] + [(0.0, 0.0)]
-        lathe(prof, (0, 1.68, -0.005), cm, seg=20, name="cap")
-        box((0.15, 0.012, 0.09), (0, 1.69, 0.13), cm, bevel=0.004, rot=(-8, 0, 0), name="brim")
+        prof = [(math.cos(math.pi / 2 * i / 8) * 0.12, math.sin(math.pi / 2 * i / 8) * 0.115) for i in range(9)] + [(0.0, 0.0)]
+        lathe(prof, (0, 1.66, -0.005), cm, seg=20, name="cap")
+        box((0.15, 0.012, 0.09), (0, 1.67, 0.14), cm, bevel=0.004, rot=(-8, 0, 0), name="brim")
 
 
 def _person(look, rider=False):
@@ -88,7 +92,7 @@ def _person(look, rider=False):
     box((0.03, 0.006, 0.008), (0, 1.585, 0.097), mat("mouth", "#8a4a3a", rough=0.6), name="mouth")
     if rider:
         helmet = mat("helmet", "#20262a", rough=0.25, metal=0.2)
-        prof = [(math.cos(math.pi / 2 * i / 10) * 0.135, math.sin(math.pi / 2 * i / 10) * 0.15) for i in range(11)] + [(0.0, 0.0)]
+        prof = [(math.cos(math.pi / 2 * i / 10) * 0.14, math.sin(math.pi / 2 * i / 10) * 0.18) for i in range(11)] + [(0.0, 0.0)]
         lathe(prof, (0, 1.6, -0.01), helmet, seg=22, name="helmet")
         box((0.2, 0.012, 0.03), (0, 1.6, 0.1), helmet, name="helmet_rim")
         # the insulated bag on the back

@@ -66,7 +66,7 @@ def side():
     tube([(0.84, 1.3, -1.075), (1.64, 1.3, -1.075)], 0.008, chrome(), name="ladle_rail")
     for x in (0.86, 1.6):
         box((0.02, 0.04, 0.04), (x, 1.3, -1.095), chrome(), name="rail_bracket")
-    for i in range(8):
+    for i in range(6):                       # six ladle sizes (data/equipment.json)
         x = 0.9 + i * 0.11
         tube([(x, 1.3, -1.075), (x, 1.32, -1.06), (x, 1.31, -1.045), (x, 1.295, -1.05)], 0.003, chrome(), caps=False, name="hook")
     # a peel hanging on the right wall
@@ -148,7 +148,7 @@ def _metal_stand():
     box((0.52, 0.02, 1.04), (1.33, 0.16, 0.28), s, name="shelf")
     box((0.58, 0.04, 1.1), (1.33, 0.58, 0.28), s, bevel=0.006, name="stand_top")
     for i in range(3):
-        box((0.42, 0.02, 0.32), (1.33, 0.18 + i * 0.03, 0.0 + i * 0.03), mat("tray", "#9aa3a8", rough=0.4, metal=0.6), name="tray")
+        box((0.42, 0.02, 0.32), (1.33, 0.18 + i * 0.02, 0.0 + i * 0.03), mat("tray", "#9aa3a8", rough=0.4, metal=0.6), name="tray")
 
 
 def _controls(face_m, knobs, display=True):
@@ -179,7 +179,7 @@ def deck_oven(kind):
     # a loading ledge under the mouth
     box((0.13, 0.025, 0.86), (0.99, MY0 - 0.06, 0.2), trim, bevel=0.005, name="ledge")
     _controls(black() if kind == "electric" else steel(), 3 if kind == "electric" else 2, display=kind == "electric")
-    text("FORNO", (1.035, 1.53, 0.2), chrome(), size=0.06, depth=0.004, rot=(0, -90, 0), name="brand")
+    text("FORNO", (1.043, 1.53, 0.2), chrome(), size=0.06, depth=0.004, rot=(0, -90, 0), name="brand")
     # the vents on top, and the gas oven's flue
     for i in range(5):
         box((0.3, 0.01, 0.02), (1.33, 1.605, 0.0 + i * 0.1), black(), name="vent")
@@ -207,7 +207,7 @@ def dome_oven(kind):
             a = math.pi * i / 12
             box((0.06, 0.07, 0.1), (1.0, MY1 + math.sin(a) * 0.4, 0.2 + math.cos(a) * 0.4), arch_m, bevel=0.008, rot=(-math.degrees(a) + 90, 0, 0), name="voussoir")
         prof = [(math.cos(math.pi / 2 * i / 10), math.sin(math.pi / 2 * i / 10)) for i in range(11)] + [(0.0, 0.0)]
-        lathe([(r, y) for (r, y) in prof], (1.35, 0.78, 0.165), dome_m, seg=28, scale=(0.27, 0.92, 0.43), name="dome")
+        lathe([(r, y) for (r, y) in prof], (1.35, 0.6, 0.165), dome_m, seg=28, scale=(0.27, 1.1, 0.43), name="dome")   # sits on the base
         box((0.14, 0.03, 0.9), (0.99, MY0 - 0.015, 0.2), arch_m, bevel=0.006, name="landing")
         _mouth_frame(mat("iron", "#2a2522", rough=0.5, metal=0.6), x=1.0, w=0.035, dark_x=1.07)
         _flue(1.25, 0.165, 1.62, 0.09)
@@ -222,7 +222,7 @@ def dome_oven(kind):
         _mouth_frame(black(), x=1.025, w=0.04, dark_x=1.065)
         _controls(black(), 2)
         _flue(1.33, 0.28, 1.62, 0.08)
-        text("ROTARY", (1.028, 1.52, 0.2), black(), size=0.05, depth=0.004, rot=(0, -90, 0), name="brand")
+        text("ROTARY", (1.028, 1.52, 0.2), black(), size=0.05, depth=0.004, rot=(0, -90, 0), name="brand")  # on the facade (x 1.03)
 
 
 @model("logs")

@@ -192,29 +192,29 @@
 		{
 			"bufferView":8,
 			"componentType":5126,
-			"count":352,
+			"count":335,
 			"max":[
-				0.13258548080921173,
-				0.23032556474208832,
-				0.08807388693094254
+				0.13250617682933807,
+				0.1957329511642456,
+				0.08823832124471664
 			],
 			"min":[
-				-0.13259167969226837,
-				0.16963845491409302,
-				-0.08806430548429489
+				-0.13252359628677368,
+				0.13481473922729492,
+				-0.08823025971651077
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":9,
 			"componentType":5126,
-			"count":352,
+			"count":335,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":10,
 			"componentType":5126,
-			"count":352,
+			"count":335,
 			"type":"VEC2"
 		},
 		{
@@ -229,12 +229,12 @@
 			"count":24,
 			"max":[
 				0.15000000596046448,
-				0.24199999868869781,
+				0.19699999690055847,
 				0.0949999988079071
 			],
 			"min":[
 				-0.15000000596046448,
-				0.23799999058246613,
+				0.19299998879432678,
 				-0.0949999988079071
 			],
 			"type":"VEC3"
@@ -309,56 +309,56 @@
 		},
 		{
 			"buffer":0,
-			"byteLength":4224,
+			"byteLength":4020,
 			"byteOffset":13680,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":4224,
-			"byteOffset":17904,
+			"byteLength":4020,
+			"byteOffset":17700,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":2816,
-			"byteOffset":22128,
+			"byteLength":2680,
+			"byteOffset":21720,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":3000,
-			"byteOffset":24944,
+			"byteOffset":24400,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":288,
-			"byteOffset":27944,
+			"byteOffset":27400,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":288,
-			"byteOffset":28232,
+			"byteOffset":27688,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":192,
-			"byteOffset":28520,
+			"byteOffset":27976,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":72,
-			"byteOffset":28712,
+			"byteOffset":28168,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":28784,
+			"byteLength":28240,
 			"uri":"fp-dough_trays.bin"
 		}
 	]

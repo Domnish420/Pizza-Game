@@ -209,7 +209,7 @@ def street():
     cyl(0.055, 3.4, (lx, G + 1.9, lz), post, seg=12, r2=0.04, name="post")
     box((0.3, 0.4, 0.3), (lx, G + 3.75, lz), post, bevel=0.02, name="lantern_frame")
     box((0.24, 0.32, 0.24), (lx, G + 3.75, lz), mat("lantern", "#ffe6b0", rough=0.3, emit="#ffd58a", emit_k=1.5), name="lantern")
-    cyl(0.2, 0.08, (lx, G + 4.0, lz), post, r2=0.06, seg=12, name="lantern_cap")
+    cyl(0.2, 0.08, (lx, G + 3.98, lz), post, r2=0.06, seg=12, name="lantern_cap")
     bx, bz = -3.6, -4.9
     seat = oak()
     for k in range(3):

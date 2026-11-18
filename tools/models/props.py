@@ -86,8 +86,8 @@ def drystore():
         box((0.06, 0.03, 0.002), (x, 0.67, -0.11), mat("tin_label_band", "#f0d36a", rough=0.5), name="tin_band")
     oil = mat("oil_can", "#3f6b35", rough=0.4, metal=0.4)
     for i in range(2):
-        box((0.11, 0.24, 0.11), (-0.25 + i * 0.13, 0.73, 0.1), oil, bevel=0.008, name="oil_can")
-        cyl(0.012, 0.03, (-0.25 + i * 0.13, 0.865, 0.1), black(), seg=8, name="oil_cap")
+        box((0.11, 0.24, 0.11), (-0.25 + i * 0.13, 0.726, 0.1), oil, bevel=0.008, name="oil_can")
+        cyl(0.012, 0.03, (-0.25 + i * 0.13, 0.858, 0.1), black(), seg=8, name="oil_cap")
     # jars, packets and boxes on the third, boxes of dry goods on the top
     jar_glass = mat("jar_glass", "#e6dcc4", rough=0.15, metal=0.05)
     cols = ["#6b8f3a", "#d9b23f", "#8a5c36", "#b8352b"]
@@ -183,7 +183,7 @@ def mixer():
 def bowl():
     """a stainless mixing bowl with a dough in it"""
     lathe([(0.0, 0.0), (0.09, 0.0), (0.15, 0.08), (0.16, 0.12), (0.165, 0.125), (0.155, 0.125), (0.145, 0.085), (0.085, 0.008), (0.0, 0.008)], (0, 0, 0), steel(), seg=28, name="bowl")
-    blobs([("ellipsoid", (0, 0.05, 0), 0.12, (1.0, 0.5, 1.0)), ("ball", (0.03, 0.07, 0.02), 0.06)], mat("dough", "#efdcb6", rough=0.8), res=0.02, name="dough", tris=300)
+    blobs([("ellipsoid", (0, 0.055, 0), 0.1, (1.0, 0.5, 1.0)), ("ball", (0.02, 0.07, 0.01), 0.05)], mat("dough", "#efdcb6", rough=0.8), res=0.02, name="dough", tris=300)
     box((0.1, 0.004, 0.07), (0.12, 0.13, 0.05), mat("scraper", "#e3e3e0", rough=0.5), rot=(0, 30, -20), bevel=0.003, name="scraper")
 
 
@@ -199,9 +199,9 @@ def dough_trays():
     els = []
     for r in range(2):
         for c in range(3):
-            els.append(("ellipsoid", (-0.09 + c * 0.09, 0.2, -0.045 + r * 0.09), 0.042, (1.0, 0.7, 1.0)))
+            els.append(("ellipsoid", (-0.09 + c * 0.09, 0.165, -0.045 + r * 0.09), 0.042, (1.0, 0.7, 1.0)))
     blobs(els, dough, res=0.012, name="balls", tris=500)
-    box((0.3, 0.004, 0.19), (0, 0.24, 0), glass(), name="lid")
+    box((0.3, 0.004, 0.19), (0, 0.195, 0), glass(), name="lid")
 
 
 @model("clipboard")
@@ -242,12 +242,15 @@ def crates():
         box((sx, 0.14, sz), (cx, 0.39, cz), crate, name="crate_wall")
     tom = mat("tomato", "#d6402b", rough=0.35)
     rnd = random.Random(5)
-    els = []
-    for i in range(14):
-        els.append(("ball", (0.03 + rnd.uniform(-0.17, 0.17), 0.37 + rnd.uniform(0, 0.06), 0.01 + rnd.uniform(-0.13, 0.13)), 0.038))
-    for (_, p, r) in els:
-        sphere(r, p, tom, seg=10, rings=7, name="tomato")
-    blobs([("ellipsoid", (-0.2, 0.3, 0.12), 0.16, (0.55, 1.1, 0.5))], k, res=0.025, name="flour_sack", tris=200)
+    r = 0.038
+    for ix in range(5):
+        for iz in range(4):
+            x = 0.03 + (ix - 2) * 0.078 + rnd.uniform(-0.006, 0.006)
+            z = 0.01 + (iz - 1.5) * 0.078 + rnd.uniform(-0.006, 0.006)
+            sphere(r, (x, 0.32 + r, z), tom, seg=10, rings=7, name="tomato")          # on the crate floor
+    for (ix, iz) in [(0.5, 0.5), (1.5, 1.5), (2.5, 0.5), (1.5, -0.5), (3.0, 1.2)]:
+        sphere(r, (0.03 + (ix - 2) * 0.078, 0.32 + r + 0.055, 0.01 + (iz - 1.0) * 0.078), tom, seg=10, rings=7, name="tomato")
+    blobs([("ellipsoid", (-0.34, 0.176, 0.08), 0.16, (0.55, 1.1, 0.5))], k, res=0.025, name="flour_sack", tris=200)
 
 
 @model("pan")
@@ -306,10 +309,10 @@ def table():
     top = walnut()
     iron = mat("cast_iron", "#26282a", rough=0.45, metal=0.5)
     box((0.8, 0.04, 0.8), (0, 0.745, 0), top, bevel=0.008, name="top")
-    cyl(0.04, 0.68, (0, 0.38, 0), iron, seg=12, name="column")
+    cyl(0.04, 0.69, (0, 0.375, 0), iron, seg=12, name="column")
     for a in range(4):
         ang = math.radians(45 + a * 90)
-        box((0.36, 0.03, 0.05), (math.cos(ang) * 0.16, 0.02, math.sin(ang) * 0.16), iron, rot=(0, -math.degrees(ang), 0), bevel=0.008, name="foot")
+        box((0.36, 0.03, 0.05), (math.cos(ang) * 0.16, 0.015, math.sin(ang) * 0.16), iron, rot=(0, -math.degrees(ang), 0), bevel=0.008, name="foot")
     cyl(0.06, 0.03, (0, 0.71, 0), iron, seg=12, name="collar")
     # the caddy at the far side: salt, pepper, oil, a little vase
     for k, (c, x) in enumerate([("#f2f2ef", -0.12), ("#2a2a2a", -0.07)]):
@@ -344,6 +347,6 @@ def mouse():
     blobs([("ellipsoid", (0, 0.03, 0), 0.04, (1.4, 0.75, 0.85)), ("ellipsoid", (0.045, 0.028, 0), 0.025, (1.3, 0.85, 0.85))], fur, res=0.006, name="body", tris=300)
     for z in (-0.014, 0.014):
         sphere(0.012, (0.04, 0.05, z), pink, seg=10, rings=6, scale=(0.4, 1.0, 1.0), name="ear")
-        sphere(0.004, (0.068, 0.036, z * 0.6), black(), seg=8, rings=5, name="eye")
+        sphere(0.004, (0.064, 0.038, z * 0.93), black(), seg=8, rings=5, name="eye")
     sphere(0.005, (0.082, 0.026, 0), pink, seg=8, rings=5, name="nose")
     tube([(-0.05, 0.025, 0), (-0.08, 0.012, 0.01), (-0.11, 0.008, -0.01), (-0.14, 0.012, 0.01)], 0.003, pink, name="tail")

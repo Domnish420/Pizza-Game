@@ -6,11 +6,39 @@ paint them with textures made in numpy (tiles, marble, wood, brushed steel, mosa
 one to `assets/models/` where the game loads it by key (`Art.model("fp.<key>")`, see `ART_KEYS.md`).
 
 ```
-blender -b --factory-startup -P tools/models/build.py -- all
-blender -b --factory-startup -P tools/models/build.py -- counter oven.wood customer.3
+blender -b --factory-startup --python-exit-code 1 --python tools/models/build.py -- all
+blender -b --factory-startup --python-exit-code 1 --python tools/models/build.py -- counter oven.wood customer.3
 ```
 
-Then open the project in Godot (or run `godot --headless --path . --import`) so it imports the new files.
+`--python-exit-code 1` has to come before `--python`: Blender reads its arguments in order and runs the script as
+soon as it reaches `--python`, so the flag placed after it is ignored and a failed build would still exit 0.
+
+## Checking a model before calling it done
+
+Every change is checked with a 4-view diagnostic contact sheet (front, side, top and a three-quarter perspective),
+rendered with Workbench under a virtual display:
+
+```
+xvfb-run -a blender -b --factory-startup --python-exit-code 1 --python tools/models/preview.py -- counter oven.wood
+xvfb-run -a blender -b --factory-startup --python-exit-code 1 --python tools/models/preview.py -- all
+```
+
+Each sheet goes to `/tmp/previews/<key>.png` and the last one to `/tmp/preview.png`. Look at it: back faces are
+culled as they are in the game, so a face pointing the wrong way shows as a hole. The script also checks every model
+and fails (exit 1) on:
+
+- **FLOAT**: a group of parts touching nothing that does not reach the ground. Parts that hang on another model's
+  wall (the ticket rail, the ladle rail, the prep tablet and shelf, the clipboard, the sign...) are listed as
+  MOUNTED and allowed in their own sheet only.
+- **FLIP**: a closed shell with its normals pointing inwards.
+
+`scene.van` and `scene.kitchen` put every model where the game puts it (props at their positions, pans stretched
+to the rail, customers at the hatch or seated at tables) and check the whole room, so mounted parts must meet their
+wall there. `all` runs every model and both scenes. Rooms and scenes are drawn as sections (the nearest wall and the
+ceiling cut away) with the three-quarter view from inside.
+
+Then open the project in Godot (or run `godot --headless --path . --import`) so it imports the new files, and look
+at them in the game.
 
 | File | What it builds |
 | --- | --- |
@@ -20,6 +48,7 @@ Then open the project in Godot (or run `godot --headless --path . --import`) so 
 | `fixtures.py` | The counters, the pass, bin and sheeter, the four ovens, the prep station, the logs |
 | `props.py` | The back of house, pans, ladles, tickets, the table, the mouse |
 | `people.py` | Six customers, the delivery rider, your hands |
+| `preview.py` | The diagnostic contact sheets and checks (see below) |
 
 Everything is modelled directly in the game's own space (metres, Y up, the player at the origin facing -Z) and
 exported without axis conversion, so a shape placed at (1.04, 1.1, 0.2) here is at (1.04, 1.1, 0.2) in the game.
