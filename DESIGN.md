@@ -1,4 +1,4 @@
-# Crust Empire: brief for the art and polish pass
+# Crust Empire: design notes
 
 ## What this is
 
@@ -7,14 +7,13 @@ Compatibility renderer). The player makes every pizza by hand, buys every ingred
 of suppliers, and grows a one-person pop-up van into a flagship trattoria with a full front- and back-of-house team.
 
 **The art direction is 3D and first person.** Service is played from a chest-mounted GoPro-style camera: you are
-standing at your station in the van or the kitchen, your forearms and hands at the bottom of the frame, and everything
-you work with is a 3D object in the room that you touch where it is. Think a VR game played on a phone. The 3D world
-is built and playable with placeholder shapes (`scripts/fp/`); every prop is swappable for a model by key.
+standing at your station in the van or the kitchen, your hands at the bottom of the frame, and everything you work
+with is a 3D object in the room that you touch where it is. Think a VR game played on a phone.
 
-All the game systems are built and playable. Everything you see is placeholder shapes and plain UI.
-Your job is to make it look, feel and sound like a finished game without changing how it plays.
-
-Read `README.md` for how a day works and a map of the code, and `ART_KEYS.md` for every image the game asks for.
+This is the shared picture of the game for the two of us building it: the owner (the vision, the art, play-testing)
+and Claude (the code, the generated models, the tests). `README.md` says how a day works and maps the code,
+`ART_KEYS.md` lists every image and model the game asks for, and `ROADMAP.md` is what is built and what is next.
+Each part below says how it works now and what would make it better.
 
 ## The owner's vision, in their words
 
@@ -59,7 +58,7 @@ Read `README.md` for how a day works and a map of the code, and `ART_KEYS.md` fo
 
 The owner supplied reference photos of the real kit: white 2 L and 4 L deli tubs, and a stainless pizza prep counter
 with a granite/marble top, drawers and doors below, and a refrigerated rail of about ten gastronorm pans under a glass
-sneeze guard. Ask the owner for the photos; the counter, tubs and rail should look like them.
+sneeze guard. The photos are with the owner; the counter, tubs and rail should look like them.
 
 ## The art style (decided with the owner)
 
@@ -107,9 +106,9 @@ Art goes in through `Art.tex(key)`: drop a PNG at `assets/<key with dots as dash
 placeholder. Start there before touching drawing code. If you change a JSON shape, update `scripts/data.gd` too.
 The save file is `user://crust_empire_v8.json`; changing what is saved means bumping that name.
 
-## Work, in priority order
+## The parts of the game, and what is next for each
 
-### 0. The 3D first-person world (do this first: everything else lives in it)
+### 0. The 3D first-person world (everything else lives in it)
 
 Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on screen behind a light HUD, and
 `FPSurface` turns a 2D station control into a working surface in the room.
@@ -263,13 +262,13 @@ moments that matter: the first morning, each shift review, the promotion, and ha
 **The first week** (`Story.PLAN`). Day 1 the player only stretches the bases and Marco does the rest; day 2 they
 stretch and top; day 3 Marco stretches and they top and work the oven; from day 4 they make whole pizzas beside him,
 busier every day. As senior the first two shifts are quieter and day 10 is a normal service. Marco's parts happen in
-`ServiceScreen` (`helps`, `_marco_stretches`, `_marco_tops`, `_marco_finishes`): for the art pass, Marco could be seen
+`ServiceScreen` (`helps`, `_marco_stretches`, `_marco_tops`, `_marco_finishes`): next, Marco could be seen
 doing them (taking the base from the bench, topping it at his station, cutting at the pass).
 
 **Guides and the training day** (`scripts/tutor.gd`). Marco guides the first shift (a real one) and briefs days 2 to
 4; before the first senior shift he gives a training day on the back of house. Right now he is a text box at the bottom of the screen with his name, a
 "Skip training" button, and a yellow cone and ring (`FPWorld.set_highlight`) floating over the thing to touch. A HUD
-button can be lit with a yellow border instead. Ideas for the art pass, keeping the same steps and checks:
+button can be lit with a yellow border instead. Ideas, keeping the same steps and checks:
 - Marco as a person standing in the kitchen who points, or his hands demonstrating (pressing the dough, the ladle
   spiral), with his lines voiced or as speech bubbles.
 - A nicer marker: a glow on the object itself, or a hand icon tapping it.

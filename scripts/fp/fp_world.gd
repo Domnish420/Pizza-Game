@@ -191,7 +191,7 @@ func _tappable(parent: Node3D, size: Vector3, offset: Vector3, act: Dictionary) 
 	parent.add_child(sb)
 	return sb
 
-## a prop from the art pass if there is one, else the placeholder built by `make`
+## the generated (or hand-made) model if there is one, else the placeholder built by `make`
 func _prop(key: String, pos: Vector3, make: Callable, parent: Node = null) -> Node3D:
 	var root := Node3D.new()
 	root.position = pos
@@ -1460,7 +1460,7 @@ func _sync_tickets() -> void:
 		e.bar.position.x = -0.09 * (1.0 - frac)
 		e.bar.material_override = _mat(Kit.BASIL if frac > 0.5 else (Kit.CHEESE if frac > 0.25 else Kit.TOMATO))
 
-func _sync_misc(dt: float) -> void:
+func _sync_misc(_dt: float) -> void:
 	crates.visible = Game.s.dock.size() > 0
 	if not svc.mouse.is_empty():
 		if mouse_node == null:

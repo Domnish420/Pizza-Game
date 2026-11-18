@@ -13,7 +13,7 @@ def model(*keys, **kw):
     return deco
 
 
-# --- the palette: warm, saturated, taken from the ingredients (see REPLIT_BRIEF.md, "The art style") ---
+# --- the palette: warm, saturated, taken from the ingredients (see DESIGN.md, "The art style") ---
 TOMATO = "#e0533a"
 BASIL = "#4caf50"
 CHEESE = "#f4c64f"

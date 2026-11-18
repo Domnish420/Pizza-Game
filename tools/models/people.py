@@ -1,6 +1,6 @@
 """People: six customers, the delivery-app rider, and your own forearms and hands.
 
-The style is a soft clay toy (see the reference in REPLIT_BRIEF.md, "The people"): a big wide head, about a third of
+The style is a soft clay toy (see the reference in DESIGN.md, "The people"): a big wide head, about a third of
 the figure, with a round bulb of a nose, ears that stick out, small glossy bead eyes (or happy closed ones), thick
 brows, rosy cheeks and a wide open smile with teeth; sculpted hair in chunky clumps and curls; a soft body that
 differs per person (a kid, a plump granny, a big-bellied papa, a tall thin businessman); clothes with their details

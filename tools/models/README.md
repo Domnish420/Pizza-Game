@@ -52,7 +52,7 @@ at them in the game.
 | `people.py` | Six customers, the delivery rider, your hands |
 | `preview.py` | The diagnostic contact sheets and checks (see below) |
 
-The look is the art style in `REPLIT_BRIEF.md`. The toolkit enforces most of it: boxes get rounded edges unless
+The look is the art style in `DESIGN.md`. The toolkit enforces most of it: boxes get rounded edges unless
 a model turns `ROUND` off, materials are capped at a painted-metal look with no bump maps, the palette and shared
 materials are in `common.py`, and every model gets its shadows baked in (below).
 

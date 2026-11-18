@@ -3,8 +3,9 @@
 A hands-on pizza-making and restaurant-management game for phones, played in landscape.
 You start alone in a pop-up pizza van and grow it into a flagship trattoria.
 
-Every system is built and playable. All artwork is placeholder shapes: see `ART_KEYS.md`.
-`REPLIT_BRIEF.md` is the handoff for the art and polish pass.
+Every system is built and playable, in a 3D first-person kitchen with generated models (`tools/models/`).
+`DESIGN.md` has the owner's vision, the art style and how the code is split; `ART_KEYS.md` lists every image and
+model the game asks for; `ROADMAP.md` is what is built and what is next.
 
 ## Run it
 

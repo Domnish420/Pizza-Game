@@ -24,7 +24,7 @@ Every key below has a first-pass model, generated in Blender by the scripts in `
 `assets/models/tex/`. To replace one, drop `assets/models/fp-<key>.glb` next to it: a `.glb` is loaded before the
 `.gltf`, so yours wins with no code change. Delete the generated `.gltf` and `.bin` once you are happy with yours.
 
-Follow the art style in `REPLIT_BRIEF.md` (chunky, rounded, warm colours, painted-in shadows). Shading baked into
+Follow the art style in `DESIGN.md` (chunky, rounded, warm colours, painted-in shadows). Shading baked into
 vertex colours (`COLOR_0`) is multiplied into the material colour by the game, so bake ambient occlusion there
 rather than into textures.
 

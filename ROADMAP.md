@@ -1,7 +1,7 @@
 # Crust Empire roadmap
 
-What is built, what is next, and the order we are doing it in. The owner's priorities come first; the code side is
-built in this repo and the look, sound and feel are for the Replit art pass (see `REPLIT_BRIEF.md`).
+What is built, what is next, and the order we are doing it in. The owner's priorities come first. Everything is built
+in this repo; the vision and the art style are in `DESIGN.md`.
 
 ## Story mode (the tutorial and career)
 
@@ -79,13 +79,13 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [ ] Weather, local events, holidays, competitors
 - [ ] VAT and tax, loans, rent reviews, a weekly profit and loss
 
-## 5. Look, sound and feel (Replit)
+## 5. Look, sound and feel
 
 - [x] 3D first-person service world (GoPro angle): room, stations, look and gyro, touch on 3D objects and surfaces
 - [x] First-pass models for every `fp.*` key, generated in Blender (`tools/models/`): rooms, street, dining room,
       counters, ovens, back of house, props, customers that sit at tables, hands
 - [x] The art style: chunky, toy-like, warm ingredient colours, painted-in shadows, cartoon customers
-      (REPLIT_BRIEF.md, "The art style"); a Retro (PS2) look as an option on the phone
+      (DESIGN.md, "The art style"); a Retro (PS2) look as an option on the phone
 - [x] The pizza in 3D on the bench and the board, built live from its data: dough ball to stretched base with a
       puffy rim, glossy sauce, cheese shreds that melt and blister, toppings, browning with leopard spots, cuts, steam
 - [x] The pizza in 3D in the oven: hollow ovens with a visible deck and their heat source, the deck map laid on

@@ -20,7 +20,7 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 OUT = os.path.join(ROOT, "assets", "models")
 TEX = os.path.join(HERE, "tex")
 
-# The look (see REPLIT_BRIEF.md, "The art style"): chunky, rounded, toy-like props in warm ingredient colours,
+# The look (see DESIGN.md, "The art style"): chunky, rounded, toy-like props in warm ingredient colours,
 # painted-in shadows (ambient occlusion baked into vertex colours), soft materials and no bump maps.
 ROUND = [True]          # boxes get rounded edges unless a model turns it off (the far-away street does)
 

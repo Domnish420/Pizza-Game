@@ -6,7 +6,7 @@ extends MeshInstance3D
 ## works unchanged. Touches are projected from the camera onto the quad and fed into the control as if it were the
 ## screen: a finger on the dough in 3D is a finger on the dough in the Bench control.
 ##
-## The 3D art pass can replace the quad's look (a real marble slab, a modelled oven mouth) as long as the surface
+## A model can replace the quad's look (a real marble slab, a modelled oven mouth) as long as the surface
 ## keeps mapping touches to the same place: see `to_px()`.
 
 var station := ""           # which station this belongs to (front, bench, board, oven, prep)
