@@ -15,6 +15,13 @@ model the game asks for; `ROADMAP.md` is what is built and what is next.
 
 The project is 1280x720, landscape, Compatibility renderer, so it exports to Android, iOS and the web.
 
+## Test it
+
+Bots play the real game and check that it behaves: `tests/run.sh` runs them all (about 16 minutes without a GPU),
+`tests/run.sh wood_oven look_stick` runs just those. Each writes its log and screenshots to `tests/out/<name>/`. See
+`tests/README.md` for what each one covers and how to write one. `gdlint scripts/ tests/` lints the GDScript (`pip
+install gdtoolkit`; the rules are in `gdlintrc`).
+
 ## The title screen
 
 The game opens on the owner's painting of the van (`assets/ui/title.jpg`), brought to life in code

@@ -51,18 +51,24 @@ func render() -> void:
 	name_l.clip_text = true
 	top.add_child(name_l)
 	top.add_child(Kit.chip("%s · day %d" % [Data.DAY_SHORT[G.weekday()], G.s.day], Kit.PANEL, Kit.INK, 17))
+	# the clock is the day's one control (as in the kitchen): open up, or lock up at night
+	var now := Data.hhmm(Day.now())
 	var late: bool = G.s.phase == "morning" and Day.now() > Day.open_time()
-	top.add_child(Kit.chip(Data.hhmm(Day.now()) + (("  ·  opens " + Data.hhmm(Day.open_time())) if G.s.phase == "morning" else "  ·  evening"), Kit.TOMATO if late else Kit.PANEL, Color.WHITE if late else Kit.CHEESE, 17))
+	var clock: Button
+	if G.s.phase == "evening":
+		clock = Kit.button("%s  ·  %s" % [now, "clock off" if Story.employed() else "lock up"], _sleep, "danger", 17)
+	elif G.s.hygiene.get("closed_day", -1) == G.s.day:
+		clock = Kit.button("%s  ·  closed today" % now, _closed_day, "danger", 17)
+	elif late:
+		clock = Kit.button("%s  ·  open now" % now, _open, "danger", 17)
+	else:
+		clock = Kit.button("%s  ·  %s %s" % [now, "service at" if Story.employed() else "open at", Data.hhmm(Day.open_time())], _open, "danger", 17)
+	clock.tooltip_text = "Tap the clock to open (or, at night, to lock up)"
+	top.add_child(clock)
 	top.add_child(Kit.chip("%.1f / 5" % G.s.rep, Kit.PANEL, Kit.INK, 17))
 	top.add_child(Kit.chip("Level %d  (%d / %d)" % [G.s.level, G.s.xp, G.xp_need(G.s.level)], Kit.PANEL, Kit.INK, 17))
 	if Story.employed(): top.add_child(Kit.label("Savings " + Kit.money(G.s.story.savings), 24, Kit.CHEESE))
 	else: top.add_child(Kit.label(Kit.money(G.s.cash), 28, Kit.TOMATO if G.s.cash < 0 else Kit.CHEESE))
-	if G.s.phase == "evening":
-		top.add_child(Kit.button("Clock off" if Story.employed() else "Lock up & sleep", _sleep, "primary", 22))
-	elif G.s.hygiene.get("closed_day", -1) == G.s.day:
-		top.add_child(Kit.button("Closed today", _closed_day, "ghost", 22))
-	else:
-		top.add_child(Kit.button(("Start service " if Story.employed() else "Open at ") + Data.hhmm(max(Day.now(), Day.open_time())), _open, "danger", 22))
 	var allowed: Array = {"pizzaiolo": ["home", "jobs", "menu"], "senior": ["home", "jobs", "suppliers", "kit", "stores", "dough", "menu"]}.get(Story.role(), [])
 	for t in TABS:
 		if allowed.size() > 0 and not allowed.has(t[0]): continue
