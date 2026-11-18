@@ -819,10 +819,22 @@ func _camera() -> void:
 	head.add_child(cam)
 	# your forearms and hands, low in the frame like a chest camera sees them
 	for side in [1, -1]:
-		var h := _prop("hand." + ("right" if side == 1 else "left"), Vector3.ZERO, _mk_hand, cam)
-		var rest := Vector3(0.22 * side, -0.27, -0.46)
+		var nm := "right" if side == 1 else "left"
+		var h := _prop("hand." + nm, Vector3.ZERO, _mk_hand, cam)
+		var rest := Vector3(0.21 * side, -0.215, -0.42)          # low in the frame, as a chest camera sees your hands
 		h.position = rest
-		hands.append({"node": h, "rest": rest, "target": null})
+		# the hand's poses: open (dough), a pinch (a topping), a grip (the ladle, the peel)
+		var poses := {}
+		if Art.has_model("fp.hand." + nm):
+			poses.open = h.get_child(0)
+			for pose in ["pinch", "grip"]:
+				var m := Art.model("fp.hand.%s.%s" % [nm, pose])
+				if m == null: continue
+				m.visible = false
+				h.add_child(m)
+				_shade(m)
+				poses[pose] = m
+		hands.append({"node": h, "rest": rest, "target": null, "poses": poses, "pose": "open"})
 	# what you are holding: a handful of the topping, or the ladle
 	held = MeshInstance3D.new()
 	var sm := SphereMesh.new()
@@ -905,12 +917,21 @@ func _sync_people(dt: float) -> void:
 		var e: Dictionary = people[p.id]
 		var target := _to3d(p.pos)
 		if seated: target = _to3d(svc.tables[p.table].pos)
-		e.root.position = e.root.position.lerp(target, 1.0 - exp(-dt * 8.0))
+		var was: Vector3 = e.root.position
+		e.root.position = was.lerp(target, 1.0 - exp(-dt * 8.0))
+		var vel: Vector3 = (e.root.position - was) / max(dt, 0.001)
+		vel.y = 0.0
+		e.speed = lerp(float(e.get("speed", 0.0)), vel.length(), 1.0 - exp(-dt * 6.0))
 		if seated != e.seated: _arrange(e, int(p.n), seated)
 		if not seated:
-			var face := Vector3(0, e.root.position.y, -1.1 if not dine else 0.0)
-			if e.root.position.distance_to(face) > 0.3: e.root.look_at(face, Vector3.UP, true)
+			# walking: face the way you are going; standing: face the counter
+			var face: Vector3 = e.root.position + vel.normalized() if vel.length() > 0.25 else Vector3(0, e.root.position.y, -1.1 if not dine else 0.0)
+			var flat := Vector3(face.x, e.root.position.y, face.z)
+			if e.root.position.distance_to(flat) > 0.05:
+				var want: float = e.root.global_transform.looking_at(flat, Vector3.UP, true).basis.get_euler().y
+				e.root.rotation.y = lerp_angle(e.root.rotation.y, want, 1.0 - exp(-dt * 8.0))
 		var kind: String = acts.get(p.id, "")
+		_animate(e, p, kind, dt)
 		var lbl: Label3D = e.lbl
 		if kind != "":
 			var b: Array = FrontScene.BUBBLE[kind]
@@ -950,7 +971,7 @@ func _person(p: Dictionary) -> Dictionary:
 	var root := Node3D.new()
 	add_child(root)
 	root.position = _to3d(p.pos)
-	var e := {"root": root, "figs": [], "seated": false, "lbl": null}
+	var e := {"root": root, "figs": [], "seated": false, "lbl": null, "speed": 0.0}
 	var app: bool = p.get("app", false)
 	for i in int(p.n) if not app else 1:
 		var key := "rider" if app else "customer.%d" % ((int(p.look) + i) % 6)
@@ -976,15 +997,101 @@ func _arrange(e: Dictionary, n: int, seated: bool) -> void:
 		if seated:
 			var a := Vector2(0.62, 0).rotated(i * PI / 2.0)
 			# lower them until the hips sit on the seat (0.53 m: the seat top plus the seat of the trousers)
-			f.position = Vector3(a.x, -(hips[0].position.y - 0.53) if jointed else -0.3, a.y)
+			f.position = Vector3(a.x, f.position.y, a.y)
+			f.set_meta("seat_y", -(hips[0].position.y - 0.53) if jointed else -0.3)
 			f.rotation.y = atan2(-a.x, -a.y)           # face the middle of the table
 		else:
-			f.position = Vector3((i - (n - 1) / 2.0) * 0.45, 0, 0)
+			f.position = Vector3((i - (n - 1) / 2.0) * 0.45, f.position.y, 0)
+			f.set_meta("seat_y", 0.0)
 			f.rotation.y = 0.0
-		for h in hips:
-			if h != null: h.rotation.x = -PI / 2.0 if seated else 0.0
-		for k in knees:
-			if k != null: k.rotation.x = PI / 2.0 if seated else 0.0
+		if not jointed:
+			f.position.y = f.get_meta("seat_y")
+
+# ---------- people moving ----------
+const JOINTS := ["hip_l", "hip_r", "knee_l", "knee_r", "shoulder_l", "shoulder_r", "elbow_l", "elbow_r", "neck"]
+
+## the joints of a figure (a model's hip_*, knee_*, shoulder_*, elbow_*, neck nodes), found once
+func _joints(f: Node3D) -> Dictionary:
+	if f.has_meta("joints"): return f.get_meta("joints")
+	var j := {}
+	for n in JOINTS:
+		var node = f.find_child(n, true, false)
+		if node != null: j[n] = node
+	f.set_meta("joints", j)
+	f.set_meta("ph", randf() * TAU)
+	return j
+
+## Each figure's pose, every frame, eased toward what it is doing: walking (legs and arms swing with its speed),
+## sitting down at a table, ordering (nodding, a hand gesturing), waiting (looking about; arms folded and a foot
+## tapping once they get impatient), eating (a hand to the mouth), or just standing and breathing.
+func _animate(e: Dictionary, p: Dictionary, kind: String, dt: float) -> void:
+	var k := 1.0 - exp(-dt * 10.0)
+	var w: float = clamp(float(e.get("speed", 0.0)) / 0.9, 0.0, 1.0)
+	var frac: float = clamp(p.pat / max(1.0, p.max), 0.0, 1.0)
+	for i in e.figs.size():
+		var f: Node3D = e.figs[i]
+		var j := _joints(f)
+		if j.is_empty(): continue
+		var ph: float = f.get_meta("ph") + dt * (2.0 + 8.0 * w)
+		f.set_meta("ph", ph)
+		var t: float = time + i * 1.7
+		var tg := {}
+		for n in JOINTS: tg[n] = Vector3.ZERO
+		if e.seated:
+			tg.hip_l = Vector3(-PI / 2.0, 0, 0)
+			tg.hip_r = Vector3(-PI / 2.0, 0, 0)
+			tg.knee_l = Vector3(PI / 2.0, 0, 0)
+			tg.knee_r = Vector3(PI / 2.0, 0, 0)
+			if p.state == "eat":
+				var bite: float = 0.5 + 0.5 * sin(t * 1.8)
+				tg.shoulder_r = Vector3(-0.7 - 0.5 * bite, 0, 0)
+				tg.elbow_r = Vector3(-0.5 - 1.3 * bite, 0, 0)
+				tg.shoulder_l = Vector3(-0.75, 0, 0)
+				tg.elbow_l = Vector3(-0.5, 0, 0)
+				tg.neck = Vector3(0.15 * bite, 0, 0)
+			else:
+				tg.shoulder_l = Vector3(-0.7, 0, 0)
+				tg.shoulder_r = Vector3(-0.7, 0, 0)
+				tg.elbow_l = Vector3(-0.55, 0, 0)
+				tg.elbow_r = Vector3(-0.55, 0, 0)
+				tg.neck = Vector3(0.05 * sin(t * 0.7), 0.35 * sin(t * 0.4), 0)
+		elif w > 0.08:
+			var s := sin(ph)
+			tg.hip_l = Vector3(-0.55 * s * w, 0, 0)
+			tg.hip_r = Vector3(0.55 * s * w, 0, 0)
+			tg.knee_l = Vector3((0.4 + 0.5 * sin(ph + 1.3)) * 0.9 * w, 0, 0)
+			tg.knee_r = Vector3((0.4 - 0.5 * sin(ph + 1.3)) * 0.9 * w, 0, 0)
+			tg.shoulder_l = Vector3(0.45 * s * w, 0, 0)
+			tg.shoulder_r = Vector3(-0.45 * s * w, 0, 0)
+			tg.elbow_l = Vector3(-0.35 * w, 0, 0)
+			tg.elbow_r = Vector3(-0.35 * w, 0, 0)
+		else:
+			# standing: breathing, looking about
+			var br := 0.04 * sin(t * 1.6)
+			tg.shoulder_l = Vector3(br, 0, 0.04)
+			tg.shoulder_r = Vector3(br, 0, -0.04)
+			tg.elbow_l = Vector3(-0.15, 0, 0)
+			tg.elbow_r = Vector3(-0.15, 0, 0)
+			tg.neck = Vector3(0.03 * sin(t * 1.6), 0.3 * sin(t * 0.35 + i), 0)
+			if kind != "" and frac > 0.45:
+				# talking to you: nodding, one hand gesturing
+				tg.neck = Vector3(0.14 * sin(t * 6.5), 0.1 * sin(t * 1.3), 0)
+				tg.shoulder_r = Vector3(-0.55 - 0.25 * sin(t * 3.0), 0, 0)
+				tg.elbow_r = Vector3(-0.9 - 0.3 * sin(t * 3.0 + 1.0), 0, 0)
+			elif frac < 0.45 and p.state in ["wait", "queue", "door", "ask"]:
+				# getting impatient: arms folded, a foot tapping, looking around for their food
+				var tap: float = max(0.0, sin(t * 10.0))
+				tg.shoulder_l = Vector3(-0.35, 0, 0.1)
+				tg.shoulder_r = Vector3(-0.35, 0, -0.1)
+				tg.elbow_l = Vector3(-1.4, -1.15, 0)          # forearms across the chest
+				tg.elbow_r = Vector3(-1.4, 1.15, 0)
+				tg.hip_l = Vector3(-0.12 * tap, 0, 0)
+				tg.knee_l = Vector3(0.22 * tap, 0, 0)
+				tg.neck = Vector3(-0.05, 0.55 * sin(t * 1.1), 0)
+		for n in j:
+			j[n].rotation = j[n].rotation.lerp(tg[n], k)
+		# ease down into the seat (and back up)
+		f.position.y = lerp(f.position.y, float(f.get_meta("seat_y", 0.0)), k)
 
 func _sync_tables() -> void:
 	for e in table_nodes:
@@ -1190,11 +1297,21 @@ func _sync_hands(dt: float) -> void:
 		var sauce: bool = Data.ING[tool].kind == "sauce"
 		held.material_override = _mat(Color(Data.ING[tool].col) if not sauce or svc.ladle_g > 0.0 else Color("c3c9cc"), 0.6, 0.8 if sauce and svc.ladle_g <= 0.0 else 0.0)
 		held.scale = Vector3(1.4, 0.7, 1.4) if sauce else Vector3.ONE
+	# the right hand takes the shape of what it is doing
+	var want := "open"
+	if tool != "": want = "grip" if Data.ING[tool].kind == "sauce" else "pinch"
+	elif svc != null and ctrls.has("oven") and ctrls.oven.get("drag") != null: want = "grip"
+	_pose(hands[0], want)
 	for i in hands.size():
 		var h: Dictionary = hands[i]
 		var goal: Vector3 = h.rest
 		if h.target != null: goal = cam.to_local(h.target) + Vector3(0.02 * (1 if i == 0 else -1), 0.02, 0.05)
 		h.node.position = h.node.position.lerp(goal, 1.0 - exp(-dt * 14.0))
+
+func _pose(h: Dictionary, want: String) -> void:
+	if h.pose == want or not h.poses.has(want): return
+	for k in h.poses: h.poses[k].visible = k == want
+	h.pose = want
 
 # ---------- touch ----------
 func _unhandled_input(e: InputEvent) -> void:

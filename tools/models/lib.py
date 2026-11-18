@@ -620,6 +620,7 @@ def bake_ao(objs, dist=0.35, samples=32, tint=(0.56, 0.47, 0.44), strength=1.0, 
         pm.from_pydata([(-s, lo, -s), (s, lo, -s), (s, lo, s), (-s, lo, s)], [], [(0, 3, 2, 1)])
         plane = bpy.data.objects.new("bake_ground", pm)
         link(plane)
+    peak = 0.0
     for ob in meshes:
         if max_len: densify(ob, max_len)
         me = ob.data
@@ -636,8 +637,7 @@ def bake_ao(objs, dist=0.35, samples=32, tint=(0.56, 0.47, 0.44), strength=1.0, 
         c = np.empty(n * 4, dtype=np.float32)
         attr.data.foreach_get("color", c)
         c = c.reshape(-1, 4)
-        if c[:, 0].max() <= 0.0:
-            raise RuntimeError("ambient occlusion bake came out black for " + ob.name)
+        peak = max(peak, float(c[:, 0].max()))
         ao = np.clip(c[:, 0], 0, 1) ** (0.8 * strength)
         t = np.array(tint, dtype=np.float32)
         rgb = t[None, :] + (1 - t[None, :]) * ao[:, None]
@@ -647,6 +647,9 @@ def bake_ao(objs, dist=0.35, samples=32, tint=(0.56, 0.47, 0.44), strength=1.0, 
     if plane is not None:
         bpy.data.objects.remove(plane)
         bpy.data.meshes.remove(pm)
+    # a small part shut inside another can be black; everything black means the bake failed (see the denoiser note)
+    if peak <= 0.0:
+        raise RuntimeError("ambient occlusion bake came out black")
 
 
 def join(objs, name):

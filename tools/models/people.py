@@ -92,56 +92,81 @@ def _grow(f):
         o.location = o.location * f
 
 
+def _attach(objs, joint, at):
+    """hang parts from a joint: their geometry moves into the joint's own space"""
+    for o in objs:
+        if o is None or o.type != "MESH": continue
+        o.data.transform(Matrix.Translation(-Vector(at)))
+        o.parent = joint
+
+
+def _new_since(before):
+    return [o for o in bpy.context.scene.objects if o not in before and o.type == "MESH"]
+
+
+NECK_Y = 1.22
+
+
 def _person(look, rider=False):
+    """a cartoon person with joints the game moves: the head on `neck`, each arm on `shoulder_*` with the forearm and
+    hand on `elbow_*`, each leg on `hip_*` with the shin and shoe on `knee_*`"""
     skin_m = mat("skin", SKIN[look["skin"]], rough=0.6)
     top_m = mat("jacket", TEAL, rough=0.55) if rider else mat("shirt", look["shirt"], rough=0.65)
     legs_m = mat("legs", "#2f3437" if rider else look["legs"], rough=0.75)
     shoe_m = mat("shoes", look["shoes"], rough=0.5)
     hair_m = mat("hair", look["hair_col"], rough=0.7)
-    # hips, a short chunky body, chunky arms and mitten hands, a big round head
+    # hips and a short chunky body (they stay put: everything else hangs from joints)
     blobs([("ellipsoid", (0, HIP_Y + 0.03, 0), 0.175, (1.0, 0.62, 0.8))], legs_m, res=0.022, name="hips", tris=150)
     blobs([("ellipsoid", (0, 1.0, 0), 0.2, (1.0, 1.2, 0.74)), ("ellipsoid", (0, 1.17, 0), 0.19, (1.15, 0.5, 0.7))], top_m, res=0.022, name="torso", tris=520)
-    arms, skin = [], []
-    for s in (1, -1):
-        sh, el, wr = (s * 0.245, 1.17, 0.0), (s * 0.285, 0.96, 0.03), (s * 0.3, 0.77, 0.07)
-        arms.append(("capsule", ((sh[0] + el[0]) / 2, (sh[1] + el[1]) / 2, 0.015), 0.058, 0.1, (0, 0, 90 + s * 11)))
-        fore = ("capsule", ((el[0] + wr[0]) / 2, (el[1] + wr[1]) / 2, 0.05), 0.052, 0.09, (-12, 0, 90 + s * 4))
-        (arms if look["sleeves"] == "long" or rider else skin).append(fore)
-        skin.append(("ellipsoid", (wr[0], 0.715, 0.08), 0.068, (0.8, 1.1, 0.9)))          # mitten hand
-        skin.append(("ball", (wr[0] - s * 0.045, 0.74, 0.11), 0.03))                        # its thumb
-    blobs(arms, top_m, res=0.016, name="arms", tris=320)
     if not rider:
-        # a collar, the hem of short sleeves, a belt with its buckle
+        # a collar, a belt with its buckle
         torus(0.07, 0.016, (0, 1.215, 0.0), top_m, seg=16, rseg=6, rot=(-8, 0, 0), name="collar")
-        if look["sleeves"] == "short":
-            for s2 in (1, -1):
-                torus(0.06, 0.012, (s2 * 0.268, 1.06, 0.022), top_m, seg=14, rseg=5, rot=(0, 0, 90 + s2 * 11), name="sleeve_hem")
         belt = mat("belt", "#3b2a1e", rough=0.5)
         lathe([(0.168, -0.022), (0.176, -0.016), (0.176, 0.016), (0.168, 0.022)], (0, HIP_Y + 0.11, 0), belt, seg=24, scale=(1.0, 1.0, 0.8), name="belt")
         box((0.05, 0.036, 0.016), (0, HIP_Y + 0.11, 0.142), mat("buckle", CHEESE, rough=0.35, metal=0.3), name="buckle")
-    if look.get("glasses"):
-        frame = mat("glasses", "#2a2a2a", rough=0.4)
-        for s2 in (1, -1):
-            torus(0.034, 0.005, (s2 * 0.057, HEAD_Y + 0.035, HEAD_R * 0.93), frame, seg=16, rseg=4, rot=(90, 0, 0), name="lens_rim")
-            tube([(s2 * 0.091, HEAD_Y + 0.04, HEAD_R * 0.9), (s2 * 0.145, HEAD_Y + 0.045, 0.03)], 0.0045, frame, name="glasses_arm")
-        tube([(-0.023, HEAD_Y + 0.04, HEAD_R * 0.96), (0.023, HEAD_Y + 0.04, HEAD_R * 0.96)], 0.005, frame, name="bridge")
-    skin += [("capsule", (0, 1.24, 0), 0.06, 0.03, (0, 0, 90)), ("ellipsoid", (0, HEAD_Y, 0), HEAD_R, (0.95, 1.05, 0.95))]
-    skin.append(("ellipsoid", (0, HEAD_Y - 0.01, HEAD_R * 0.92), 0.028, (1.0, 0.85, 0.8)))   # the nose
-    for s in (1, -1): skin.append(("ellipsoid", (s * HEAD_R * 0.95, HEAD_Y, 0), 0.035, (0.5, 1.0, 0.8)))   # ears
-    blobs(skin, skin_m, res=0.012, name="skin", tris=900)
+    else:
+        bag = mat("bag", TEAL, rough=0.55)
+        box((0.42, 0.42, 0.26), (0, 1.05, -0.27), bag, bevel=0.04, name="bag")
+        text("RAPIDO", (0, 1.07, -0.403), mat("bag_text", "#ffffff", rough=0.5), size=0.07, depth=0.004, rot=(0, 180, 0), name="bag_text")
+        for s in (1, -1):
+            tube([(s * 0.13, 1.22, -0.14), (s * 0.15, 1.22, 0.04), (s * 0.13, 0.92, 0.12)], 0.016, black(), name="strap")
+    # the arms: upper arm on the shoulder, forearm and mitten hand on the elbow
+    for s in (1, -1):
+        tag = "l" if s > 0 else "r"
+        sh, el, wr = (s * 0.245, 1.17, 0.0), (s * 0.285, 0.96, 0.03), (s * 0.3, 0.77, 0.07)
+        shoulder = empty("shoulder_" + tag, sh)
+        elbow = empty("elbow_" + tag, (el[0] - sh[0], el[1] - sh[1], el[2] - sh[2]), parent=shoulder)
+        upper = blobs([("ball", sh, 0.06), ("capsule", ((sh[0] + el[0]) / 2, (sh[1] + el[1]) / 2, 0.015), 0.058, 0.1, (0, 0, 90 + s * 11))], top_m, res=0.016, name="upper_arm_" + tag, tris=180)
+        parts_up = [upper]
+        long_sleeve = look["sleeves"] == "long" or rider
+        if not long_sleeve:
+            parts_up.append(torus(0.06, 0.012, (s * 0.268, 1.06, 0.022), top_m, seg=14, rseg=5, rot=(0, 0, 90 + s * 11), name="sleeve_hem"))
+        fore = blobs([("ball", el, 0.052), ("capsule", ((el[0] + wr[0]) / 2, (el[1] + wr[1]) / 2, 0.05), 0.052, 0.09, (-12, 0, 90 + s * 4))], top_m if long_sleeve else skin_m, res=0.016, name="forearm_" + tag, tris=160)
+        hand = blobs([("ellipsoid", (wr[0], 0.715, 0.08), 0.068, (0.8, 1.1, 0.9)), ("ball", (wr[0] - s * 0.045, 0.74, 0.11), 0.03)], skin_m, res=0.012, name="hand_" + tag, tris=160)
+        _attach(parts_up, shoulder, sh)
+        _attach([fore, hand], elbow, el)
+    # the head on the neck: head, face, hair or helmet, glasses
+    neck = empty("neck", (0, NECK_Y, 0))
+    before = set(bpy.context.scene.objects)
+    head = [("capsule", (0, 1.24, 0), 0.06, 0.03, (0, 0, 90)), ("ellipsoid", (0, HEAD_Y, 0), HEAD_R, (0.95, 1.05, 0.95)),
+            ("ellipsoid", (0, HEAD_Y - 0.01, HEAD_R * 0.92), 0.028, (1.0, 0.85, 0.8))]
+    for s in (1, -1): head.append(("ellipsoid", (s * HEAD_R * 0.95, HEAD_Y, 0), 0.035, (0.5, 1.0, 0.8)))
+    blobs(head, skin_m, res=0.012, name="head", tris=700)
     _face(hair_m, rider)
     if rider:
         helmet = mat("helmet", "#2a3236", rough=0.35)
         prof = [(math.cos(math.pi / 2 * i / 10) * 0.185, math.sin(math.pi / 2 * i / 10) * 0.2) for i in range(11)] + [(0.0, 0.0)]
         lathe(prof, (0, HEAD_Y + 0.0, -0.01), helmet, seg=22, name="helmet")
         box((0.3, 0.035, 0.05), (0, HEAD_Y + 0.0, 0.16), mat("visor_rim", TEAL, rough=0.5), name="helmet_rim")
-        bag = mat("bag", TEAL, rough=0.55)
-        box((0.42, 0.42, 0.26), (0, 1.05, -0.27), bag, bevel=0.04, name="bag")
-        text("RAPIDO", (0, 1.07, -0.403), mat("bag_text", "#ffffff", rough=0.5), size=0.07, depth=0.004, rot=(0, 180, 0), name="bag_text")
-        for s in (1, -1):
-            tube([(s * 0.13, 1.22, -0.14), (s * 0.15, 1.22, 0.04), (s * 0.13, 0.92, 0.12)], 0.016, black(), name="strap")
     else:
         _hair(look, hair_m)
+    if look.get("glasses"):
+        frame = mat("glasses", "#2a2a2a", rough=0.4)
+        for s2 in (1, -1):
+            torus(0.034, 0.005, (s2 * 0.057, HEAD_Y + 0.035, HEAD_R * 0.93), frame, seg=16, rseg=4, rot=(90, 0, 0), name="lens_rim")
+            tube([(s2 * 0.091, HEAD_Y + 0.04, HEAD_R * 0.9), (s2 * 0.145, HEAD_Y + 0.045, 0.03)], 0.0045, frame, name="glasses_arm")
+        tube([(-0.023, HEAD_Y + 0.04, HEAD_R * 0.96), (0.023, HEAD_Y + 0.04, HEAD_R * 0.96)], 0.005, frame, name="bridge")
+    _attach(_new_since(before), neck, (0, NECK_Y, 0))
     for s in (1, -1):
         _leg(s, legs_m, shoe_m)
     _grow(GROW)
@@ -152,8 +177,10 @@ for _i, _look in enumerate(LOOKS):
 model("rider", look=dict(LOOKS[0], shoes="#2a2a2a"), rider=True)(_person)
 
 
-def _hand(side):
+def _hand(side, pose="open"):
     """a chunky cartoon forearm and hand, palm down, pointing -Z, fingertips at the origin (side 1 = right hand).
+    pose: "open" (pressing and stretching dough), "pinch" (finger and thumb together, holding a topping),
+    "grip" (a fist round a handle: the ladle, the peel).
     The palm and wrist are one soft shape; each finger is its own rounded tube curling slightly down, so they read
     as separate fingers from above; nails on the tips; the rolled cuff of a chef's jacket with red piping."""
     skin = mat("skin", "#efbd96", rough=0.55)
@@ -165,17 +192,28 @@ def _hand(side):
            ("ellipsoid", (-0.046 * s, -0.004, 0.122), 0.026, (1.0, 0.8, 1.3)),
            ("capsule", (0.004 * s, 0.008, 0.27), 0.043, 0.115, (0, 90, 0))], skin, res=0.005, name="palm", tris=1100)
     fingers = [(-0.034, 0.012, 0.075), (-0.0115, 0.0126, 0.083), (0.0115, 0.012, 0.078), (0.032, 0.0106, 0.063)]   # chunky
-    for (fx, r, length) in fingers:
+    for k, (fx, r, length) in enumerate(fingers):
         x0 = fx * s
         z0 = 0.078
-        pts = [(x0, 0.007, z0), (x0 * 1.1, 0.004, z0 - length * 0.45), (x0 * 1.22, -0.006, z0 - length * 0.8), (x0 * 1.26, -0.013, z0 - length + r)]
+        curl = pose == "grip" or (pose == "pinch" and k > 0)
+        if curl:            # curled under the palm
+            pts = [(x0, 0.007, z0), (x0 * 1.03, -0.012, z0 - 0.032), (x0 * 1.03, -0.036, z0 - 0.02), (x0 * 1.02, -0.04, z0 + 0.006)]
+        elif pose == "pinch":   # the index finger reaching down to meet the thumb
+            pts = [(x0, 0.007, z0), (x0 * 1.02, 0.0, z0 - length * 0.5), (x0 * 0.85, -0.012, z0 - length * 0.82), (x0 * 0.7, -0.02, z0 - length + r)]
+        else:
+            pts = [(x0, 0.007, z0), (x0 * 1.1, 0.004, z0 - length * 0.45), (x0 * 1.22, -0.006, z0 - length * 0.8), (x0 * 1.26, -0.013, z0 - length + r)]
         tube(pts, r, skin, seg=10, radii=[r * 1.05, r, r * 0.97, r * 0.93], caps=False, name="finger")
         tip = pts[-1]
         sphere(r * 0.93, tip, skin, seg=10, rings=6, name="fingertip")
-        sphere(r * 0.6, (tip[0], tip[1] + r * 0.62, tip[2] - r * 0.15), nail, seg=10, rings=5, scale=(1.0, 0.3, 1.15), name="nail")
+        if not curl:
+            sphere(r * 0.6, (tip[0], tip[1] + r * 0.62, tip[2] - r * 0.15), nail, seg=10, rings=5, scale=(1.0, 0.3, 1.15), name="nail")
         sphere(r * 1.08, pts[0], skin, seg=10, rings=6, name="knuckle")
     # the thumb, along the inside, pointing forward and in
     th = [(-0.05 * s, -0.004, 0.115), (-0.066 * s, -0.01, 0.088), (-0.07 * s, -0.013, 0.064)]
+    if pose == "pinch":
+        th = [(-0.05 * s, -0.004, 0.115), (-0.054 * s, -0.014, 0.066), (-0.034 * s, -0.022, 0.03)]
+    elif pose == "grip":
+        th = [(-0.05 * s, -0.004, 0.115), (-0.046 * s, -0.022, 0.085), (-0.022 * s, -0.034, 0.068)]
     tube(th, 0.0135, skin, seg=10, radii=[0.0145, 0.0135, 0.0125], caps=False, name="thumb")
     sphere(0.0125, th[-1], skin, seg=10, rings=6, name="thumb_tip")
     sphere(0.008, (th[-1][0], th[-1][1] + 0.008, th[-1][2] - 0.002), nail, seg=10, rings=5, scale=(1.0, 0.3, 1.15), name="nail")
@@ -187,3 +225,6 @@ def _hand(side):
 
 model("hand.right", side=1)(_hand)
 model("hand.left", side=-1)(_hand)
+for _pose in ("pinch", "grip"):
+    model("hand.right." + _pose, side=1, pose=_pose)(_hand)
+    model("hand.left." + _pose, side=-1, pose=_pose)(_hand)

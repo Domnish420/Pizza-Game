@@ -154,9 +154,14 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   chairs, six customers, the rider, the hands and a mouse. They are deliberately simple and clean. Improve on them
   freely: drop `assets/models/fp-<key>.glb` and it replaces the generated `.gltf` with no code change, or edit the
   scripts and rebuild. The keys, sizes and positions are in `ART_KEYS.md`.
-- **Customers** are placed from the simulation's 2D positions (`FPWorld._to3d`) and face the hatch or pass with their
-  front (+Z). They sit at tables by bending the `hip_*` and `knee_*` joints in the model. They still need walk, idle,
-  order (talking), waiting-impatiently, eating and leaving animations.
+- **Customers** are placed from the simulation's 2D positions (`FPWorld._to3d`). Each model has joints: `neck` (the
+  head), `shoulder_*` with `elbow_*` (arms), `hip_*` with `knee_*` (legs). `FPWorld._animate` poses them every frame
+  from what they are doing, easing between poses: walking (legs and arms swing with their speed, facing the way they
+  go), standing (breathing, looking about), ordering (nodding, a hand gesturing), impatient (arms folded, a foot
+  tapping, looking about), seated (easing down into the chair, hands on the table) and eating (a hand to the mouth).
+  Better animation is welcome: keep the joint names, or replace the procedural poses with an AnimationPlayer per state.
+- **Your hands** change pose with what you hold: `fp.hand.<side>` open (shaping dough), `.pinch` (a topping), `.grip`
+  (the ladle; the peel in the oven). They rest low in the frame and reach to wherever you touch.
 - **Between services** (`scripts/fp/kitchen_screen.gd`): the morning and evening happen in the same 3D kitchen with
   no service running. Every job is a prop with a live label: the delivery crates, prep tubs, sink with dirty tubs,
   pans on the rail, mixer or bowl, proving trays, mop and bucket, spray, box of traps, pizza boxes on the shelf, the

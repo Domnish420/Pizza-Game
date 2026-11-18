@@ -88,7 +88,9 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
       puffy rim, glossy sauce, cheese shreds that melt and blister, toppings, browning with leopard spots, cuts, steam
 - [x] The pizza in 3D in the oven: hollow ovens with a visible deck and their heat source, the deck map laid on
       it, real pizzas browning as they bake, a peel, live flames, READY / TURN labels
-- [ ] Hand-made models to replace the generated ones, rigged hands and customers with animations
+- [x] Customers that move: walking, standing, ordering, impatient, sitting down, eating (procedural, on joints)
+- [x] Hands that change pose with what they hold (open, pinch, grip)
+- [ ] Hand-made models to replace the generated ones; keyframed animation (waving, paying, leaving with a box)
 - [x] The morning and evening in the same 3D kitchen: every job a prop you tap (deliveries, prep, wash-up, counter,
       dough, cleaning, traps, boxes, temperatures, stores, checklist, open / lock up); management on a phone
 - [ ] The hands-on minigames (prep, cleaning, unpacking, traps, folding, dough) done on the 3D props instead of 2D sheets
