@@ -780,11 +780,20 @@ def finish(keep=()):
 
 
 def _tidy(ob):
-    """drop zero-area faces and zero-length edges (they give Godot's LOD generator non-finite normals)"""
+    """triangulate the way that avoids slivers, then drop zero-area faces and zero-length edges (they give Godot's
+    LOD generator non-finite normals)"""
     bm = bmesh.new()
     bm.from_mesh(ob.data)
-    bmesh.ops.dissolve_degenerate(bm, dist=1e-7, edges=bm.edges)
+    mw = ob.matrix_world.copy()
+    world = abs(mw.determinant()) > 1e-12
+    if world: bm.transform(mw)                     # measured at its real size (small parts are often scaled down)
+    # (merging first: merging after triangulating can leave many-sided faces that the exporter cuts into slivers)
+    # (Godot welds points closer than about 0.01 mm when it builds levels of detail: edges that short go first)
+    bmesh.ops.dissolve_degenerate(bm, dist=1e-5, edges=bm.edges)
+    bmesh.ops.triangulate(bm, faces=bm.faces[:], quad_method="BEAUTY", ngon_method="BEAUTY")
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.calc_area() < 1e-8], context="FACES_ONLY")
     bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    if world: bm.transform(mw.inverted())
     bm.to_mesh(ob.data)
     bm.free()
 

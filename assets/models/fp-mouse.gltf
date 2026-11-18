@@ -100,14 +100,14 @@
 		{
 			"bufferView":0,
 			"componentType":5123,
-			"count":173,
+			"count":239,
 			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":173,
+			"count":239,
 			"max":[
 				0.07902911305427551,
 				0.06044475734233856,
@@ -123,13 +123,13 @@
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":173,
+			"count":239,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":3,
 			"componentType":5126,
-			"count":173,
+			"count":239,
 			"type":"VEC2"
 		},
 		{
@@ -224,98 +224,98 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":1384,
+			"byteLength":1912,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":2076,
-			"byteOffset":1384,
+			"byteLength":2868,
+			"byteOffset":1912,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":2076,
-			"byteOffset":3460,
+			"byteLength":2868,
+			"byteOffset":4780,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1384,
-			"byteOffset":5536,
+			"byteLength":1912,
+			"byteOffset":7648,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":1800,
-			"byteOffset":6920,
+			"byteOffset":9560,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":3032,
-			"byteOffset":8720,
+			"byteOffset":11360,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":4548,
-			"byteOffset":11752,
+			"byteOffset":14392,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":4548,
-			"byteOffset":16300,
+			"byteOffset":18940,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":3032,
-			"byteOffset":20848,
+			"byteOffset":23488,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":2040,
-			"byteOffset":23880,
+			"byteOffset":26520,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":1128,
-			"byteOffset":25920,
+			"byteOffset":28560,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":1692,
-			"byteOffset":27048,
+			"byteOffset":29688,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":1692,
-			"byteOffset":28740,
+			"byteOffset":31380,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":1128,
-			"byteOffset":30432,
+			"byteOffset":33072,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":768,
-			"byteOffset":31560,
+			"byteOffset":34200,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":32328,
+			"byteLength":34968,
 			"uri":"fp-mouse.bin"
 		}
 	]

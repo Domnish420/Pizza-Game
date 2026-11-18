@@ -403,8 +403,11 @@ def scene(name):
                 a = Vector((0.62, 0)).copy()
                 ang = i * math.pi
                 ax, az = math.cos(ang) * 0.62, math.sin(ang) * 0.62
-                from people import HIP_Y, GROW
-                objs = load("customer.%d" % look, (tx + ax, -(HIP_Y * GROW - 0.53), tz + az), yaw=math.atan2(-ax, -az))
+                objs = load("customer.%d" % look, (tx + ax, 0.0, tz + az), yaw=math.atan2(-ax, -az))
+                # lowered (or raised) until the hips are at seat height, as the game does: the people differ in height
+                bpy.context.view_layer.update()
+                hip = next((o for o in objs if o.name.split(".")[0] == "hip_l"), None)
+                if hip is not None: objs[-1].location.z -= hip.matrix_world.translation.z - 0.53
                 _seat(objs, ang)
     bad = check(name)
     lo, hi = bounds(room)                         # frame the room, not the whole street

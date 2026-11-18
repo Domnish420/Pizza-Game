@@ -438,14 +438,14 @@
 		{
 			"bufferView":30,
 			"componentType":5123,
-			"count":102,
+			"count":157,
 			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":31,
 			"componentType":5126,
-			"count":102,
+			"count":157,
 			"max":[
 				0.03926076367497444,
 				0.19106550514698029,
@@ -461,13 +461,13 @@
 		{
 			"bufferView":32,
 			"componentType":5126,
-			"count":102,
+			"count":157,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":33,
 			"componentType":5126,
-			"count":102,
+			"count":157,
 			"type":"VEC2"
 		},
 		{
@@ -660,38 +660,38 @@
 		},
 		{
 			"buffer":0,
-			"byteLength":816,
+			"byteLength":1256,
 			"byteOffset":45680,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1224,
-			"byteOffset":46496,
+			"byteLength":1884,
+			"byteOffset":46936,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":1224,
-			"byteOffset":47720,
+			"byteLength":1884,
+			"byteOffset":48820,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":816,
-			"byteOffset":48944,
+			"byteLength":1256,
+			"byteOffset":50704,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":1200,
-			"byteOffset":49760,
+			"byteOffset":51960,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":50960,
+			"byteLength":53160,
 			"uri":"fp-mop.bin"
 		}
 	]

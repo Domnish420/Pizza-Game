@@ -123,17 +123,17 @@
 		{
 			"bufferView":0,
 			"componentType":5123,
-			"count":2130,
+			"count":2276,
 			"normalized":true,
 			"type":"VEC4"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":2130,
+			"count":2276,
 			"max":[
 				0.07444872707128525,
-				0.05134982988238335,
+				0.05135033279657364,
 				0.42841747403144836
 			],
 			"min":[
@@ -146,19 +146,19 @@
 		{
 			"bufferView":2,
 			"componentType":5126,
-			"count":2130,
+			"count":2276,
 			"type":"VEC3"
 		},
 		{
 			"bufferView":3,
 			"componentType":5126,
-			"count":2130,
+			"count":2276,
 			"type":"VEC2"
 		},
 		{
 			"bufferView":4,
 			"componentType":5123,
-			"count":8406,
+			"count":8394,
 			"type":"SCALAR"
 		},
 		{
@@ -288,128 +288,128 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":17040,
+			"byteLength":18208,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":25560,
-			"byteOffset":17040,
+			"byteLength":27312,
+			"byteOffset":18208,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":25560,
-			"byteOffset":42600,
+			"byteLength":27312,
+			"byteOffset":45520,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":17040,
-			"byteOffset":68160,
+			"byteLength":18208,
+			"byteOffset":72832,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":16812,
-			"byteOffset":85200,
+			"byteLength":16788,
+			"byteOffset":91040,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":560,
-			"byteOffset":102012,
+			"byteOffset":107828,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":840,
-			"byteOffset":102572,
+			"byteOffset":108388,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":840,
-			"byteOffset":103412,
+			"byteOffset":109228,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":560,
-			"byteOffset":104252,
+			"byteOffset":110068,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":480,
-			"byteOffset":104812,
+			"byteOffset":110628,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":3088,
-			"byteOffset":105292,
+			"byteOffset":111108,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":4632,
-			"byteOffset":108380,
+			"byteOffset":114196,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":4632,
-			"byteOffset":113012,
+			"byteOffset":118828,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":3088,
-			"byteOffset":117644,
+			"byteOffset":123460,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":2376,
-			"byteOffset":120732,
+			"byteOffset":126548,
 			"target":34963
 		},
 		{
 			"buffer":0,
 			"byteLength":1616,
-			"byteOffset":123108,
+			"byteOffset":128924,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":2424,
-			"byteOffset":124724,
+			"byteOffset":130540,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":2424,
-			"byteOffset":127148,
+			"byteOffset":132964,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":1616,
-			"byteOffset":129572,
+			"byteOffset":135388,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":1080,
-			"byteOffset":131188,
+			"byteOffset":137004,
 			"target":34963
 		}
 	],
 	"buffers":[
 		{
-			"byteLength":132268,
+			"byteLength":138084,
 			"uri":"fp-hand-left-grip.bin"
 		}
 	]
