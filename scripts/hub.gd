@@ -663,7 +663,7 @@ func _closed_day() -> void:
 
 func _open() -> void:
 	var G := Game
-	if Tutor.running() and not Tutor.training_service():
+	if not Tutor.may_open():
 		Kit.main.toast("Not yet: %s has more to show you" % Story.BOSS)
 		return
 	if Day.now() > Day.close_time() - 90.0:
@@ -721,6 +721,7 @@ func _go_open() -> void:
 
 func _sleep() -> void:
 	var G := Game
+	if Tutor.guide > 0: Tutor.finish()                # a guide left open ends with the day
 	if Tutor.running():
 		Kit.main.toast("Not yet: %s has more to show you" % Story.BOSS)
 		return

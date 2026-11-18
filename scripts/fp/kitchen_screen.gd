@@ -180,7 +180,7 @@ func job(name: String, act: Dictionary) -> void:
 	var G := Game
 	var morning: bool = G.s.phase == "morning"
 	match name:
-		"open" when Tutor.running() and not Tutor.training_service():
+		"open" when not Tutor.may_open():
 			Kit.main.toast("Not yet: %s has more to show you" % Story.BOSS)
 		"open":
 			if G.s.hygiene.get("closed_day", -1) == G.s.day and morning: hub._closed_day()

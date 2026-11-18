@@ -258,15 +258,21 @@ The boss is Marco and the crew are Luca, Sofia, Tom, Aisha and Kofi (all fiction
 text in dialogs and on the Today page. They need faces, a few lines of personality, and small scenes for the
 moments that matter: the first morning, each shift review, the promotion, and handing in your notice.
 
-**Training days** (`scripts/tutor.gd`). Before the first shift and before the first senior shift, Marco walks the
-player through the day in the 3D kitchen. Right now he is a text box at the bottom of the screen with his name, a
+**The first week** (`Story.PLAN`). Day 1 the player only stretches the bases and Marco does the rest; day 2 they
+stretch and top; day 3 Marco stretches and they top and work the oven; from day 4 they make whole pizzas beside him,
+busier every day. As senior the first two shifts are quieter and day 10 is a normal service. Marco's parts happen in
+`ServiceScreen` (`helps`, `_marco_stretches`, `_marco_tops`, `_marco_finishes`): for the art pass, Marco could be seen
+doing them (taking the base from the bench, topping it at his station, cutting at the pass).
+
+**Guides and the training day** (`scripts/tutor.gd`). Marco guides the first shift (a real one) and briefs days 2 to
+4; before the first senior shift he gives a training day on the back of house. Right now he is a text box at the bottom of the screen with his name, a
 "Skip training" button, and a yellow cone and ring (`FPWorld.set_highlight`) floating over the thing to touch. A HUD
 button can be lit with a yellow border instead. Ideas for the art pass, keeping the same steps and checks:
 - Marco as a person standing in the kitchen who points, or his hands demonstrating (pressing the dough, the ladle
   spiral), with his lines voiced or as speech bubbles.
 - A nicer marker: a glow on the object itself, or a hand icon tapping it.
 - A small celebration when a step is done (the step already plays the `up` sound).
-Each step's text is in `_pizzaiolo()` and `_senior()`; its check is a plain function on the game state, so the
+Each step's text is in `_day1()` and `_senior()` (and `Story.briefing()`); its check is a plain function on the game state, so the
 wording and the look can change freely without touching the checks.
 
 ### 4b. The counter and the hands-on jobs

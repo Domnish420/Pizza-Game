@@ -1,19 +1,23 @@
 extends CanvasLayer
 ## Autoload `Tutor`: the training days of story mode.
 ##
-## Before your first shift as a pizzaiolo, and again before your first shift as senior pizzaiolo, Marco gives you a
-## training day. He talks you through one job at a time; a marker bobs over the thing to touch; each step ticks on
-## when you have actually done it (nothing to press to say you have). Training days do not count: the game is
-## snapshotted when one starts and put back when it ends, so the real first shift starts fresh.
+## Your first shift as a pizzaiolo is guided: Marco talks you through the first pizza of a real shift (you only
+## stretch the bases that day; he does the rest), and briefs you on the mornings of days 2 to 4 as your part of the
+## job grows (Story.PLAN). Guides count: they run on the real game. Before your first shift as senior pizzaiolo he
+## gives you a training day on the back of house, which does not count: the game is snapshotted when it starts and
+## put back when it ends, so the real first senior shift starts fresh.
 ##
-## A training day is pending when Game.s.story.training is "pizzaiolo" or "senior" (set by Story.start() and by the
-## promotion). It starts as soon as you are in the 3D kitchen with nothing else on screen.
+## In both, he talks you through one job at a time; a marker bobs over the thing to touch; each step ticks on when
+## you have actually done it (nothing to press to say you have). A training day is pending when
+## Game.s.story.training is "senior" (set by the promotion); a guide when Story.guide_due() names a shift. Either
+## starts as soon as you are in the 3D kitchen with nothing else on screen.
 ##
 ## Each step: {say: what Marco says, at: the thing to point at ("job:<name>", "pan:<ingredient>", "ticket",
 ## "surface:<station>", "pass", "hud:phone", "hud:<station>"), setup: run when the step starts, done: true when it
 ## is done, tap: true for a step you read and tap to go on, skip: true to leave the step out}.
 
-var kind := ""                 # the training day running: "" / "pizzaiolo" / "senior"
+var kind := ""                 # what is running: "" / "senior" (the training day) / "day1".."day4" (a guide)
+var guide := 0                 # the shift a guide is for (0: not a guide)
 var steps := []
 var i := 0
 var mark := {}                 # what a step noted when it started (to see what changed)
@@ -92,7 +96,9 @@ func _world():
 func _process(dt: float) -> void:
 	if kind == "":
 		var pending: String = Game.s.get("story", {}).get("training", "")
-		if pending != "" and _kitchen() != null and not Kit.main.modal_root.visible: start(pending)
+		if _kitchen() == null or Kit.main.modal_root.visible: return
+		if pending != "": start(pending)
+		elif Story.guide_due() > 0: start_guide(Story.guide_due())
 		return
 	if not is_same(Game.s, game_ref):               # a new game was started (or loaded) under us: this training day is void
 		_stop()
@@ -105,7 +111,24 @@ func _process(dt: float) -> void:
 	var st: Dictionary = steps[i]
 	if st.has("done") and st.done.call(): _next()
 
+## Marco guiding a real shift (it counts): the first pizza of day 1, a briefing on days 2 to 4
+func start_guide(n: int) -> void:
+	kind = "day%d" % n
+	guide = n
+	game_ref = Game.s
+	steps = _day1() if n == 1 else [{"say": Story.briefing(), "tap": true}]
+	i = 0
+	panel.visible = true
+	_enter()
+
+## opening is not blocked by a guide (only by a training day that has more to show)
+func may_open() -> bool:
+	return kind == "" or guide > 0 or training_service()
+
 func start(k: String) -> void:
+	if k == "pizzaiolo":                                # an older save: the first shift is guided now instead
+		Game.s.story.training = ""
+		return
 	var S: Dictionary = Game.s.story
 	if S.has("train_snap"):                             # the game was closed during a training day: start it again
 		Game.s = S.train_snap.duplicate(true)
@@ -116,7 +139,7 @@ func start(k: String) -> void:
 	Game.s.story.train_snap = snap
 	game_ref = Game.s
 	Game.s.view3d = true
-	steps = _pizzaiolo() if k == "pizzaiolo" else _senior()
+	steps = _senior()
 	i = 0
 	panel.visible = true
 	_enter()
@@ -146,6 +169,7 @@ func _panel_input(e: InputEvent) -> void:
 ## stop without touching the game (it was replaced: a new game, or a save loaded)
 func _stop() -> void:
 	kind = ""
+	guide = 0
 	game_ref = null
 	panel.visible = false
 	hl.visible = false
@@ -153,6 +177,17 @@ func _stop() -> void:
 ## the training day is over (or skipped): the game goes back to how it was, ready for the real shift
 func finish() -> void:
 	if kind == "": return
+	if guide > 0:                                       # a guide: nothing to put back, it just ends
+		Game.s.story["guided_%d" % guide] = true
+		Game.save_game()
+		kind = ""
+		guide = 0
+		game_ref = null
+		panel.visible = false
+		hl.visible = false
+		var gw = _world()
+		if gw != null: gw.set_highlight(null)
+		return
 	var k := kind
 	kind = ""
 	game_ref = null
@@ -236,57 +271,26 @@ func _mean_r(pz) -> float:
 	for x in pz.base.r: t += x
 	return t / max(1, pz.base.r.size())
 
-# ---------- the pizzaiolo's training day ----------
-func _pizzaiolo() -> Array:
+# ---------- day 1: you stretch, Marco does the rest ----------
+func _day1() -> Array:
 	return [
-		{"say": "Morning! I'm %s. Today is a training day: nothing counts, so take your time. You are standing at the pizza counter at %s. Drag your finger across the screen to look around the kitchen." % [Story.BOSS, Story.EMPLOYER],
+		{"say": "Morning! I'm %s, and this is %s. Drag your finger across the screen to look around the kitchen." % [Story.BOSS, Story.EMPLOYER],
 			"setup": func(): mark.yaw = _world().yaw,
 			"done": func(): return abs(angle_difference(deg_to_rad(_world().yaw), deg_to_rad(mark.yaw))) > deg_to_rad(30.0) or _view() != "front"},
-		{"say": "The buttons along the bottom turn you to each station. Turn to Prep.", "at": "hud:prep",
-			"done": func(): return _view() == "prep"},
-		{"say": "Every morning starts with the prep list. These tubs are it: tap them and prep the first thing on the list by hand.", "at": "job:prep",
-			"setup": func(): mark.prep = _prepped_total(),
-			"done": func(): return _prepped_total() > mark.prep + 1.0},
-		{"say": "Good. Luca has done the rest of the prep while you were at it. Now set up the counter: turn to the Counter and tap a pan on the rail. Every pan fills from the tubs.", "at": "hud:bench",
-			"setup": func(): _prep_rest(),
-			"done": func(): return _pans_filled() >= 4},
-		{"say": "That is the opening jobs. The checklist in the corner ticks itself off as you do things. When you are ready, tap the sign above the pass to open.", "at": "job:open",
+		{"say": "%s has done the prep and set up the counter. Today you do one job: you stretch the bases, and I do the rest. When you are ready, tap the sign above the pass to open." % Story.JUNIOR, "at": "job:open",
 			"done": func(): return _svc() != null},
-		{"say": "Sofia has put an order on the rail: a Margherita for table 1. Tickets hang on the rail above the counter. Tap it to start.", "at": "ticket",
+		{"say": "Tickets hang on the rail above the counter. Here is your first: tap it to start it. The dough ball goes on the marble.", "at": "ticket",
 			"setup": func(): _svc().training_order("margherita"),
 			"done": func(): return _pizza() != null},
-		{"say": "The dough ball is on the marble. With an empty hand, press it out from the middle with one finger, working outwards. Stop short of the edge to leave a rim.", "at": "surface:bench",
+		{"say": "With an empty hand, press the dough out from the middle with one finger, working outwards. Stop short of the edge to leave a rim for the crust.", "at": "surface:bench",
 			"setup": func(): mark.r = _mean_r(_pizza()) if _pizza() != null else 0.0,
 			"done": func(): return _pizza() != null and _mean_r(_pizza()) > mark.r * 1.3},
-		{"say": "Now two fingers on the dough: spread them apart to stretch it out to the ring. Twist them to turn it. There are no steps here: the dough is yours to shape however you like.", "at": "surface:bench",
+		{"say": "Now two fingers on the dough: spread them apart to stretch it out to the ring, and twist them to turn it. Round, even, and out to the ring.", "at": "surface:bench",
 			"done": func(): return _pizza() != null and _pizza().base.diameter_cm() >= _pizza().d.size_cm * 0.85},
-		{"say": "Sauce: tap the tomato sauce pan. The 2 oz ladle scoops exactly what a Margherita needs.", "at": "pan:tomato",
-			"done": func(): return _svc() != null and (_svc().ladle_g > 0.0 or (_pizza() != null and _pizza().grams.get("tomato", 0.0) > 0.0))},
-		{"say": "Tap the middle of the pizza to drop the sauce, then drag your finger round and round to spread it out to the rim.", "at": "surface:bench",
-			"done": func(): return _pizza() != null and _pizza().cov(_pizza().sauce_amt) >= 0.7},
-		{"say": "Cheese: tap the mozzarella pan, then drag across the pizza to scatter it. The card in the corner shows the grams against the recipe card. Every gram over is the boss's money.", "at": "pan:mozz",
-			"done": func(): return _pizza() != null and _pizza().grams.get("mozz", 0.0) >= _pizza().spec_of("mozz") * 0.6},
-		{"say": "Basil: tap its pan and tap the pizza to place a few leaves. Tap the basil pan again to put it back and free your hand.", "at": "pan:basil",
-			"done": func(): return _pizza() != null and _pizza().grams.get("basil", 0.0) >= _pizza().spec_of("basil") * 0.5},
-		{"say": "Into the oven. Turn to the Oven: the pizza comes with you on the peel.", "at": "hud:oven",
-			"done": func(): return _view() == "oven" and _pizza() == null},
-		{"say": "Drag it off the peel onto the deck.", "at": "surface:oven",
-			"done": func(): return _svc() != null and _svc().oven.mine().size() > 0},
-		{"say": "This is a gas oven: the back is hotter. When it says TURN, drag the edge of the pizza round to turn it. When it says READY, drag it off the deck and it goes on the board.", "at": "surface:oven",
-			"done": func(): return _svc() != null and _svc().board.size() > 0},
-		{"say": "On the board: with an empty hand, swipe across the pizza through the middle. Three cuts.", "at": "surface:board",
-			"done": func(): return _svc() != null and _svc().board.size() > 0 and _svc().board[0].cuts.size() >= 3},
-		{"say": "Tap the pass behind the board to send it out. Sofia takes it to the table.", "at": "pass",
-			"done": func(): return _svc() != null and _svc().board.is_empty()},
-		{"say": "Two more on the rail. Make them on your own: everything you just did, in whatever order you like.", "at": "ticket",
-			"setup": _two_more,
-			"done": func(): return _svc() != null and _svc().tickets.filter(func(tk): return tk.p.get("training", false) and tk.state != "pass").is_empty()},
-		{"say": "Lovely. That is the job: tickets, dough, sauce, cheese, toppings, oven, board, pass. Tomorrow is your first real shift. Get some sleep.", "tap": true},
+		{"say": "That is a base. Turn to the Oven to hand it to me: I top it, bake it, cut it and send it.", "at": "hud:oven",
+			"done": func(): return _svc() != null and _pizza() == null},
+		{"say": "In it goes. That is your day: take each ticket as it comes in, stretch it, and bring it to me. I will keep up, and if a ticket waits too long I make it myself.", "tap": true},
 	]
-
-func _two_more() -> void:
-	_svc().training_order("pepperoni")
-	_svc().training_order("funghi")
 
 # ---------- the senior pizzaiolo's training day ----------
 func _senior() -> Array:

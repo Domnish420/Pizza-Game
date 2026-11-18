@@ -16,8 +16,25 @@ const BOSS := "Marco"
 const JUNIOR := "Luca"
 const WAGE := {"pizzaiolo": 95.0, "senior": 140.0}
 const GOALS := {
-	"pizzaiolo": {"shifts": 5, "score": 70.0},
-	"senior": {"shifts": 6, "score": 70.0, "inspection": 3},
+	"pizzaiolo": {"shifts": 7, "score": 55.0, "over": 4},
+	"senior": {"shifts": 7, "score": 70.0, "over": 7, "inspection": 3},
+}
+## The first shifts at each stage: what is yours to do, and how busy it is (a share of a normal day's customers).
+## A pizzaiolo's first week: on day 1 you only stretch the bases, and Marco tops, bakes, cuts and sends them; on day 2
+## you stretch and top, and he bakes and sends; on day 3 he stretches, and you top and work the oven (he cuts and
+## sends); from day 4 you and Marco each make your own pizzas, slowly at first and busier every day. As senior (day 8,
+## after the training day on the back of house) it is still quieter; by day 10 it is a normal restaurant service.
+const STEPS := ["stretch", "top", "oven", "board"]
+const PLAN := {
+	"pizzaiolo": [
+		{"jobs": ["stretch"], "pace": 0.22},
+		{"jobs": ["stretch", "top"], "pace": 0.28},
+		{"jobs": ["top", "oven"], "pace": 0.32},
+		{"jobs": ["all"], "pace": 0.3},
+		{"jobs": ["all"], "pace": 0.38},
+		{"jobs": ["all"], "pace": 0.46},
+		{"jobs": ["all"], "pace": 0.55}],
+	"senior": [{"jobs": ["all"], "pace": 0.6}, {"jobs": ["all"], "pace": 0.8}, {"jobs": ["all"], "pace": 1.0}],
 }
 
 func stage() -> String:
@@ -31,16 +48,80 @@ func role() -> String:
 func employed() -> bool:
 	return role() != "owner"
 
-## employed shifts are quieter than running the whole place: the boss and the crew take the rest
+## which shift this is at the current stage (the first is 1)
+func shift_no() -> int:
+	return stage_shifts().size() + 1 if employed() else 0
+
+## this shift's plan: {jobs, pace} (after the planned days, the last one carries on)
+func plan() -> Dictionary:
+	var p: Array = PLAN.get(stage(), [])
+	if p.is_empty(): return {"jobs": ["all"], "pace": 1.0}
+	return p[min(stage_shifts().size(), p.size() - 1)]
+
+## the steps of each pizza Marco does for you this shift ("stretch", "top", "oven", "board"): none once you make
+## whole pizzas
+func marco_does() -> Array:
+	if stage() != "pizzaiolo": return []
+	var j: Array = plan().jobs
+	if "all" in j: return []
+	return STEPS.filter(func(x): return not x in j)
+
+## how busy employed shifts are: quiet at first, a normal day's trade by the senior's third shift
 func traffic() -> float:
-	return {"pizzaiolo": 0.45, "senior": 0.75}.get(stage(), 1.0)
+	return float(plan().pace) if employed() else 1.0
+
+## what Marco says about today's shift, in the morning
+func briefing() -> String:
+	var n := shift_no()
+	if stage() == "pizzaiolo":
+		match n:
+			1: return "Day one. Today you only stretch the bases. Take a ticket, open the dough out to the ring, then turn to the oven and hand it to me: I top it, bake it, cut it and send it. Luca has done the prep."
+			2: return "Day two: you stretch and you top. Sauce, cheese and toppings to the recipe card, then hand it to me at the oven. I bake it and send it. Luca has done the prep again."
+			3: return "Day three: I stretch the bases for you. You top them and work the oven: load them, turn them, pull them when they are ready. I cut them and send them."
+			4: return "From today we each make our own pizzas, ticket to pass: stretch, top, bake, cut, send. We start slow. The prep and the counter are yours in the mornings now."
+			5, 6: return "Busier today than yesterday. Keep up with the rail."
+			7: return "Last day of your first week, and the busiest yet. Show me what you have learned."
+		return "Another shift. Keep the rail moving."
+	if stage() == "senior":
+		match n:
+			1: return "Your first day running the kitchen. We keep it quieter today."
+			2: return "Busier today. The kitchen is yours."
+			3: return "A full service today, like any other day from now on."
+	return ""
+
+## the shift Marco guides you into this morning (1: the first pizza of day 1; 2-4: a briefing), or 0
+func guide_due() -> int:
+	if stage() != "pizzaiolo" or Game.s.phase != "morning": return 0
+	var n := shift_no()
+	if n > 4 or bool(Game.s.story.get("guided_%d" % n, false)): return 0
+	return n
+
+## a line for the recipe card while Marco is doing part of every pizza
+func today_short() -> String:
+	var md := marco_does()
+	if md.is_empty(): return ""
+	var yours: Array = STEPS.filter(func(x): return not x in md)
+	var words := {"stretch": "stretch", "top": "top", "oven": "bake", "board": "cut and send"}
+	return "Today you %s; %s does the rest (%s)." % [" and ".join(yours.map(func(x): return words[x])), BOSS, ", ".join(md.map(func(x): return words[x]))]
+
+## while Marco is doing part of every pizza (the first three days), Luca preps to the list and sets up the counter
+## before you get in
+func luca_preps() -> String:
+	var done := []
+	for row in Day.prep_list():
+		if row.raw > 0.0 and row.get("block", "") == "":
+			var res := Stock.prep(row.id, row.raw, 0.7)
+			if res.made > 0: done.append(Data.ING[row.id].name.to_lower())
+	var set_up := Day.set_up_counter()
+	Stock.fold(Stock.boxes_needed() - Stock.folded())
+	return "%s came in early: he prepped %s and set up the counter (%d pans)." % [JUNIOR, ", ".join(done) if done.size() > 0 else "what was needed", set_up.filled]
 
 # ---------- starting out ----------
 ## a new career: you start as a pizzaiolo at someone else's pizzeria
 func start() -> void:
 	Game.new_game()
 	var s: Dictionary = Game.s
-	s.story = {"stage": "pizzaiolo", "shifts": [], "savings": 150.0, "sheet": {}, "sheet_day": -1, "started": s.day, "reviews": [], "training": "pizzaiolo"}
+	s.story = {"stage": "pizzaiolo", "shifts": [], "savings": 150.0, "sheet": {}, "sheet_day": -1, "started": s.day, "reviews": [], "training": ""}
 	s.venue = 3
 	s.tables = 12
 	s.cash = 6000.0
@@ -66,7 +147,7 @@ func start() -> void:
 	for e in [["flour00", 25000, 3], ["tomato", 5000, 3], ["mozz", 5000, 3], ["basil", 125, 2], ["pepperoni", 1000, 2], ["mushroom", 1000, 2], ["box", 50, 2],
 			["garlicbutter", 2500, 2], ["cola", 48, 2], ["lemonade", 24, 2], ["water", 48, 1], ["coffee", 2000, 2], ["milk", 4000, 2]]:
 		Stock.add(e[0], e[1], e[2], Data.ING[e[0]].g[e[2]].price)
-	s.notes = ["%s: \"Morning! Welcome to %s. Your list is on the Jobs page: the prep, then set up the counter. We open at %s. Any questions, shout.\"" % [BOSS, EMPLOYER, Data.hhmm(Day.open_time())]]
+	s.notes = ["%s: \"Morning! Welcome to %s. %s We open at %s.\"" % [BOSS, EMPLOYER, briefing(), Data.hhmm(Day.open_time())], luca_preps()]
 	Game.save_game()
 
 ## the people working alongside you at each stage
@@ -84,6 +165,11 @@ func _crew(st: String) -> void:
 func morning() -> Array:
 	var notes := []
 	var st: Dictionary = Game.s.get("story", {})
+	if stage() == "pizzaiolo":
+		notes.append("%s: \"%s\"" % [BOSS, briefing()])
+		if not marco_does().is_empty(): notes.append(luca_preps())
+	elif stage() == "senior" and shift_no() <= 3 and Game.s.day >= int(st.get("promoted", 0)):
+		notes.append("%s: \"%s\"" % [BOSS, briefing()])
 	if stage() == "senior" and int(st.get("sheet_day", -1)) == Game.s.day and not st.sheet.is_empty():
 		var done := []
 		for id in st.sheet:
@@ -141,12 +227,13 @@ func review(r: Dictionary) -> Dictionary:
 	if stage() == "pizzaiolo":
 		var mine: int = r.get("mine", 0)
 		var q: float = r.get("mine_q", 0.0) / mine if mine > 0 else 0.0
-		parts.pizzas = q * clamp(mine / 4.0, 0.0, 1.0)
+		var need: float = max(2.0, round(9.0 * float(plan().pace)))       # a quiet first day needs fewer than a busy one
+		parts.pizzas = q * clamp(mine / need, 0.0, 1.0)
 		var over: float = (r.get("mine_cost", 0.0) - r.get("mine_spec", 0.0)) / max(r.get("mine_spec", 0.0), 0.01)
 		parts.portions = clamp(100.0 - abs(over) * 250.0, 0.0, 100.0) if mine > 0 else 0.0
 		var score: float = parts.pizzas * 0.45 + parts.portions * 0.2 + parts.checks * 0.35
 		lines.append("You made %d pizzas, averaging %d." % [mine, q])
-		if mine < 4: lines.append("I need you making more pizzas. Take tickets as soon as they come in.")
+		if mine < need: lines.append("I need you making more pizzas. Take tickets as soon as they come in.")
 		elif q < 65: lines.append("The pizzas need work: watch the stretch, the spread and the bake.")
 		if over > 0.08: lines.append("Your portions were heavy, %d%% over the recipe cards. That is my margin." % (over * 100))
 		elif over < -0.1: lines.append("You were stingy with the toppings. Customers notice.")
@@ -205,7 +292,7 @@ func goals() -> Array:
 	var g: Dictionary = GOALS[stage()]
 	var out := []
 	out.append(["Work %d shifts (%d so far)" % [g.shifts, stage_shifts().size()], stage_shifts().size() >= g.shifts])
-	out.append(["Average %d or more from %s over your last %d (%d)" % [g.score, BOSS, g.shifts if stage() == "senior" else 5, avg_score(g.shifts)], avg_score(g.shifts) >= g.score and stage_shifts().size() > 0])
+	out.append(["Average %d or more from %s over your last %d (%d)" % [g.score, BOSS, g.over, avg_score(g.over)], avg_score(g.over) >= g.score and stage_shifts().size() > 0])
 	if stage() == "senior":
 		var H: Dictionary = Game.s.hygiene
 		var ok: bool = int(H.rating) >= g.inspection and int(H.day) >= int(Game.s.story.get("promoted", 0))

@@ -31,20 +31,33 @@ training day; once you are senior, Luca works at the end of the prep counter. Th
 
 ## Story or free play
 
-**New game** offers two starts. **Story** starts you as a pizzaiolo at Bella Napoli: the boss sets your checklist, you
-prep, set up the counter and make pizzas, and each shift is reviewed and paid into your savings. Promotion to senior
-pizzaiolo hands you the back of house (temperature logs, deliveries, rotation, cleaning down, dough, ordering and the
-junior's prep list). Then your savings buy a van and you go it alone. **Free play** starts straight away in the van.
+**New game** offers two starts. **Story** starts you as a pizzaiolo at Bella Napoli, under Marco
+(`scripts/story.gd`, `Story.PLAN`). Your first week builds the job up a piece at a time:
 
-**Training days.** Before your first shift, and again before your first shift as senior, Marco walks you through it
-in the 3D kitchen (`scripts/tutor.gd`, autoload `Tutor`). A box at the bottom says what to do next and a yellow
-marker floats over the thing to touch (or a button lights up). Each step finishes when you have actually done it:
-look around, turn to prep, prep a tub by hand, fill the counter, open, make a Margherita from the ticket (press,
-stretch, sauce, cheese, basil), oven, board, cut, pass, then two more on your own. The senior day covers the fridge
-and freezer temperatures, the delivery at the back door, a sprung trap, the counter, the phone, then the evening:
-cleaning down, washing up, the dough, the order, tomorrow's prep sheet and the evening temperature. Nothing counts:
-the training service has only practice customers who wait forever, no inspector, no mice and no walk-ins, and when
-the day ends (or you skip it) the game goes back to exactly how it was, ready for the real shift.
+| Day | You | Marco | How busy |
+| --- | --- | --- | --- |
+| 1 | stretch the bases | tops, bakes, cuts and sends them | very quiet |
+| 2 | stretch and top | bakes, cuts and sends | quiet |
+| 3 | top and work the oven | stretches them first; cuts and sends | quiet |
+| 4 | whole pizzas, ticket to pass | makes his own beside you | slow |
+| 5 to 7 | whole pizzas | the same | busier every day |
+
+On days 1 to 3 Luca does the morning prep and sets up the counter, and Marco only picks up a ticket himself if it has
+waited too long; from day 4 the prep and the counter are yours. Each shift is reviewed (how many pizzas for how busy
+the day was, how good they were, the portions, the checklists) and paid into your savings. After day 7, if your days
+4 to 7 averaged 55 or more, you are promoted to senior pizzaiolo, and the next day is a training day on the back of
+house. Your first senior shift (day 8) is still quieter, the next busier, and from day 10 it is a normal restaurant
+service. Seven senior shifts averaging 70 and a good hygiene inspection, and your savings buy a van: you go it alone.
+**Free play** starts straight away in the van.
+
+**Marco guides you** (`scripts/tutor.gd`, autoload `Tutor`). Your first shift is guided and counts: he has you look
+around, open, take the first ticket, press and stretch the dough, and hand it to him at the oven, then leaves you to
+it. On the mornings of days 2 to 4 he briefs you on what has changed, and the recipe card says what is yours today.
+A box at the top says what to do next and a yellow marker floats over the thing to touch (or a button lights up);
+each step finishes when you have actually done it. The senior's training day covers the fridge and freezer
+temperatures, the delivery at the back door, a sprung trap, the counter, the phone, then the evening: cleaning down,
+washing up, the dough, the order, tomorrow's prep sheet and the evening temperature. That one does not count: when it
+ends (or you skip it) the game goes back to exactly how it was, ready for the real shift.
 
 ## A day
 

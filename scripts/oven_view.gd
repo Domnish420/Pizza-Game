@@ -204,7 +204,7 @@ func _draw() -> void:
 		if drag != null and drag.o == o and drag.mode == "move": continue
 		PizzaDraw.draw(self, o.pz, off + p * k, k * ov.prad / 106.0)
 		draw_set_transform(off, 0, Vector2(k, k))
-		var st := "your fornaio has it" if o.auto else ov.status(o)
+		var st := ("%s has it" % Story.BOSS if Story.stage() == "pizzaiolo" else "your fornaio has it") if o.auto else ov.status(o)
 		var col := Kit.INK
 		if st == "READY": col = Kit.BASIL
 		elif st == "TURN": col = Kit.CHEESE

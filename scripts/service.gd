@@ -54,6 +54,8 @@ var phones := []                 # calls ringing: {n, until}
 var tablet := []                 # delivery-app orders pinging on the tablet: {n, until}
 var app_acc := 0.0
 var training := false            # a training day: no customers of its own, nobody else takes the tickets (see Tutor)
+var helps := []                  # the steps of your pizzas Marco does today (Story.marco_does): stretch, top, oven, board
+var marco_board_t := 0.0         # Marco cutting and sending what has come off the oven
 var carried: Pizza = null        # the pizza you took from the bench to the oven and have not loaded yet
 var spiked := []                 # tickets that have just gone (walked out, collected): {tk, why, until (msec)} - they stay on the rail a moment
 var critic_at := -1.0            # when the food critic walks in today (-1: not today)
@@ -106,7 +108,13 @@ func _ready() -> void:
 	if G.s.day >= int(G.s.critic_next) and G.s.level >= 3 and not training: critic_at = randf_range(0.2, 0.7) * DAY
 	oven = Oven.new(G.tier("oven"))
 	if oven.def.feeds: _light_for_service()
-	for x in G.staff_of("pizzaiolo"): workers.append({"s": x, "job": null, "left": 0.0, "prep": "", "raw": 0.0})
+	helps = Story.marco_does()
+	if Story.stage() == "pizzaiolo":
+		# Marco works the line beside you: on the first days only picking up tickets that have waited (the rest go
+		# through your hands), from day 4 making his own pizzas from the rail like you
+		workers.append({"s": {"name": Story.BOSS, "skill": 4, "role": "pizzaiolo"}, "job": null, "left": 0.0, "prep": "", "raw": 0.0, "backup": not helps.is_empty()})
+	else:
+		for x in G.staff_of("pizzaiolo"): workers.append({"s": x, "job": null, "left": 0.0, "prep": "", "raw": 0.0})
 	for role in ["cashier", "server", "host", "porter", "driver"]:
 		for x in G.staff_of(role): foh.append({"s": x, "role": role, "cd": 1.0})
 	for role in ["prep", "porter"]:
@@ -1413,7 +1421,7 @@ func step(dt: float) -> void:
 			continue
 		if w.job == null and not training:
 			for tk in _by_due():
-				if tk.state != "new" or tk.owner != "" or tk.age <= 1.2: continue
+				if tk.state != "new" or tk.owner != "" or tk.age <= (40.0 if w.get("backup", false) else 1.2): continue
 				var mk: String = tk.rec.get("make", "pizza")
 				if mk == "bar": continue          # drinks are made out front
 				if mk == "cold":
@@ -1448,9 +1456,16 @@ func step(dt: float) -> void:
 					break
 	# oven
 	for o in oven.step(dt, c.bake / oven.bake_time): to_pass(o.tk, staff_result(o.tk))
-	if c.fornaio:
+	if c.fornaio or helps.has("oven"):
 		for o in oven.mine():
-			if o.pz.bake_avg() >= 1.0: oven_pull(o)
+			if o.pz.bake_avg() >= o.pz.bake_target: oven_pull(o, helps.has("oven"))
+	if helps.has("board") and board.size() > 0:
+		marco_board_t += dt
+		if marco_board_t >= 2.5:
+			marco_board_t = 0.0
+			_marco_finishes(board[0])
+			serve(true)
+	else: marco_board_t = 0.0
 	# the oven tender keeps the fire just right; without one, a pizzaiolo throws a log on when it gets low
 	if oven.def.feeds and (oven.power_soon() < 0.85 if c.fornaio else (oven.power_soon() < 0.55 and workers.size() > 0)):
 		var lg := Stock.take("wood", 1.0)
@@ -1608,6 +1623,7 @@ func claim(tk: Dictionary) -> void:
 	tk.state = "make"
 	ladle_g = 0.0
 	bench = Pizza.new(tk, dq)
+	if helps.has("stretch"): _marco_stretches(bench)
 	if bench.rec.sauce != "":
 		var lo := Game.ladle_for(bench.rec.spec[bench.rec.sauce])
 		if lo > 0: ladle_oz = lo
@@ -1636,13 +1652,15 @@ func _carry_to_oven(say: bool) -> Pizza:
 	if bench == null: return null
 	_drop_ladle(bench)
 	var pz: Pizza = bench
-	if c.fornaio:
+	if helps.has("top"): _marco_tops(pz)
+	if c.fornaio or helps.has("oven"):
 		var slot := oven.free_slot()
 		if slot < 0:
 			if say: Kit.main.toast("The oven is full", true)
 			return null
 		oven.load_pizza(pz, slot, true)
 		pz.tk.state = "oven"
+		if helps.has("oven"): Kit.main.toast("%s takes it: %s" % [Story.BOSS, "he tops it and bakes it" if helps.has("top") else "he bakes it and sends it"])
 	else:
 		if oven.shelf.size() >= Oven.SHELF:
 			if say: Kit.main.toast("The shelf by the oven is full. Put those pizzas in first", true)
@@ -1654,6 +1672,49 @@ func _carry_to_oven(say: bool) -> Pizza:
 	dirty = true
 	Art.sfx("tap")
 	return pz
+
+# ---------- Marco's part of your pizzas (the first days of the story) ----------
+## he stretches the base out to the ring, with an even rim
+func _marco_stretches(pz: Pizza) -> void:
+	var b := pz.base
+	for j in PizzaBase.NS:
+		b.r[j] = b.R * randf_range(0.97, 1.03)
+		b.rim[j] = b.crust * randf_range(0.9, 1.1)
+	pz.inside_n = -1
+	pz.stage = "top"
+
+## he tops it to the recipe card (adding only what is not on it yet): the sauce spread to the rim, the cheese
+## scattered, the toppings laid out evenly
+func _marco_tops(pz: Pizza) -> void:
+	var reach: float = max(20.0, pz.base.mean_r() - pz.base.mean_rim())
+	for ing in [pz.rec.sauce, pz.rec.cheese]:
+		if ing == "" or not pz.rec.spec.has(ing): continue
+		var k := 0
+		while pz.grams.get(ing, 0.0) < pz.spec_of(ing) * 0.97 and k < 400:
+			var p := Vector2.from_angle(k * 0.62) * fmod(k * 2.6, reach * 0.92)
+			if not pz.spread(ing, p, 14.0, 17.0): break
+			k += 1
+	_marco_lays(pz, false)
+
+## the pieces on top (before the oven, or the ones that go on after it)
+func _marco_lays(pz: Pizza, after: bool) -> void:
+	var reach: float = max(20.0, pz.base.mean_r() - pz.base.mean_rim())
+	for ing in pz.rec.tops:
+		if ing == "" or bool(Data.ING[ing].after) != after: continue
+		var k := 0
+		while pz.grams.get(ing, 0.0) < pz.spec_of(ing) * 0.95 and k < 60:
+			var p := Vector2.from_angle(k * 2.39996) * reach * 0.82 * sqrt(fmod(k * 0.137 + 0.08, 1.0))
+			var res := pz.add_top(ing, p, after)
+			if res == "out" or res == "full": break
+			k += 1
+
+## off the oven: anything that goes on after baking, three cuts through the middle, onto the pass
+func _marco_finishes(pz: Pizza) -> void:
+	_marco_lays(pz, true)
+	var R: float = pz.base.mean_r() * 1.1
+	while pz.cuts.size() < 3:
+		var a := pz.cuts.size() * PI / 3.0 + 0.2
+		pz.cuts.append({"a": Vector2.from_angle(a) * -R, "b": Vector2.from_angle(a) * R, "d": 0.0})
 
 func bin() -> void:
 	var pz: Pizza = (board.pop_front() if board.size() > 0 else null) if view == "board" else bench
@@ -1800,7 +1861,7 @@ func oven_load(pz: Pizza, slot: int, at: Vector2 = Vector2.INF) -> void:
 	dirty = true
 	Art.sfx("tap")
 
-func oven_pull(o: Dictionary) -> void:
+func oven_pull(o: Dictionary, by_marco: bool = false) -> void:
 	if not Equip.has("peel") and not o.auto:
 		Kit.main.toast("You need a pizza peel to get it out", true)
 		return
@@ -1808,7 +1869,7 @@ func oven_pull(o: Dictionary) -> void:
 	o.pz.stage = "board"
 	if not o.pz.tk.gone: o.pz.tk.state = "board"
 	board.append(o.pz)
-	if view == "oven" and oven.mine().is_empty() and oven.shelf.is_empty(): set_view("board")
+	if not by_marco and view == "oven" and oven.mine().is_empty() and oven.shelf.is_empty(): set_view("board")
 	dirty = true
 	Art.sfx("tap")
 
@@ -1835,7 +1896,7 @@ func add_log() -> void:
 	if lg.got >= 1.0: oven.add_log(lg.g)
 	else: Kit.main.toast("No firewood left", true)
 
-func serve() -> void:
+func serve(by_marco: bool = false) -> void:
 	if board.is_empty(): return
 	var pz: Pizza = board[0]
 	if pz.tk.gone:
@@ -1856,7 +1917,7 @@ func serve() -> void:
 	to_pass(pz.tk, a)
 	board.pop_front()
 	_show_result(pz, a)
-	if board.is_empty():
+	if board.is_empty() and not by_marco:
 		set_view("bench" if bench != null else ("oven" if oven.mine().size() + oven.shelf.size() > 0 else "front"))
 
 func _show_result(pz: Pizza, a: Dictionary) -> void:
@@ -2066,6 +2127,7 @@ func _build_side() -> void:
 	bin_btn.visible = pz != null
 	auto_btn.visible = pz != null and view == "bench" and pz.base.method == "roll" and c.roll_auto > 0
 	mini_panel.visible = view != "oven" and oven.mine().size() + oven.shelf.size() > 0
+	if not helps.is_empty(): info.add_child(Kit.label(Story.today_short(), 15, Kit.CHEESE, true))
 	if mini_panel.visible:
 		mini_box.add_child(Kit.label("IN THE OVEN", 14, Kit.MUTED))
 		for o in oven.mine():
@@ -2107,11 +2169,16 @@ func _build_side() -> void:
 		"hand": "Hand empty: one finger presses the dough out (leave a rim), two fingers stretch it and twist it.",
 		"roll": "Hand empty: roll the pin across the dough with a finger, changing direction so it stays round.",
 		"press": "Hand empty: rub the dough outward to the wall of the pan."}[b.method]
-	info.add_child(Kit.label(how + " Tap a pan to pick up a topping (tap it again to put it back); one finger then puts it on. %s" % ("Turn to the oven and the pizza comes with you on the peel." if fp_mode else "Go to the Oven tab and the pizza comes with you."), 14, Kit.MUTED, true))
+	var topping := "" if helps.has("top") else " Tap a pan to pick up a topping (tap it again to put it back); one finger then puts it on."
+	info.add_child(Kit.label(how + topping + " %s" % ("Turn to the oven and the pizza comes with you on the peel." if fp_mode else "Go to the Oven tab and the pizza comes with you."), 14, Kit.MUTED, true))
 	if b.method == "hand" and not DisplayServer.is_touchscreen_available():
 		info.add_child(Kit.label("With a mouse: left button is one finger, right button is two.", 13, Kit.MUTED, true))
 	_info(func(): return ["Size %.1f of %d cm · rim %.1f (aim %.1f) · %d%%" % [b.diameter_cm(), pz.d.size_cm, b.crust_cm(), pz.d.crust_cm, b.score().total * 100], Kit.BASIL if b.score().total >= 0.8 else Kit.CHEESE], 16)
 	next_btn.text = "To the oven"
+	if helps.has("top"):
+		# you only stretch today: when it is out to the ring, Marco takes it
+		_info(func(): return ["%s: turn to the Oven and hand it to %s. He tops it, bakes it and sends it." % ["Stretched" if b.score().size >= 0.8 else "Stretch it out to the ring, then", Story.BOSS], Kit.BASIL if b.score().size >= 0.8 else Kit.CHEESE], 16)
+		return
 	for id in [pz.rec.sauce, pz.rec.cheese] + pz.rec.tops:
 		if id == "": continue
 		if Data.ING[id].after:

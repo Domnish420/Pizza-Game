@@ -529,7 +529,7 @@ func _sync_oven() -> void:
 			if moving: at = _deck3d(dg.pos, OV_Y + 0.025)
 			n.position = at
 			n.show_pizza(o.pz)
-			var st: String = "your fornaio has it" if o.auto else ov.status(o)
+			var st: String = ("%s has it" % Story.BOSS if Story.stage() == "pizzaiolo" else "your fornaio has it") if o.auto else ov.status(o)
 			var col := Color.WHITE
 			if st == "READY": col = Kit.BASIL
 			elif st == "TURN": col = Kit.CHEESE

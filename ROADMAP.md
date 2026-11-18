@@ -20,6 +20,8 @@ The game starts as a job in someone else's pizzeria and works up to running your
 Each stage has goals to pass before promotion and a boss who checks your work. The checklists reuse the jobs below.
 
 - [x] Start screen: Story or Free play
+- [x] The first week builds the job up: day 1 stretching for Marco, day 2 stretching and topping, day 3 topping and
+      the oven, from day 4 whole pizzas beside him, busier each day; senior from day 8, a normal service by day 10
 - [x] Pizzaiolo at Bella Napoli: the boss's opening and closing checklist, prep and counter, making pizzas;
       the boss makes the dough, orders and keeps the temperature log; a wage into your savings every shift
 - [x] Shift reviews from the boss (pizzas, portions against the recipe cards, checklists) and promotion goals
