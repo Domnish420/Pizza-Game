@@ -23,6 +23,12 @@ sign for a puff from the chimney. The menu is a chalkboard: **Continue** (your s
 cash), **New game** (the story or free play; it asks before replacing a save), **Settings** (the 3D kitchen, looking
 by turning the phone, the retro look) and **Quit** on a computer. The phone's home page has a Title screen button.
 
+## The crew
+
+At Bella Napoli you can see the people you work with: Marco, the boss, stands out past the pass in his toque
+while you are his pizzaiolo, watching every pizza go out, tapping his rolling pin and waving you on through your
+training day; once you are senior, Luca works at the end of the prep counter. They turn their heads to follow you.
+
 ## Story or free play
 
 **New game** offers two starts. **Story** starts you as a pizzaiolo at Bella Napoli: the boss sets your checklist, you

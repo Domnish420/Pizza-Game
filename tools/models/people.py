@@ -263,6 +263,13 @@ def _arm(f, s, c, top_m, skin_m):
     tt = tb + Vector((-s * 0.014, -0.046, 0.036))
     lows.append(tube([tuple(tb), tuple((tb + tt) / 2 + Vector((0, 0, 0.007))), tuple(tt)], 0.027, skin_m, seg=10, radii=[0.029, 0.027, 0.025], caps=False, name="thumb"))
     lows.append(sphere(0.025, tuple(tt), skin_m, seg=10, rings=6, name="thumb_tip"))
+    if c.get("rolling_pin") == tag:
+        wood = mat("pin_wood", "#c9935a", rough=0.6)
+        c0 = Vector((px - s * 0.03, py - 0.035, pz + 0.03))
+        lows.append(cyl(0.032, 0.36, tuple(c0), wood, axis="z", seg=16, bevel=0.01, rot=(-25, 0, 0), name="rolling_pin"))
+        for e in (-1, 1):
+            d = Vector((0, math.sin(math.radians(-25)) * -0.22 * e, math.cos(math.radians(25)) * 0.22 * e))
+            lows.append(cyl(0.017, 0.09, tuple(c0 + d), wood, axis="z", seg=12, bevel=0.006, rot=(-25, 0, 0), name="pin_handle"))
     if c.get("phone") == tag:
         ph = box((0.014, 0.12, 0.066), (px - s * 0.035, py - 0.03, pz + 0.035), mat("phone", "#22272b", rough=0.4), bevel=0.006, rot=(-20, 0, 0), name="phone")
         scr = box((0.002, 0.1, 0.054), (px - s * 0.043, py - 0.03, pz + 0.035), mat("screen", "#7fb6e8", rough=0.3, emit="#9cc9f2", emit_k=0.8), bevel=0.0, rot=(-20, 0, 0), name="screen")
@@ -295,6 +302,8 @@ def _head(f, c):
         sphere(0.13 * R, tuple(ear_c(s) + ear_n(s) * 0.075 * R), inner, seg=12, rings=8, scale=(1.0, 1.3, 0.25), rot=(0, s * 38, 0), name="inner_ear")
         if c.get("earrings"):
             sphere(0.04 * R, (s * 1.08 * R, Y - 0.33 * R, -0.03 * R), mat("gold", CHEESE, rough=0.35, metal=0.3), seg=8, rings=6, name="earring")
+        if c.get("hoops"):
+            torus(0.11 * R, 0.022 * R, (s * 1.1 * R, Y - 0.42 * R, -0.03 * R), mat("gold", CHEESE, rough=0.35, metal=0.3), seg=18, rseg=5, rot=(0, s * 38, 90), name="hoop")
     return head
 
 
@@ -441,6 +450,36 @@ def _hair(f, c, head):
         blobs([("ellipsoid", (0.1 * R, Y + 0.74 * R, 0.62 * R), 0.26 * R, (1.5, 0.62, 0.9), (-20, 0, -8)),
                ("ellipsoid", (0.98 * R, Y + 0.08 * R, 0.12 * R), 0.13 * R, (0.6, 1.5, 0.9)),
                ("ellipsoid", (-0.98 * R, Y + 0.08 * R, 0.12 * R), 0.13 * R, (0.6, 1.5, 0.9))], hm, res=0.01, name="top", tris=500)
+    elif h == "ponytail":                      # hair pulled back into a high ponytail with a scrunchie, a swept fringe
+        _hair_cap(f, hm, 0.5, -0.4, grow=1.07)
+        blobs([("ellipsoid", (0.18 * R, Y + 0.6 * R, 0.76 * R), 0.22 * R, (1.6, 0.55, 0.7), (-15, 0, -18))], hm, res=0.009, name="fringe", tris=260)
+        tie = Vector((0, Y + 0.62 * R, -0.98 * R))
+        els = [("ball", tuple(tie), 0.17 * R)]
+        for i in range(1, 7):
+            els.append(("ball", tuple(tie + Vector((0, -0.2 * R * i, -0.16 * R * i + 0.022 * R * i * i))), (0.2 - 0.016 * i) * R))
+        blobs(els, hm, res=0.01, name="ponytail", tris=500)
+        torus(0.13 * R, 0.055 * R, tuple(tie + Vector((0, -0.02 * R, 0.05 * R))), mat("scrunchie", c.get("tie_col", "#e86a8a"), rough=0.7), seg=16, rseg=6, rot=(70, 0, 0), name="scrunchie")
+    elif h == "chef":                          # short dark hair under a tall pleated toque
+        _hair_cap(f, hm, 0.45, -0.42, grow=1.06)
+        white = mat("toque", "#f8f6f1", rough=0.75)
+        lathe([(1.0, -0.5), (1.0, 0.5)], (0, Y + 0.72 * R, -0.04 * R), white, seg=32, scale=(R * 1.1, 0.5 * R, R * 1.08), rot=(-8, 0, 0), name="toque_band")
+        els = [("ellipsoid", (0, Y + 1.25 * R, -0.08 * R), 0.62 * R, (1.25, 0.75, 1.2))]
+        for k in range(8):
+            a = 2 * math.pi * k / 8
+            els.append(("ellipsoid", (math.sin(a) * 0.8 * R, Y + 1.22 * R, math.cos(a) * 0.78 * R - 0.08 * R), 0.36 * R, (1.0, 1.15, 1.0)))
+        blobs(els, white, res=0.012, name="toque", tris=700)
+    elif h == "paper_hat":                     # ginger curls and a folded paper hat
+        _hair_cap(f, hm, 0.42, -0.42, grow=1.06)
+        pts = _shell_pts(f, 90, lambda p: (p.y > Y + 0.4 * R or p.z < -0.05 * R) and p.y > Y - 0.5 * R and not (abs(p.x) < 0.5 * R and p.y > Y + 0.7 * R), lift=0.05, radius=1.1)
+        hm2 = mat("hair_light", _mix(c["hair_col"], "#ffd08a", 0.22), rough=0.7)
+        for i, p in enumerate(pts):
+            n = (p - Vector((0, Y, -0.04 * R))).normalized()
+            sphere(R * (0.15 + 0.035 * ((i * 7) % 3)), tuple(p), hm if i % 3 else hm2, seg=8, rings=5, scale=(1.0, 1.0, 0.8), rot=_facing(n), name="curl")
+        paper = mat("paper_hat", "#f7f4ec", rough=0.8)
+        side = [(-1.02 * R, 0.0), (1.02 * R, 0.0), (0.62 * R, 0.62 * R), (-0.62 * R, 0.62 * R)]
+        for s in (1, -1):            # two panels leaning together into a ridge, front to back on the curls (a folded boat)
+            slab(side, 0.02, (s * 0.4 * R - s * 0.01, Y + 0.84 * R, -0.04 * R), paper, rot=(s * -33, 90, 0), bevel=0.004, name="paper_hat")
+        box((0.9 * R, 0.12 * R, 2.08 * R), (0, Y + 0.88 * R, -0.04 * R), paper, bevel=0.012, name="paper_band")
     elif h == "helmet":                        # the rider: messy hair poking out of a cycle helmet with a chin strap
         els = []
         for a_deg in (62, 82, 102, 125, 150, 180, 210, 235, 258, 278, 298):
@@ -554,6 +593,38 @@ def _clothes(f, c, torso, top_m):
             _ring(bvh, y0 + 0.06 + j * 0.115, 0, 0, -0.002, 0.009, seam, name="quilt")
         _decal(bvh, [(-0.012, f.neck - 0.03), (0.012, f.neck - 0.03), (0.012, y0 + 0.02), (-0.012, y0 + 0.02)], mat("zip", "#3a3a3e", rough=0.5), out=0.004, name="zip", rings=2)
         lathe([(1.0, -0.5), (1.12, -0.25), (1.12, 0.25), (1.0, 0.5)], (0, f.neck - 0.01, 0.0), top_m, seg=28, scale=(0.105, 0.09, 0.1), name="high_collar")
+    elif k == "chef_jacket":
+        flap = mat("jacket_flap", "#fbfaf6", rough=0.7)
+        _decal(bvh, [(-0.04, f.neck - 0.06), (0.2, f.neck - 0.1), (0.21, y0 + 0.05), (-0.04, y0 + 0.05)], flap, out=0.004, name="flap", rings=3)
+        edge = [_on(bvh, -0.04, y, 0.007)[0] for y in [f.neck - 0.06 - (f.neck - 0.06 - y0 - 0.05) * t / 8 for t in range(9)]]
+        tube(edge, 0.005, mat("jacket_edge", "#d9d4c8", rough=0.7), seg=6, name="flap_edge")
+        bt = mat("jacket_button", "#bdb4a6", rough=0.5)
+        for bx in (-0.1, 0.12):
+            for j in range(3):
+                p, n = _on(bvh, bx, f.neck - 0.17 - j * 0.12, 0.008)
+                sphere(0.017, p, bt, seg=10, rings=6, scale=(1, 1, 0.55), rot=_facing(n), name="button")
+        torus(0.1, 0.026, (0, f.neck - 0.005, 0.004), mat("collar", "#f8f6f1", rough=0.75), seg=22, rseg=6, rot=(-6, 0, 0), name="stand_collar")
+        nk = mat("neckerchief", c["scarf_col"], rough=0.6)
+        _decal(bvh, [(-0.09, f.neck - 0.03), (0.09, f.neck - 0.03), (0.0, f.neck - 0.14)], nk, out=0.009, name="neckerchief", rings=3)
+        p, n = _on(bvh, 0.0, f.neck - 0.035, 0.022)
+        sphere(0.028, p, nk, seg=10, rings=6, scale=(1.3, 0.8, 0.7), rot=_facing(n), name="scarf_knot")
+    if c.get("apron"):
+        ap = mat("apron", c.get("apron_col", "#efe6d4"), rough=0.8)
+        flour = mat("flour", "#fbf9f3", rough=0.9)
+        _decal(bvh, [(-0.12, f.neck - 0.12), (0.12, f.neck - 0.12), (0.16, y0 + 0.13), (-0.16, y0 + 0.13)], ap, out=0.005, name="apron_bib", rings=3)
+        for s in (1, -1):
+            path = [(s * 0.11, f.neck - 0.11, 0.4), (s * 0.12, f.shoulder_y + 0.06, 0.25), (s * 0.13, f.shoulder_y + 0.14, 0.0),
+                    (s * 0.12, f.shoulder_y + 0.04, -0.25), (s * 0.1, f.torso_y, -0.4)]
+            _band(bvh, path, lambda p: (p.x * 0.4, min(p.y, f.shoulder_y - 0.06), 0.0), 0.028, 0.006, ap, name="apron_strap")
+        _ring(bvh, y0 + 0.13, 0, 0, 0.004, 0.012, ap, name="apron_tie")
+        # the skirt of the apron, curving round the front of the legs to the knees (outer and inner faces)
+        top_r, bot_r = 0.215 * f.w + 0.03, 0.25 * f.w + 0.04
+        prof = [(top_r, 0.0), (bot_r, -(f.hip + 0.13 - f.knee - 0.02))]
+        lathe(prof, (0, f.hip + 0.13, 0.0), ap, seg=14, a0=-62, arc=124, scale=(1.0, 1.0, 0.9 * f.d), name="apron")
+        lathe([(top_r - 0.006, 0.0), (bot_r - 0.006, -(f.hip + 0.13 - f.knee - 0.02))], (0, f.hip + 0.13, 0.0), ap, seg=14, a0=-62, arc=124, scale=(1.0, 1.0, 0.9 * f.d), flip=True, name="apron_back")
+        for (fx, fy) in ((0.05, f.torso_y - 0.05), (-0.08, f.torso_y - 0.15), (0.1, y0 + 0.2), (-0.03, f.neck - 0.2)):
+            p, n = _on(bvh, fx, fy, 0.007)
+            sphere(0.022, p, flour, seg=10, rings=6, scale=(1.3, 0.9, 0.2), rot=_facing(n), name="flour")
     # the backpack, its straps over the shoulders and round under the arms, and a chest strap
     if c.get("backpack"):
         bp = mat("backpack", c["pack_col"], rough=0.6)
@@ -619,6 +690,14 @@ def _person(c):
         for o in bpy.context.scene.objects:
             if o.type == "MESH": o.data.transform(Matrix.Scale(k, 4))
             o.location = o.location * k
+    # one mesh per joint (its parts keep their materials): a hand is one mesh, not twelve, so a full dining room
+    # costs far fewer draw calls on a phone. The loose body parts are joined into one by the build as usual.
+    groups = {}
+    for o in list(bpy.context.scene.objects):
+        if o.type == "MESH" and o.parent is not None and o.parent.type == "EMPTY":
+            groups.setdefault(o.parent.name, []).append(o)
+    for jn, objs in groups.items():
+        if len(objs) > 1: join(objs, jn + "_mesh")
 
 
 # the cast (customer.0 is a kid: the game never has a kid order alone at the hatch)
@@ -632,10 +711,10 @@ PEOPLE = {
                        top="cardigan", top_col="#ffffff", top_tex="floral", top_uvs=0.24, collar_col="#f3e6cc", long_top=True,
                        sleeves="long", sleeve_col="#ffffff", sleeve_tex="floral", cuff_col="#f3e6cc",
                        legs="skirt", legs_col="#e8b8a0", skirt_col="#ea9fb0", shoes="flat", shoe_col="#7a4a2e"),
-    "customer.2": dict(k=1.0, frame=dict(hip=0.56, w=0.96), skin="fair", freckles=True,
-                       hair="curls", hair_col="#e0782e", brow_col="#c4642a",
-                       top="tee", top_col="#ffffff", top_tex="stripes_ginger", top_uvs=0.11, collar_col="#ea7a3c", sleeves="short",
-                       legs="trousers", legs_col="#ffffff", legs_tex="denim", rolled=True, shoes="sneaker", shoe_col="#9a7a5c"),
+    "customer.2": dict(k=1.0, frame=dict(hip=0.58, w=0.94), skin="brown", hoops=True,
+                       hair="ponytail", hair_col="#1f1714", tie_col="#f2a33a",
+                       top="tee", top_col="#7fcfb4", collar_col="#6ab89e", sleeves="long", cuff_col="#6ab89e",
+                       legs="trousers", legs_col="#ffffff", legs_tex="denim", rolled=True, shoes="sneaker", shoe_col="#f2f2ee"),
     "customer.3": dict(k=1.0, frame=dict(hip=0.6, w=0.95), skin="warm",
                        hair="beanie", hair_col="#8a4fc4", hat_col="#5a5d63", brow_col="#5e3a8a",
                        top="varsity", top_col="#2f7a45", sleeve_col="#efe6d0", under_col="#8a5bc0", sleeves="long", cuff_col="#2f7a45",
@@ -648,6 +727,15 @@ PEOPLE = {
                        hair="papa", hair_col="#2b1d16", eyes="happy", moustache=True, mouth_w=0.75, mouth_d=0.8,
                        top="braces", top_col="#f4ecdd", braces_col="#c8402c", scarf_col="#d8402e", sleeves="short",
                        legs="trousers", legs_col="#ffffff", legs_tex="check_bw", legs_uvs=0.16, shoes="leather", shoe_col="#5a3622"),
+    # the crew at Bella Napoli: Marco the boss, Luca the junior
+    "staff.marco": dict(k=1.04, frame=dict(hip=0.56, w=1.12, d=1.06, belly=1.0), skin="warm",
+                        hair="chef", hair_col="#2b1d16", eyes="happy", moustache=True, mouth_w=0.8, mouth_d=0.85,
+                        top="chef_jacket", top_col="#f8f6f1", long_top=True, sleeves="long", cuff_col="#d8402e", scarf_col="#d8402e",
+                        rolling_pin="r", legs="trousers", legs_col="#ffffff", legs_tex="check_bw", legs_uvs=0.16, shoes="leather", shoe_col="#4a2e1c"),
+    "staff.luca": dict(k=0.98, frame=dict(hip=0.57, w=0.95), skin="fair", freckles=True,
+                       hair="paper_hat", hair_col="#e0782e", brow_col="#c4642a",
+                       top="tee", top_col="#ffffff", top_tex="stripes_ginger", top_uvs=0.11, collar_col="#ea7a3c", sleeves="short", apron=True,
+                       legs="trousers", legs_col="#ffffff", legs_tex="denim", rolled=True, shoes="sneaker", shoe_col="#8a7a6a"),
     "rider": dict(k=1.0, frame=dict(hip=0.6, w=1.0), skin="warm",
                   hair="helmet", hair_col="#6b4428", hat_col="#e0453a",
                   top="puffer", top_col="#f2be2e", sleeves="long", cuff_col="#d9a51f", backpack=True, pack_col="#4c9a52", phone="r",

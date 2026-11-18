@@ -93,6 +93,21 @@ func _ready() -> void:
 			th.add_child(b)
 		lc[1].add_child(th)
 		lc[1].add_child(Kit.label("Temperature log, last 7 days: %d%% of readings taken. Inspectors check it." % (Checks.log_rate(7) * 100), 14, Kit.MUTED))
+		# a wood oven is lit in the morning, about two hours before opening (in 3D you tap the oven itself)
+		var lit: Dictionary = G.s.get("oven_lit", {})
+		if Data.OVENS[G.tier("oven").type].feeds and morning:
+			if int(lit.get("day", -1)) == G.s.day:
+				lc[1].add_child(Kit.label("The oven is at about %d °C (lit at %s)." % [Oven.warm_dome(float(G.s.clock) - float(lit.at)), Data.hhmm(int(lit.at))], 15, Kit.MUTED))
+			else:
+				var lb := Kit.button("Light the wood oven · 3 logs, 10 min", func():
+					if Stock.have("wood") < 3.0:
+						Kit.main.toast("You need at least 3 logs to light it, and you have %d. Order firewood." % int(Stock.have("wood")), true)
+						return
+					var lg := Stock.take("wood", 3.0)
+					_do(10, func(): Game.s.oven_lit = {"day": Game.s.day, "at": Game.s.clock, "g": lg.g},
+						"The oven is lit: about two hours to come up to 450 °C"), "ghost", 15)
+				lb.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+				lc[1].add_child(lb)
 	add_child(lc[0])
 
 	# senior: tomorrow's prep list for the junior

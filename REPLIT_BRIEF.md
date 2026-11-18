@@ -84,7 +84,9 @@ instead; the PS2 look lives on as an optional "Retro look" switch on the phone's
   that differ (a kid, a plump granny, a big-bellied papa, a tall thin businessman); clothes with their details (a
   hoodie's hood and drawstrings, a floral cardigan, a varsity jacket, a suit and tie, a quilted puffer); four-finger
   cartoon hands on the arms; big shoes with real soles. Adults' faces sit at your eye height, so they look at you over
-  the van's ledge. Never realistic faces.
+  the van's ledge. The crew are built the same way: Marco the boss (toque, moustache, double-breasted chef's jacket,
+  rolling pin) and Luca the junior (paper hat, apron); they stand in the kitchen and follow you with their heads.
+  Never realistic faces.
 - **The pizza is the hero**: the one thing allowed real detail and appetite appeal (stretchy dough, glossy sauce,
   melting cheese, leopard-spot char, steam), standing out against the simple world.
 - **Text stays sharp**: labels, tickets and the HUD are always drawn at full resolution.

@@ -97,6 +97,9 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [x] The cast as soft clay toys after the owner's reference: big wide heads, round noses, ears, open smiles, sculpted
       hair, a kid, a granny, a ginger, a teen, a businessman, a papa and the rider, clothes with their details,
       four-finger hands
+- [x] Marco and Luca in the kitchen (the boss by the pass, the junior at the prep counter), alive and watching you
+- [x] Proper oven doors between services; the prep list on the prep tablet; the 2D layout can light the wood oven
+- [x] Each person is one mesh per joint (about half the draw calls)
 - [ ] Lower-detail versions of the people for far tables in a busy dining room
 - [x] Hands that change pose with what they hold (open, pinch, grip)
 - [ ] Hand-made models to replace the generated ones; keyframed animation (waving, paying, leaving with a box)

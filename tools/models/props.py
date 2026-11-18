@@ -397,3 +397,73 @@ def turning_peel():
         cyl(0.009, 0.0008, (math.cos(a) * 0.055, 0.0034, math.sin(a) * 0.055), dark, seg=10, name="hole")
     tube([(-0.09, 0.003, 0), (-0.16, 0.012, 0), (-1.2, 0.03, 0)], 0.0085, alu, name="shaft")
     tube([(-0.95, 0.0272, 0), (-1.22, 0.0305, 0)], 0.016, oak(), name="grip")
+
+
+# ---------------------------------------------------------------- oven doors (shut between services)
+# Both are placed like the ovens (scene coordinates): over the mouth (y 0.79..1.41, z -0.19..0.59), facing -X.
+
+@model("oven_door.steel")
+def oven_door_steel():
+    """a deck oven's door: a brushed stainless panel with a smoked glass window, a tubular handle on standoffs, the
+    hinge blocks along the bottom (it drops down to open) and a kick strip"""
+    st = steel()
+    dark = steel_dark()
+    x = 1.0
+    box((0.03, 0.67, 0.84), (x, 1.1, 0.2), st, bevel=0.012, name="door")
+    # the window: a recessed dark frame and smoked glass
+    box((0.006, 0.3, 0.6), (x - 0.016, 1.12, 0.2), dark, bevel=0.01, name="window_frame")
+    box((0.004, 0.26, 0.56), (x - 0.019, 1.12, 0.2), mat("smoked_glass", "#1d252b", rough=0.12, metal=0.1), bevel=0.0, name="window")
+    box((0.002, 0.03, 0.5), (x - 0.0215, 1.21, 0.18), mat("glass_glint", "#5d6f7b", rough=0.1), bevel=0.0, rot=(0, 0, 0), name="glint")
+    # the handle bar on two standoffs, above the window
+    for z in (-0.12, 0.52):
+        cyl(0.012, 0.05, (x - 0.035, 1.34, z), chrome(), axis="x", seg=12, name="standoff")
+    cyl(0.017, 0.76, (x - 0.06, 1.34, 0.2), chrome(), axis="z", seg=16, name="handle")
+    # the hinge blocks and a kick strip along the bottom
+    for z in (-0.13, 0.53):
+        box((0.04, 0.05, 0.08), (x - 0.005, 0.79, z), dark, bevel=0.008, name="hinge")
+    box((0.006, 0.05, 0.78), (x - 0.017, 0.83, 0.2), dark, bevel=0.004, name="kick_strip")
+    # a small maker's plate
+    box((0.004, 0.035, 0.14), (x - 0.017, 0.92, 0.2), mat("plate_brass", "#c9973a", rough=0.35, metal=0.3), bevel=0.004, name="maker_plate")
+
+
+@model("oven_door.iron")
+def oven_door_iron():
+    """a wood oven's door: a black iron plate shaped to the mouth with its top corners rounded, a riveted border, two
+    wooden handles on iron brackets, a thermometer dial and a sliding air vent along the bottom"""
+    iron = mat("iron_door", "#2c2a28", rough=0.55, metal=0.3)
+    rim = mat("iron_rim", "#3c3936", rough=0.5, metal=0.3)
+    x = 0.963                     # the plate's front face (it is 24 mm thick, its back against the mouth's frame)
+    W, H = 0.84, 0.67
+    r = 0.12
+    poly = []
+    for (cx, cy, a0) in ((W / 2 - r, H / 2 - r, 0.0), (-W / 2 + r, H / 2 - r, math.pi / 2)):
+        poly += [(cx + math.cos(a0 + math.pi / 2 * i / 6) * r, cy + math.sin(a0 + math.pi / 2 * i / 6) * r) for i in range(7)]
+    poly += [(-W / 2, -H / 2), (W / 2, -H / 2)]
+    # the plate (drawn in z-y, facing -X) and a raised border round it
+    slab([(-z, y) for (z, y) in poly], 0.024, (x + 0.024, 1.1, 0.2), iron, rot=(0, -90, 0), name="door")
+    inner = [(z * 0.9, y * 0.88) for (z, y) in poly]
+    slab([(-z, y) for (z, y) in inner], 0.006, (x + 0.001, 1.1, 0.2), rim, rot=(0, -90, 0), name="door_panel")
+    # rivets round the border
+    rv = mat("rivet", "#55504a", rough=0.4, metal=0.3)
+    for i in range(len(poly)):
+        a, b = poly[i], poly[(i + 1) % len(poly)]
+        n = max(1, int(math.hypot(b[0] - a[0], b[1] - a[1]) / 0.11))
+        for k in range(n):
+            t = (k + 0.5) / n
+            z, y = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+            sphere(0.009, (x - 0.001, 1.1 + y * 0.94, 0.2 + z * 0.95), rv, seg=8, rings=5, scale=(0.6, 1, 1), name="rivet")
+    # two handles: iron brackets and turned wooden grips
+    wood = oak()
+    for z in (-0.06, 0.46):
+        for y in (1.0, 1.24):
+            cyl(0.01, 0.07, (x - 0.035, y, z), iron, axis="x", seg=10, name="bracket")
+        cyl(0.02, 0.3, (x - 0.07, 1.12, z), wood, seg=14, bevel=0.008, name="grip")
+    # a thermometer dial at the top
+    cyl(0.05, 0.016, (x - 0.01, 1.33, 0.2), chrome(), axis="x", seg=24, name="dial_rim")
+    cyl(0.043, 0.004, (x - 0.019, 1.33, 0.2), mat("dial_face", "#f3ead6", rough=0.4), axis="x", seg=24, name="dial_face")
+    box((0.002, 0.006, 0.036), (x - 0.0215, 1.335, 0.21), red(), bevel=0.0, rot=(30, 0, 0), name="needle")
+    # the air vent: a row of slots with a sliding cover and its knob
+    for k in range(5):
+        box((0.004, 0.022, 0.05), (x - 0.0015, 0.86, 0.06 + k * 0.07), mat("vent_slot", "#151413", rough=0.7), bevel=0.0, name="vent_slot")
+    box((0.006, 0.04, 0.2), (x - 0.004, 0.86, 0.36), rim, bevel=0.004, name="vent_cover")
+    sphere(0.014, (x - 0.014, 0.86, 0.36), wood, seg=10, rings=6, name="vent_knob")

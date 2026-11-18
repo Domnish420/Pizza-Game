@@ -38,7 +38,7 @@ const OV_Y := 0.80
 const SHELF3D := [Vector2(130, 307), Vector2(270, 307)]
 ## which jobs' labels show at which station (the rest stay hidden so the view is not cluttered)
 const JOBS_AT := {"front": ["open", "checklist", "clean_foh"], "bench": ["dough_trays", "boxes", "clean_foh"], "board": ["boxes", "dough_trays"], "oven": [],
-	"prep": ["prep", "wash", "dough", "clean_boh"], "stores": ["stores", "temp_fridge", "temp_freezer", "dry", "traps", "crates", "clean_boh"]}
+	"prep": ["wash", "dough", "clean_boh"], "stores": ["stores", "temp_fridge", "temp_freezer", "dry", "traps", "crates", "clean_boh"]}
 ## (the oven's own label shows at the oven station: see _sync_jobs)
 const SNAP := 18.0                     # let go of a free look within this many degrees of a station and you settle on it
 
@@ -117,6 +117,7 @@ func _ready() -> void:
 	if dine: _dining_room()
 	else: _street()
 	_back_of_house()
+	_staff()
 	_camera()
 	ticket_root = Node3D.new()
 	add_child(ticket_root)
@@ -353,11 +354,12 @@ func _oven() -> void:
 		job_labels.logs.no_depth_test = true          # the oven's arch would clip it; it only shows at the oven (_sync_jobs)
 	if svc == null:
 		# between services: the door closes a cold oven; a wood oven lit this morning stands open with its fire going
-		oven_door = Node3D.new()
-		add_child(oven_door)
-		_box(Vector3(0.025, 0.66, 0.82), Vector3(1.025, 1.1, 0.2), Color("2f2d2b"), oven_door, 0.5, 0.3)
-		var hb := _cyl(0.014, 0.4, Vector3(0.995, 1.25, 0.2), Color("c3c9cc"), oven_door, 0.3)
-		hb.rotation_degrees.x = 90
+		# (a deck oven's is stainless with a window; a dome's is a riveted iron plate with two wooden handles)
+		var dome: bool = kind == "wood" or kind == "rotary"
+		oven_door = _prop("oven_door." + ("iron" if dome else "steel"), Vector3.ZERO, func(r: Node3D):
+			_box(Vector3(0.025, 0.66, 0.82), Vector3(1.025, 1.1, 0.2), Color("2f2d2b"), r, 0.5, 0.3)
+			var hb := _cyl(0.014, 0.4, Vector3(0.995, 1.25, 0.2), Color("c3c9cc"), r, 0.3)
+			hb.rotation_degrees.x = 90)
 		var spot := Node3D.new()
 		spot.position = Vector3(1.0, 1.1, 0.2)
 		add_child(spot)
@@ -393,6 +395,7 @@ var peel: Node3D                       # the launching peel, under a pizza you a
 var turner: Node3D                     # the turning peel
 var grip_at = null                     # where your right hand holds the peel's handle (or null)
 var oven_door: Node3D
+var prep_screen: Label3D                 # the prep list on the tablet between services
 var fire_oven: Oven                    # between services: the wood oven's fire as it is this morning
 
 ## the light of the fire or the elements inside, the flames, the logs and coals, and the peels
@@ -628,6 +631,7 @@ func _sync_closed_oven() -> void:
 	var lit: bool = int(L.get("day", -1)) == Game.s.day and Game.s.phase == "morning"
 	if Story.role() == "pizzaiolo" and Game.s.phase == "morning": lit = true
 	oven_door.visible = not lit
+	if job_labels.has("oven"): job_labels.oven.position = Vector3(-0.07, 0.26 if lit else 0.08, 0)      # over the door, or above the fire
 	oven_light.visible = lit
 	for f in flames: f.node.visible = lit
 	for n in log_nodes: n.visible = false
@@ -653,10 +657,36 @@ func _prep() -> void:
 		s.rotation_degrees.y = 90
 		add_child(s)
 		surfaces.prep = s
+	else:
+		# between services the tablet shows the day's prep list (in service it is the live prep surface)
+		prep_screen = _label("", Vector3(-1.597, 1.42, -0.42), 26, Color("f3efe4"), self, false, 0.001)
+		prep_screen.rotation_degrees.y = 90
+		prep_screen.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		prep_screen.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		prep_screen.width = 780
+		prep_screen.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		prep_screen.line_spacing = 2
 	crates = _prop("crates", Vector3(-1.2, 0.0, 0.75), _mk_crates)
 	_tappable(crates, Vector3(0.6, 0.7, 0.5), Vector3(0, 0.35, 0), {"kind": "job", "job": "crates"})
 	job_labels.crates = _label("Delivery", Vector3(0, 0.8, 0), 30, Color.WHITE, crates, true, 0.0009)
 	job_labels.crates.fixed_size = true
+
+## the prep list as the tablet shows it: what is left to prep for today (or, in the evening, for tomorrow)
+func _prep_text(morning: bool) -> String:
+	var rows := Day.prep_list(Game.s.day if morning else Game.s.day + 1)
+	var lines := ["PREP LIST · %s" % ("today" if morning else "for tomorrow"), ""]
+	var left := 0.0
+	for row in rows:
+		var nm: String = Data.ING[row.id].name
+		if row.get("block", "") != "": lines.append("x  %s: %s" % [nm, row.block])
+		elif row.raw > 0.5:
+			lines.append("-  %s: %s to prep" % [nm, Stock.amount(row.id, row.raw)])
+			left += row.minutes
+		else: lines.append("ok  %s" % nm)
+	if rows.is_empty(): lines.append("Nothing to prep.")
+	elif left > 0.0: lines.append("\nAbout %d min of prep. Tap the counter to start." % int(ceil(left)))
+	else: lines.append("\nAll prepped.")
+	return "\n".join(lines.slice(0, 12))
 
 func _mk_prep(r: Node3D) -> void:
 	_box(Vector3(0.62, 0.88, 1.3), Vector3(-1.32, 0.44, -0.45), Color("aab1b5"), r, 0.35, 0.7)
@@ -864,6 +894,7 @@ func _sync_jobs() -> void:
 	var G := Game
 	var morning: bool = G.s.phase == "morning"
 	var L := job_labels
+	if prep_screen != null: prep_screen.text = _prep_text(morning)
 	if L.has("temp_fridge"):
 		var logged := Checks.logged("fridge")
 		L.temp_fridge.text = "%.1f °C%s" % [Checks.temp_of("fridge"), "" if logged or svc != null else "\ntap to log it"]
@@ -1022,6 +1053,7 @@ func _process(dt: float) -> void:
 	_sync_pans()
 	_sync_ladles()
 	_sync_hands(dt)
+	if not staff.is_empty(): _animate_staff(dt)
 	job_t -= dt
 	if job_t <= 0.0:
 		job_t = 0.4
@@ -1146,6 +1178,57 @@ func _arrange(e: Dictionary, n: int, seated: bool) -> void:
 			f.rotation.y = 0.0
 		if not jointed:
 			f.position.y = f.get_meta("seat_y")
+
+# ---------- the crew ----------
+## the crew at Bella Napoli, there to be seen: Marco by the pass while you are his pizzaiolo (he watches every
+## pizza go out and talks you through your training day), Luca at the end of the prep counter once you are senior
+var staff := []
+
+func _staff() -> void:
+	if not dine: return
+	match Story.role():
+		"pizzaiolo": _staff_member("staff.marco", Vector3(2.15, 0.0, -1.95), "marco")        # out past the pass, clear of the stations
+		"senior": _staff_member("staff.luca", Vector3(-1.02, 0.0, 0.38), "luca")
+
+func _staff_member(key: String, at: Vector3, who: String) -> void:
+	if not Art.has_model("fp." + key): return
+	var f := _prop(key, at, func(_r): pass)
+	var to_you := Vector2(-at.x, -at.z)
+	f.rotation.y = atan2(to_you.x, to_you.y)             # facing you
+	staff.append({"node": f, "who": who, "face": f.rotation.y})
+
+## the crew's idle life: they breathe, follow you with their eyes (the head turns toward the camera), Marco taps his
+## rolling pin and waves you on while he is teaching; Luca works the prep counter
+func _animate_staff(dt: float) -> void:
+	var k := 1.0 - exp(-dt * 6.0)
+	for e in staff:
+		var f: Node3D = e.node
+		var j := _joints(f)
+		if j.is_empty(): continue
+		var t: float = time + float(f.get_meta("ph"))
+		var tg := {}
+		for n in JOINTS: tg[n] = Vector3.ZERO
+		# the head turns toward you (within reason) and nods now and then
+		var to_cam: Vector3 = cam.global_position - f.global_position
+		var yaw: float = wrapf(atan2(to_cam.x, to_cam.z) - f.rotation.y, -PI, PI)
+		tg.neck = Vector3(-0.08 + 0.05 * sin(t * 0.7), clamp(yaw, -0.9, 0.9), 0.03 * sin(t * 0.5))
+		if e.who == "marco":
+			var teaching: bool = Tutor.running()
+			tg.shoulder_r = Vector3(-0.35 - 0.12 * sin(t * 2.2), 0, -0.05)
+			tg.elbow_r = Vector3(-0.9 - 0.25 * max(0.0, sin(t * 2.2)), 0, 0)          # tapping the pin
+			tg.shoulder_l = Vector3(-0.15, 0, 0.08)
+			if teaching:                                                               # waving you on
+				tg.shoulder_l = Vector3(-1.9 + 0.25 * sin(t * 4.0), 0, 0.25)
+				tg.elbow_l = Vector3(-0.5 + 0.3 * sin(t * 4.0), 0, 0)
+				tg.neck.x += 0.08 * sin(t * 3.0)
+		else:
+			var w := sin(t * 3.4)
+			tg.shoulder_l = Vector3(-0.6 + 0.12 * w, 0, 0.05)
+			tg.shoulder_r = Vector3(-0.6 - 0.12 * w, 0, -0.05)
+			tg.elbow_l = Vector3(-0.9, 0, 0)
+			tg.elbow_r = Vector3(-0.9, 0, 0)
+		for n in j: j[n].rotation = j[n].rotation.lerp(tg[n], k)
+		f.position.y = 0.006 * sin(t * 1.6)                                           # breathing
 
 # ---------- people moving ----------
 const JOINTS := ["hip_l", "hip_r", "knee_l", "knee_r", "shoulder_l", "shoulder_r", "elbow_l", "elbow_r", "neck"]

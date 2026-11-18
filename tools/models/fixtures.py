@@ -190,6 +190,18 @@ def _soot(kind):
     paint_vertices(ob, col)
 
 
+def _cut_faces(ob, where):
+    """delete an object's faces where where(centre, normal) (in the model's space) is true: a hole in a shell"""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    mw = ob.matrix_world
+    nm = mw.to_3x3().inverted().transposed()
+    gone = [f for f in bm.faces if where(mw @ f.calc_center_median(), (nm @ f.normal).normalized())]
+    bmesh.ops.delete(bm, geom=gone, context="FACES")
+    bm.to_mesh(ob.data)
+    bm.free()
+
+
 def _deck_stone():
     return mat("deck_stone", "#dcc49c", rough=0.85, tex="stone", uvs=0.5)
 
@@ -391,12 +403,11 @@ def dome_oven(kind):
     for (za, zb) in ((z0, MZ0), (MZ1, z1)):
         box((0.13, MY1 + 0.09 - YD, zb - za), (1.125, (YD + MY1 + 0.09) / 2, (za + zb) / 2), tun, bevel=0, name="tunnel_wall")
     box((0.13, 0.09, z1 - z0), (1.125, MY1 + 0.045, (z0 + z1) / 2), tun, bevel=0, name="tunnel_roof")
-    # the dome: whole round the back and sides; over the tunnel only its top (the front below that opens into the vault)
-    prof = [(math.cos(math.pi / 2 * i / 12), math.sin(math.pi / 2 * i / 12)) for i in range(13)] + [(0.0, 0.0)]
-    lathe(prof, (1.34, MY0, 0.2), dome_m, seg=30, scale=(0.27, 1.06, 0.47), a0=326, arc=248, name="dome")
-    t0 = math.asin(0.66)
-    top = [(math.cos(t0 + (math.pi / 2 - t0) * i / 6), math.sin(t0 + (math.pi / 2 - t0) * i / 6)) for i in range(7)]
-    lathe(top, (1.34, MY0, 0.2), dome_m, seg=12, scale=(0.27, 1.06, 0.47), a0=214, arc=112, name="dome_front")
+    # the dome: a whole shell round the vault (a little bigger than it everywhere, so nothing inside shows through its
+    # sides), with a hole only where the entrance tunnel opens into the vault (the tunnel's walls and roof hide its edge)
+    prof = [(math.cos(math.pi / 2 * i / 14), math.sin(math.pi / 2 * i / 14)) for i in range(15)] + [(0.0, 0.0)]
+    dome = lathe(prof, (VX, MY0, VZ), dome_m, seg=40, scale=(VRX + 0.025, 1.06, VRZ + 0.015), name="dome")
+    _cut_faces(dome, lambda c, n: c.x < VX and MZ0 - 0.01 < c.z < MZ1 + 0.01 and c.y < MY1 + 0.08 and (c.x < 1.19 or n.x < -0.55))
     # the chimney, through the hood
     _flue(1.3, 0.2, 1.72, 0.08)
     cyl(0.1, 0.04, (1.3, 1.73, 0.2), stone_m, seg=18, name="flue_base")

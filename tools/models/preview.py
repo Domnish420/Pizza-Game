@@ -40,12 +40,12 @@ ROOMS = ("room.van", "room.kitchen", "dining")
 MOUNTED = {"counter": "ticket rail on the wall", "counter.side": "ladle rail and peel on the wall",
            "prep": "tablet, shelf and jars on the wall", "thermometer": "on the fridge door", "clipboard": "on the wall",
            "sign": "hangs in the hatch", "boxes": "wall shelf", "ticket": "clipped to the ticket rail",
-           "ladle.*": "hangs on the ladle rail", "hand.*": "held by the camera"}
+           "ladle.*": "hangs on the ladle rail", "hand.*": "held by the camera", "oven_door.*": "shuts the oven's mouth"}
 
 
 # which way each model's front faces in the game (the player sees that side); everything else faces +Z
 FACING = {"oven.*": "-x", "logs": "-x", "prep": "+x", "mixer": "+x", "bowl": "+x", "fridge": "-z", "thermometer": "-z",
-          "freezer": "-z", "drystore": "-z", "trapbox": "-z", "mop": "+x", "crates": "+x", "hand.*": "-z"}
+          "freezer": "-z", "drystore": "-z", "trapbox": "-z", "mop": "+x", "crates": "+x", "hand.*": "-z", "oven_door.*": "-x"}
 _B = {"+z": (0, -1, 0), "-z": (0, 1, 0), "+x": (1, 0, 0), "-x": (-1, 0, 0)}
 
 

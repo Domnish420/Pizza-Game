@@ -779,8 +779,20 @@ def finish(keep=()):
     if loose: join(loose, "model")
 
 
+def _tidy(ob):
+    """drop zero-area faces and zero-length edges (they give Godot's LOD generator non-finite normals)"""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    bmesh.ops.dissolve_degenerate(bm, dist=1e-7, edges=bm.edges)
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(ob.data)
+    bm.free()
+
+
 def export(key):
     os.makedirs(OUT, exist_ok=True)
+    for o in bpy.context.scene.objects:
+        if o.type == "MESH": _tidy(o)
     # .gltf + .bin, with the textures in one shared folder (assets/models/tex) so each is stored once, not once per model
     path = os.path.join(OUT, "fp-" + key.replace(".", "-") + ".gltf")
     for o in bpy.context.scene.objects:
