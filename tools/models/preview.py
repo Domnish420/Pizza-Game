@@ -43,6 +43,16 @@ MOUNTED = {"counter": "ticket rail on the wall", "counter.side": "ladle rail and
            "ladle.*": "hangs on the ladle rail", "hand.*": "held by the camera"}
 
 
+# which way each model's front faces in the game (the player sees that side); everything else faces +Z
+FACING = {"oven.*": "-x", "logs": "-x", "prep": "+x", "mixer": "+x", "bowl": "+x", "fridge": "-z", "thermometer": "-z",
+          "freezer": "-z", "drystore": "-z", "trapbox": "-z", "mop": "+x", "crates": "+x", "hand.*": "-z"}
+_B = {"+z": (0, -1, 0), "-z": (0, 1, 0), "+x": (1, 0, 0), "-x": (-1, 0, 0)}
+
+
+def facing(key):
+    return FACING.get(key, FACING.get(key.split(".")[0] + ".*", "+z"))
+
+
 def is_mounted(key):
     return key in MOUNTED or (key.split(".")[0] + ".*") in MOUNTED
 
@@ -207,7 +217,10 @@ def setup_scene():
     sc.render.stamp_font_size = 18
     for m in bpy.data.materials:            # untextured materials show their base colour
         if m.use_nodes:
-            m.diffuse_color = _base_colour(m)
+            c = list(_base_colour(m))
+            if m.blend_method == "BLEND":
+                c[3] = _alpha(m)                                  # see-through, as in the game
+            m.diffuse_color = c
 
 
 def _base_colour(m):
@@ -228,6 +241,16 @@ def _base_colour(m):
                 return tuple(i.default_value)
             if i.is_linked: todo.append(i.links[0].from_node)
     return (0.8, 0.8, 0.8, 1.0)
+
+
+def _alpha(m):
+    """a see-through material's opacity: the importer multiplies the glTF alpha in with a math node"""
+    b = m.node_tree.nodes.get("Principled BSDF")
+    a = b.inputs["Alpha"]
+    if not a.is_linked: return a.default_value
+    n = a.links[0].from_node
+    vals = [i.default_value for i in n.inputs if not i.is_linked and isinstance(i.default_value, float)]
+    return min(vals) if vals else 0.5
 
 
 def _aim(cam, d):
@@ -307,11 +330,15 @@ def sheet(title, paths, out):
 def render_sheet(key, lo, hi, room):
     setup_scene()
     span = hi - lo
+    f = "+z" if room else facing(key)
+    d = _B[f]
+    sd = (-d[1], d[0], 0)                       # a quarter turn round from the front
+    names = {(0, -1, 0): "+Z", (0, 1, 0): "-Z", (1, 0, 0): "+X", (-1, 0, 0): "-X"}
     paths = [
-        view("front", (0, -1, 0), lo, hi, "%s FRONT (from +Z)" % key, section=0.15 if room else 0.0),
-        view("side", (1, 0, 0), lo, hi, "%s SIDE (from +X)" % key, section=0.15 if room else 0.0),
+        view("front", d, lo, hi, "%s FRONT (from %s)" % (key, names[d]), section=0.15 if room else 0.0),
+        view("side", sd, lo, hi, "%s SIDE (from %s)" % (key, names[sd]), section=0.15 if room else 0.0),
         view("top", (0, 0, 1), lo, hi, "%s TOP" % key, section=max(0.35, span.z * 0.15) if room else 0.0),
-        view("persp", (0.75, -1.0, 0.7), lo, hi, "%s 3/4" % key, ortho=False, inside=room),
+        view("persp", (d[0] + sd[0] * 0.75, d[1] + sd[1] * 0.75, 0.7), lo, hi, "%s 3/4" % key, ortho=False, inside=room),
     ]
     out = os.path.join(OUTDIR, key + ".png")
     sheet("fp." + key if not key.startswith("scene") else key, paths, out)
@@ -346,7 +373,7 @@ def scene(name):
     load("street" if van else "dining")
     for k in ("counter", "counter.side", "prep"): load(k)
     load("oven.electric" if van else "oven.wood")
-    if not van: load("logs", (1.12, 0.6, 0.72))
+    if not van: load("logs", (1.19, 0.6, 0.745))
     for k, p in [("pass", (1.5, 0.92, -1.02)), ("bin", (-0.62, 0.92, -0.78)), ("sheeter", (-0.62, 0.92, -0.45)),
                  ("crates", (-1.2, 0, 0.75)), ("fridge", (-0.62, 0, 0.97)), ("thermometer", (-0.45, 1.45, 0.62)),
                  ("freezer", (1.3, 0, 1.08)), ("drystore", (0.42, 0, 1.08)), ("mop", (-1.28, 0, 0.25)),

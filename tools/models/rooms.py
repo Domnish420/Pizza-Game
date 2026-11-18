@@ -207,6 +207,31 @@ def street():
                 box((0.92, 1.32, 0.04), (wx, y + 0.75, front + 0.06), win_glass, name="win")
                 box((0.04, 1.32, 0.03), (wx, y + 0.75, front + 0.08), frame, name="win_bar")
                 box((1.25, 0.06, 0.18), (wx, y - 0.02, front + 0.1), frame, name="sill")
+        # chimneys on the roof, window boxes of flowers on the first floor
+        for cxo in (-1.6, 1.9):
+            box((0.5, 0.9, 0.5), (cx + cxo, G + h + 0.6, front - 2.2), fac, name="chimney")
+            for k in range(2):
+                cyl(0.08, 0.3, (cx + cxo - 0.1 + k * 0.2, G + h + 1.2, front - 2.2), mat("pot_clay", TERRACOTTA, rough=0.7), seg=10, name="chimney_pot")
+        if h >= 6:
+            flowers = mat("flowers_%d" % (i % 3), ["#e8553c", "#f4c64f", "#c86bd9"][i % 3], rough=0.6)
+            for k in range(3):
+                wx = cx - 1.8 + k * 1.8
+                box((1.0, 0.18, 0.22), (wx, G + 3.4 + 0.07, front + 0.3), mat("planter", "#5a4030", rough=0.7), name="window_box")
+                blobs([("ball", (wx + (j - 2) * 0.2, G + 3.62, front + 0.3), 0.11) for j in range(5)], flowers, res=0.05, name="blooms", tris=60)
+    # a parked car across the road
+    car = mat("car", "#2f8ad9", rough=0.35)
+    glass_c = mat("car_glass", "#26333b", rough=0.15)
+    tyre = mat("tyre", "#222426", rough=0.8)
+    cxp, czp = 3.2, -13.6
+    box((3.9, 0.7, 1.75), (cxp, G - 0.12 + 0.62, czp), car, bevel=0.15, name="car_body")
+    box((2.2, 0.55, 1.6), (cxp - 0.2, G - 0.12 + 1.22, czp), car, bevel=0.18, name="car_cabin")
+    box((2.0, 0.42, 1.62), (cxp - 0.2, G - 0.12 + 1.24, czp), glass_c, bevel=0.12, name="car_windows")
+    for (wx, wz) in [(-1.25, -0.82), (1.25, -0.82), (-1.25, 0.82), (1.25, 0.82)]:
+        cyl(0.34, 0.24, (cxp + wx, G - 0.12 + 0.34, czp + wz), tyre, axis="z", seg=18, name="wheel")
+        cyl(0.18, 0.25, (cxp + wx, G - 0.12 + 0.34, czp + wz), chrome(), axis="z", seg=14, name="hubcap")
+    for sx in (-1, 1):
+        sphere(0.09, (cxp + sx * 1.94, G - 0.12 + 0.72, czp - 0.62), mat("car_light_%d" % sx, "#fff4c8" if sx < 0 else TOMATO, rough=0.3), seg=10, rings=6, scale=(0.4, 1, 1), name="car_light")
+        sphere(0.09, (cxp + sx * 1.94, G - 0.12 + 0.72, czp + 0.62), mat("car_light_%d" % sx, "#fff4c8" if sx < 0 else TOMATO, rough=0.3), seg=10, rings=6, scale=(0.4, 1, 1), name="car_light")
     # on our side: a lamp post, a bench, a bin, bollards and two trees
     post = mat("post", "#22282b", rough=0.4, metal=0.5)
     lx, lz = 2.6, -2.6
@@ -296,6 +321,16 @@ def dining():
         lathe([(0.0, 2.55), (0.04, 2.55), (0.06, 2.5), (0.2, 2.34), (0.22, 2.32), (0.0, 2.32)], (px, 0, pz), shade, seg=20, name="shade")
         cyl(0.03, 0.04, (px, 2.53, pz), brass, seg=12, name="lamp_cap")
         sphere(0.05, (px, 2.33, pz), emit_warm(), seg=12, rings=8, name="bulb")
+    # red leather banquettes along both side walls (the game's tables stand clear of them, x -3.3..2.3)
+    leather = mat("leather", "#b8402e", rough=0.45)
+    base_w = walnut()
+    for side, xw in ((-1, x0), (1, x1)):
+        xs = xw - side * 0.25                       # the seat's middle, 0.5 deep from the wall
+        box((0.5, 0.36, 10.4), (xs, 0.18, -7.6), base_w, name="banquette_base")
+        box((0.5, 0.1, 10.4), (xs, 0.41, -7.6), leather, name="banquette_seat")
+        for k in range(8):                           # the back, in buttoned panels
+            box((0.12, 0.52, 1.24), (xw - side * 0.06, 0.73, -3.02 - k * 1.3), leather, name="banquette_back")
+        box((0.14, 0.05, 10.4), (xw - side * 0.07, 1.015, -7.6), base_w, name="banquette_cap")
     # plants in the corners, and a shelf of bottles on the right wall
     pot = mat("terracotta", "#b5603b", rough=0.8)
     leaves = mat("plant", "#3f6b35", rough=0.8)

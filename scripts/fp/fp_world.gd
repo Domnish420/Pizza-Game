@@ -339,7 +339,7 @@ func _oven() -> void:
 	var kind: String = Game.tier("oven").type
 	_prop("oven." + kind, Vector3.ZERO, _mk_oven.bind(kind))
 	if Game.tier("oven").type == "wood":       # the logs, stacked beside the mouth
-		var logs := _prop("logs", Vector3(1.12, 0.6, 0.72), _mk_logs)
+		var logs := _prop("logs", Vector3(1.19, 0.6, 0.745), _mk_logs)
 		_tappable(logs, Vector3(0.2, 0.3, 0.26), Vector3(0, 0.15, 0), {"kind": "log"})
 		job_labels.logs = _small_label("Logs", Vector3(0, 0.38, 0), logs)
 	if svc == null:                         # between services: the oven door, closed

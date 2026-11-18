@@ -72,9 +72,12 @@ def drystore():
     # flour sacks on the bottom shelf
     for i in range(3):
         x = -0.28 + i * 0.28
-        blobs([("ellipsoid", (x, 0.27, 0), 0.16, (0.8, 1.05, 0.62)), ("ellipsoid", (x, 0.37, 0), 0.12, (0.85, 0.6, 0.6))], paper, res=0.025, name="sack", tris=200)
-        box((0.22, 0.05, 0.005), (x, 0.3, -0.105), print_red, name="sack_band")
-        text("00", (x, 0.3, -0.1), mat("sack_text", "#fbf3e3", rough=0.7), size=0.04, depth=0.002, rot=(0, 180, 0), name="sack_text")
+        # a filled paper sack: a plump body, its top folded over and stitched
+        box((0.22, 0.27, 0.16), (x, 0.106 + 0.135, 0), paper, bevel=0.05, seg=3, name="sack")         # on the shelf (top 0.106)
+        box((0.2, 0.05, 0.11), (x, 0.389, -0.01), paper, bevel=0.018, rot=(-14, 0, 0), name="sack_fold")
+        box((0.17, 0.008, 0.004), (x, 0.394, -0.066), mat("stitch", "#8a6a44", rough=0.9), rot=(-14, 0, 0), name="sack_stitch")
+        box((0.2, 0.06, 0.004), (x, 0.26, -0.081), print_red, name="sack_band")
+        text("00", (x, 0.26, -0.084), mat("sack_text", "#fbf3e3", rough=0.7), size=0.045, depth=0.002, rot=(0, 180, 0), name="sack_text")
     # tomato tins and oil cans on the second shelf
     tin_side = mat("tin_label", "#c9452f", rough=0.5)
     tin_top = mat("tin_metal", "#cfd3d5", rough=0.3, metal=0.8)
@@ -189,19 +192,25 @@ def bowl():
 
 @model("dough_trays")
 def dough_trays():
-    """lidded proving trays, stacked; the top one has a clear lid over its dough balls"""
-    tray = mat("tray_white", "#f2f3f0", rough=0.35)
-    for i in range(3):
-        y = i * 0.065
-        box((0.3, 0.06, 0.19), (0, y + 0.03, 0), tray, bevel=0.008, name="tray")
-        box((0.302, 0.006, 0.192), (0, y + 0.06, 0), mat("tray_rim", "#dfe2df", rough=0.35), name="tray_rim")
+    """lidded proving trays, stacked: open trays in see-through plastic, each with six dough balls proving in it, and
+    a clear lid on the top one"""
+    tray = mat("tray_plastic", "#eaf2f5", rough=0.3, alpha=0.55)
+    rim = mat("tray_rim", "#cfdde3", rough=0.35)
     dough = mat("dough", "#efdcb6", rough=0.8)
-    els = []
-    for r in range(2):
-        for c in range(3):
-            els.append(("ellipsoid", (-0.09 + c * 0.09, 0.165, -0.045 + r * 0.09), 0.042, (1.0, 0.7, 1.0)))
-    blobs(els, dough, res=0.012, name="balls", tris=500)
-    box((0.3, 0.004, 0.19), (0, 0.195, 0), glass(), name="lid")
+    W, D, H, T = 0.3, 0.19, 0.06, 0.006
+    for i in range(3):
+        y = i * (H + 0.004)
+        box((W - 2 * T, T, D - 2 * T), (0, y + T / 2, 0), tray, bevel=0, name="tray_floor")
+        for z in (-D / 2 + T / 2, D / 2 - T / 2):
+            box((W, H, T), (0, y + H / 2, z), tray, bevel=0, name="tray_wall")
+        for x in (-W / 2 + T / 2, W / 2 - T / 2):
+            box((T, H, D - 2 * T), (x, y + H / 2, 0), tray, bevel=0, name="tray_wall")
+        for (x, z) in [(x, z) for x in (-0.09, 0.0, 0.09) for z in (-0.043, 0.043)]:
+            sphere(0.041, (x, y + T + 0.027, z), dough, seg=12, rings=7, scale=(1.0, 0.66, 1.0), name="ball")
+        for z in (-D / 2 - 0.002, D / 2 + 0.002):
+            box((W + 0.004, 0.008, 0.008), (0, y + H - 0.004, z), rim, bevel=0, name="tray_lip")
+    top = 2 * (H + 0.004) + H
+    box((W + 0.004, 0.005, D + 0.004), (0, top + 0.0025, 0), glass(), bevel=0, name="lid")
 
 
 @model("clipboard")
@@ -250,7 +259,8 @@ def crates():
             sphere(r, (x, 0.32 + r, z), tom, seg=10, rings=7, name="tomato")          # on the crate floor
     for (ix, iz) in [(0.5, 0.5), (1.5, 1.5), (2.5, 0.5), (1.5, -0.5), (3.0, 1.2)]:
         sphere(r, (0.03 + (ix - 2) * 0.078, 0.32 + r + 0.055, 0.01 + (iz - 1.0) * 0.078), tom, seg=10, rings=7, name="tomato")
-    blobs([("ellipsoid", (-0.34, 0.176, 0.08), 0.16, (0.55, 1.1, 0.5))], k, res=0.025, name="flour_sack", tris=200)
+    box((0.16, 0.3, 0.13), (-0.34, 0.15, 0.08), k, bevel=0.04, seg=3, name="flour_sack")
+    box((0.14, 0.045, 0.09), (-0.34, 0.315, 0.07), k, bevel=0.015, rot=(-14, 0, 0), name="flour_sack_fold")
 
 
 @model("pan")

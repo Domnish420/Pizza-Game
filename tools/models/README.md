@@ -23,7 +23,9 @@ xvfb-run -a blender -b --factory-startup --python-exit-code 1 --python tools/mod
 xvfb-run -a blender -b --factory-startup --python-exit-code 1 --python tools/models/preview.py -- all
 ```
 
-Each sheet goes to `/tmp/previews/<key>.png` and the last one to `/tmp/preview.png`. Look at it: back faces are
+Each sheet goes to `/tmp/previews/<key>.png` and the last one to `/tmp/preview.png`. The FRONT view is from the side
+the player sees (`FACING` in `preview.py`: the ovens face -X, the fridge, freezer and dry store -Z, the prep
+station +X, everything else +Z), and see-through materials are drawn see-through, as in the game. Look at it: back faces are
 culled as they are in the game, so a face pointing the wrong way shows as a hole. The script also checks every model
 and fails (exit 1) on:
 

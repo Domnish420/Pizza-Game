@@ -29,7 +29,7 @@ their own origin (base at y = 0). If no model exists for a key, the game builds 
 | `fp.dining` | The dining room beyond the pass (shop and up): x -5.2..4.2, z -14.1..-1.12, 3 m high. Keep the floor clear: the game puts tables at x -3.3..2.3, z -2..-13 |
 | `fp.counter` | The pizza counter: stainless base, marble top at y 0.92 (x -0.81..0.81, z -1.12..-0.32), the chilled rail of pans along the back (z -1.13..-0.87), the sneeze guard and the ticket rail at y 1.96 |
 | `fp.counter.side` | The counter on the right (x 0.81..1.63, z -1.12..-0.28) with the wooden board (board centre 1.16, 0.94, -0.72) and the ladle rail on the wall at y 1.3, z -1.075 |
-| `fp.oven.electric`, `fp.oven.gas`, `fp.oven.wood`, `fp.oven.rotary` | The oven on the right, mouth facing the player at x 1.04, centred y 1.1, z 0.2, 0.78 x 0.62 (z -0.19..0.59, y 0.79..1.41). Nothing may stand in front of that rectangle: the oven view is drawn there in service. The body sits at x 1.0..1.62, z -0.27..0.83 |
+| `fp.oven.electric`, `fp.oven.gas`, `fp.oven.wood`, `fp.oven.rotary` | The oven on the right, mouth facing the player at x 1.04, centred y 1.1, z 0.2, 0.78 x 0.62 (z -0.19..0.59, y 0.79..1.41). Nothing may stand in front of that rectangle: the oven view is drawn there in service. The body sits at x 0.94..1.62, z -0.29..0.83, under the hood (y 1.92). The deck ovens are cabinets on a stand with a handle bar, a temperature dial and knobs; the wood and rotary ovens have an arch-topped mosaic front with a stone arch, a hearth shelf and the dome behind. Leave z 0.63..0.86 beside a wood oven's mouth free above its base (y 0.6) for the log rack |
 | `fp.prep` | The prep station on the left: counter (x -1.63..-1.01, z -1.1..0.2), sink, tubs, shelf; the prep tablet's screen is at (-1.6, 1.42, -0.42), 0.86 x 0.63, facing +X |
 | `fp.crates` | A delivery stacked by the back door, placed at (-1.2, 0, 0.75) |
 | `fp.customer.0` .. `fp.customer.5` | A cartoon customer, about 1.76 m, facing +Z. Each leg hangs from a node named `hip_l` / `hip_r` (now at 0.79), with `knee_l` / `knee_r` below (at 0.44): the game turns those joints to sit the customer at a table, lowering them until the hips are at seat height (0.53 m) |
@@ -38,12 +38,12 @@ their own origin (base at y = 0). If no model exists for a key, the game builds 
 | `fp.pan` | One gastronorm pan, 0.1 m wide x 0.2 deep, rim at y +0.03. The game stretches its width to fit the slot; the fill is drawn by code |
 | `fp.ladle.1` .. `fp.ladle.8` | Portion ladles by size in oz, hanging from the hook at the origin (placed on the ladle rail at y 1.3), bowl at the bottom facing +Z |
 | `fp.ticket` | A paper order ticket, 0.19 x 0.26 m, centred on its origin and facing +Z; the text and the colour bars are drawn by code just in front of it |
-| `fp.hand.right`, `fp.hand.left` | Forearm and hand, attached to the camera, pointing forward (-Z), fingertips at the origin |
+| `fp.hand.right`, `fp.hand.left` | Chunky cartoon forearm and hand in a chef's-white sleeve, palm down, attached to the camera, pointing forward (-Z), fingertips at the origin |
 | `fp.mouse` | A mouse running across the floor |
 | `fp.pass` | The heated pass shelf behind the cutting board where finished pizzas go out (tap target), at (1.5, 0.92, -1.02) |
 | `fp.bin` | The scraps bin at the left end of the counter, at (-0.62, 0.92, -0.78) |
 | `fp.sheeter` | A tabletop dough sheeter (only with the sheeter upgrade), at (-0.62, 0.92, -0.45) |
-| `fp.logs` | Logs in a rack beside a wood oven's mouth, at (1.12, 0.6, 0.72) |
+| `fp.logs` | Logs in a rack beside a wood oven's mouth, on its base, at (1.19, 0.6, 0.745); keep it within 0.22 m deep (z) |
 | `fp.fridge` | Upright fridge against the back wall, door facing -Z, door front at local z -0.35 (placed at -0.62, 0, 0.97) |
 | `fp.thermometer` | The fridge thermometer on the door, face toward -Z (placed at -0.45, 1.45, 0.62) |
 | `fp.freezer` | Chest freezer (only when the premises has one), at (1.3, 0, 1.08) |
@@ -51,7 +51,7 @@ their own origin (base at y = 0). If no model exists for a key, the game builds 
 | `fp.mop`, `fp.spray`, `fp.trapbox` | Mop and bucket, spray bottle, box of traps |
 | `fp.boxes` | A wall shelf of pizza boxes, at (1.32, 1.8, -1.0). The two stacks are nodes named `flat` and `folded`, each with its origin at its base: the game scales them up and down with stock |
 | `fp.mixer`, `fp.bowl` | The dough mixer (any mixer upgrade) or the mixing bowl, on the prep counter at (-1.38, 0.92, -1.0), front toward +X |
-| `fp.dough_trays` | Lidded dough proving trays, stacked, at (1.47, 0.92, -0.38) |
+| `fp.dough_trays` | Stacked see-through proving trays with dough balls in each, a clear lid on top, at (1.47, 0.92, -0.38) |
 | `fp.clipboard`, `fp.sign` | The checklist clipboard and the OPEN / LOCK UP sign at the hatch (the text is drawn by code 4 cm in front of the sign) |
 
 ## Front of house, classic 2D layout (`scripts/front_scene.gd`)
