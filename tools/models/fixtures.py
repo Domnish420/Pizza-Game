@@ -14,7 +14,7 @@ def _feet(xs, zs, y0=0.0, h=0.06):
 def _door_front(cx, cy, w, h, zf, handle_y):
     """a stainless door on a counter front facing the player (+Z)"""
     box((w, h, 0.02), (cx, cy, zf), steel(), bevel=0.006, name="door")
-    box((w * 0.62, 0.022, 0.028), (cx, handle_y, zf + 0.022), chrome(), bevel=0.008, name="handle")
+    box((w * 0.62, 0.036, 0.04), (cx, handle_y, zf + 0.03), red(), bevel=0.014, name="handle")
 
 
 @model("counter")
@@ -58,7 +58,7 @@ def side():
     # two dough drawers on the front
     for k, y in enumerate((0.69, 0.33)):
         box((0.76, 0.32, 0.02), (1.22, y, -0.272), s, bevel=0.006, name="drawer")
-        box((0.46, 0.022, 0.028), (1.22, y + 0.12, -0.25), chrome(), bevel=0.008, name="drawer_handle")
+        box((0.46, 0.036, 0.04), (1.22, y + 0.12, -0.245), red(), bevel=0.014, name="drawer_handle")
     box((0.78, 0.06, 0.02), (1.22, 0.09, -0.275), steel_dark(), name="kick")
     # the wooden cutting board (the board you slice on sits on it in service)
     box((0.56, 0.02, 0.5), (1.16, 0.93, -0.72), oak(), bevel=0.004, name="board")
@@ -95,7 +95,7 @@ def pass_shelf():
 def scrap_bin():
     """prop: the scraps bin on the counter"""
     s = steel()
-    lathe([(0.0, 0.0), (0.062, 0.0), (0.068, 0.006), (0.07, 0.15), (0.0, 0.15)], (0, 0, 0), s, seg=24, name="bin")
+    lathe([(0.0, 0.0), (0.062, 0.0), (0.068, 0.006), (0.07, 0.15), (0.0, 0.15)], (0, 0, 0), mat("bin_teal", TEAL, rough=0.45), seg=24, name="bin")
     lathe([(0.0, 0.15), (0.073, 0.15), (0.074, 0.158), (0.06, 0.175), (0.0, 0.178)], (0, 0, 0), black(), seg=24, name="lid")
     box((0.07, 0.01, 0.03), (0, 0.172, 0.03), mat("flap", "#353535", rough=0.6), rot=(-10, 0, 0), name="flap")
 
@@ -111,7 +111,7 @@ def sheeter():
     cyl(0.03, 0.25, (0, 0.2, 0.048), chrome(), axis="x", seg=16, name="roller_b")
     box((0.24, 0.004, 0.16), (0, 0.27, -0.1), s, rot=(-35, 0, 0), name="tray_in")
     box((0.24, 0.004, 0.18), (0, 0.14, 0.17), s, rot=(15, 0, 0), name="tray_out")
-    cyl(0.03, 0.03, (0.16, 0.2, 0.0), black(), axis="x", seg=16, name="knob")
+    cyl(0.035, 0.035, (0.165, 0.2, 0.0), red(), axis="x", seg=16, bevel=0.01, name="knob")
     box((0.18, 0.006, 0.12), (0, 0.15, 0.17), mat("dough", "#efdcb6", rough=0.8), rot=(15, 0, 0), name="dough_sheet")
 
 
@@ -154,7 +154,7 @@ def _metal_stand():
 def _controls(face_m, knobs, display=True):
     box((0.012, 0.5, 0.13), (1.044, 1.12, 0.735), face_m, bevel=0.004, name="panel")
     for k, y in enumerate((1.22, 1.06, 0.92)[:knobs]):
-        cyl(0.024, 0.03, (1.026, y, 0.735), black(), axis="x", seg=16, bevel=0.006, name="knob")
+        cyl(0.03, 0.035, (1.024, y, 0.735), mat("knob_" + ("cheese" if face_m.name == "black" else "tomato"), CHEESE if face_m.name == "black" else TOMATO, rough=0.4), axis="x", seg=16, bevel=0.01, name="knob")
         box((0.004, 0.022, 0.004), (1.01, y + 0.008, 0.735), chrome(), name="knob_mark")
     if display:
         box((0.004, 0.05, 0.1), (1.036, 1.32, 0.735), black(), name="display")
@@ -171,7 +171,7 @@ def _flue(x=1.33, z=0.2, y0=1.6, r=0.09):
 @model("oven.gas", kind="gas")
 def deck_oven(kind):
     _metal_stand()
-    body_m = steel() if kind == "electric" else mat("enamel", "#262626", rough=0.35, metal=0.3)
+    body_m = steel() if kind == "electric" else mat("enamel", CHARCOAL, rough=0.4)
     trim = steel_dark() if kind == "electric" else steel()
     box((0.56, 1.0, 1.08), (1.33, 1.1, 0.28), body_m, bevel=0.012, name="body")
     box((0.02, 1.0, 1.08), (1.055, 1.1, 0.28), mat("facade", "#3a3a3a" if kind == "electric" else "#1a1a1a", rough=0.4, metal=0.4), name="facade")
@@ -209,7 +209,7 @@ def dome_oven(kind):
         prof = [(math.cos(math.pi / 2 * i / 10), math.sin(math.pi / 2 * i / 10)) for i in range(11)] + [(0.0, 0.0)]
         lathe([(r, y) for (r, y) in prof], (1.35, 0.6, 0.165), dome_m, seg=28, scale=(0.27, 1.1, 0.43), name="dome")   # sits on the base
         box((0.14, 0.03, 0.9), (0.99, MY0 - 0.015, 0.2), arch_m, bevel=0.006, name="landing")
-        _mouth_frame(mat("iron", "#2a2522", rough=0.5, metal=0.6), x=1.0, w=0.035, dark_x=1.07)
+        _mouth_frame(mat("iron", "#2a2522", rough=0.5, metal=0.6), x=1.0, w=0.035, dark_x=1.065)
         _flue(1.25, 0.165, 1.62, 0.09)
         text("FORNO", (0.995, 1.75, 0.2), mat("gold", "#d4a72c", rough=0.3, metal=0.8), size=0.07, depth=0.004, rot=(0, -90, 0), name="brand")
     else:
@@ -257,7 +257,7 @@ def prep():
     _feet((-1.58, -1.08), (-1.04, 0.14))
     for z in (-0.78, -0.12):
         box((0.02, 0.62, 0.6), (-1.02, 0.5, z), s, bevel=0.006, name="door")
-        box((0.028, 0.022, 0.38), (-1.0, 0.78, z), chrome(), bevel=0.008, name="handle")
+        box((0.04, 0.036, 0.38), (-0.995, 0.78, z), red(), bevel=0.014, name="handle")
     box((0.02, 0.06, 1.26), (-1.025, 0.09, -0.45), steel_dark(), name="kick")
     # the top, round the sink (sink x -1.55..-1.09, z -0.2..0.2)
     box((0.64, 0.04, 0.91), (-1.32, 0.9, -0.655), s, bevel=0.005, name="top_a")

@@ -251,6 +251,7 @@ func _page_home() -> void:
 	var vh := Kit.hbox(6)
 	vh.add_child(Kit.button("Service in 3D: " + ("on" if G.s.get("view3d", true) else "off"), func(): _act(func(): Game.s.view3d = not Game.s.get("view3d", true)), "ghost", 15))
 	vh.add_child(Kit.button("Look by turning the phone: " + ("on" if G.s.get("gyro", true) else "off"), func(): _act(func(): Game.s.gyro = not Game.s.get("gyro", true)), "ghost", 15))
+	vh.add_child(Kit.button("Retro look: " + ("on" if G.s.get("retro", false) else "off"), func(): _act(func(): Game.s.retro = not Game.s.get("retro", false)), "ghost", 15))
 	nc[1].add_child(vh)
 	var reset := Kit.button("Start over", func(): Kit.main.confirm("Start over?", "This wipes your save and takes you back to the start.", "Wipe my save", func():
 		Game.new_game()

@@ -20,6 +20,10 @@ ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 OUT = os.path.join(ROOT, "assets", "models")
 TEX = os.path.join(HERE, "tex")
 
+# The look (see REPLIT_BRIEF.md, "The art style"): chunky, rounded, toy-like props in warm ingredient colours,
+# painted-in shadows (ambient occlusion baked into vertex colours), soft materials and no bump maps.
+ROUND = [True]          # boxes get rounded edges unless a model turns it off (the far-away street does)
+
 # ---------------------------------------------------------------- scene
 
 def reset():
@@ -33,6 +37,7 @@ def reset():
             except Exception:
                 pass
     MATS.clear()
+    ROUND[0] = True
 
 
 def link(ob, parent=None):
@@ -70,6 +75,10 @@ def mat(name, col="#cccccc", rough=0.6, metal=0.0, tex=None, normal=None, uvs=1.
     """A material, made once per model. tex/normal name a generated texture (see TEXTURES); uvs is how many
     metres one repeat of the texture covers."""
     if name in MATS: return MATS[name]
+    # toy-like: painted metal rather than mirror steel, nothing glassy-hard, no bump maps
+    metal = min(metal, 0.3)
+    rough = max(rough, 0.32) if alpha is None else rough
+    normal = None
     m = bpy.data.materials.new(name)
     m.use_nodes = True
     nt = m.node_tree
@@ -172,9 +181,9 @@ def tex_wood(n, seed, col="#9a6b3f", planks=0, plank_gap=0.004, var=0.12):
     pid = np.floor(x * planks) if planks else np.zeros_like(x)
     rng = np.random.default_rng(seed)
     pv = rng.normal(0, 1, max(planks, 1))[pid.astype(int)] if planks else 0
-    rings = np.sin((x * 12 + warp * 1.6 + (pid * 3.7 if planks else 0)) * math.pi * 2)
-    streak = fbm(n, 2, 5, seed + 4, sx=6, sy=1)
-    grain = 0.93 + 0.035 * rings + 0.12 * (streak - 0.5)
+    rings = np.sin((x * 6 + warp * 1.2 + (pid * 3.7 if planks else 0)) * math.pi * 2)
+    streak = fbm(n, 2, 4, seed + 4, sx=6, sy=1)
+    grain = 0.95 + 0.025 * rings + 0.07 * (streak - 0.5)          # soft, painted-looking grain
     a = _rgb(col)[None, None, :] * grain[..., None] * (1 + var * (pv[..., None] if planks else 0))
     h = np.ones_like(x)
     if planks:
@@ -253,28 +262,41 @@ def tex_speckle(n, seed, col, dots, amt=0.25):
     return a, None
 
 
+def tex_checker(n, a, b, cells=4, var=0.03, seed=31):
+    x, y = _grid(n)
+    ix = np.floor(x * cells).astype(int); iy = np.floor(y * cells).astype(int)
+    pick = ((ix + iy) % 2)[..., None]
+    rng = np.random.default_rng(seed)
+    shade = 1 + var * rng.normal(0, 1, (cells, cells))[iy, ix][..., None]
+    c = (_rgb(a)[None, None, :] * (1 - pick) + _rgb(b)[None, None, :] * pick) * shade
+    fx = x * cells - ix; fy = y * cells - iy
+    d = np.minimum(np.minimum(fx, 1 - fx), np.minimum(fy, 1 - fy)) / cells
+    return c * (0.82 + 0.18 * _soft(d, 0.004))[..., None], None
+
+
 TEXTURES = {
+    "checker": (256, lambda n: tex_checker(n, "#c8432f", "#f3ead6")),
     # name: (size, generator)
-    "quarry": (512, lambda n: tex_tiles(n, 4, 4, "#9b4a33", "#3e3a36", 0.07, 11, gw=0.006)),
-    "subway": (512, lambda n: tex_tiles(n, 4, 8, "#f4f2ee", "#b9b5ad", 0.012, 12, offset_rows=True, gw=0.004, jitter=0.03)),
-    "marble": (512, lambda n: tex_marble(n, 13)),
-    "planks": (512, lambda n: tex_wood(n, 14, "#8a5c36", planks=5, plank_gap=0.003)),
-    "oak": (256, lambda n: tex_wood(n, 15, "#a87a4c")),
-    "walnut": (256, lambda n: tex_wood(n, 16, "#6a4428")),
+    "quarry": (256, lambda n: tex_tiles(n, 4, 4, "#c0603f", "#8c7a68", 0.05, 11, gw=0.006, jitter=0.04)),
+    "subway": (256, lambda n: tex_tiles(n, 4, 8, "#f4f2ee", "#b9b5ad", 0.012, 12, offset_rows=True, gw=0.004, jitter=0.03)),
+    "marble": (256, lambda n: tex_marble(n, 13)),
+    "planks": (256, lambda n: tex_wood(n, 14, "#8a5c36", planks=5, plank_gap=0.003)),
+    "oak": (128, lambda n: tex_wood(n, 15, "#a87a4c")),
+    "walnut": (128, lambda n: tex_wood(n, 16, "#6a4428")),
     "steel": (256, lambda n: tex_steel(n, 17)),
-    "plate": (512, lambda n: tex_checker_plate(n, 18)),
-    "mosaic": (512, lambda n: tex_mosaic(n, 19, ["#b5472e", "#c8643a", "#9a3826", "#d9893f", "#7a2e22"])),
-    "mosaic_blue": (512, lambda n: tex_mosaic(n, 20, ["#1f5f8b", "#2a7aa8", "#173f5f", "#3f9bc0", "#e8e2d0"])),
-    "asphalt": (512, lambda n: tex_asphalt(n, 21)),
-    "slabs": (512, lambda n: tex_tiles(n, 2, 2, "#a8a39a", "#5e5a54", 0.05, 22, gw=0.004, jitter=0.12)),
-    "brick": (512, lambda n: tex_tiles(n, 4, 12, "#9c4a34", "#cfc6b8", 0.10, 23, offset_rows=True, gw=0.006, jitter=0.15)),
-    "brick_yellow": (512, lambda n: tex_tiles(n, 4, 12, "#c9a46a", "#e6dfd2", 0.08, 24, offset_rows=True, gw=0.006, jitter=0.15)),
-    "kraft": (256, lambda n: tex_kraft(n, 25)),
-    "plaster": (256, lambda n: tex_noise(n, 26, "#e9e2d4", 0.04)),
+    "plate": (256, lambda n: tex_checker_plate(n, 18)),
+    "mosaic": (256, lambda n: tex_mosaic(n, 19, ["#b5472e", "#c8643a", "#9a3826", "#d9893f", "#7a2e22"])),
+    "mosaic_blue": (256, lambda n: tex_mosaic(n, 20, ["#1f5f8b", "#2a7aa8", "#173f5f", "#3f9bc0", "#e8e2d0"])),
+    "asphalt": (128, lambda n: tex_asphalt(n, 21)),
+    "slabs": (256, lambda n: tex_tiles(n, 2, 2, "#a8a39a", "#5e5a54", 0.05, 22, gw=0.004, jitter=0.12)),
+    "brick": (256, lambda n: tex_tiles(n, 4, 12, "#9c4a34", "#cfc6b8", 0.10, 23, offset_rows=True, gw=0.006, jitter=0.15)),
+    "brick_yellow": (256, lambda n: tex_tiles(n, 4, 12, "#c9a46a", "#e6dfd2", 0.08, 24, offset_rows=True, gw=0.006, jitter=0.15)),
+    "kraft": (128, lambda n: tex_kraft(n, 25)),
+    "plaster": (128, lambda n: tex_noise(n, 26, "#e9e2d4", 0.04)),
     "cladding": (256, lambda n: tex_noise(n, 27, "#eef0ee", 0.025, 3)),
-    "vinyl": (512, lambda n: tex_speckle(n, 28, "#5d6266", ["#7d8388", "#3d4246", "#9aa0a4"], 0.18)),
-    "terrazzo": (512, lambda n: tex_speckle(n, 29, "#d9d3c7", ["#a49a8a", "#7a6e60", "#efe9de", "#b86b4b"], 0.3)),
-    "stone": (256, lambda n: tex_noise(n, 30, "#b9b3a8", 0.12, 8)),
+    "vinyl": (256, lambda n: tex_speckle(n, 28, "#5d6266", ["#7d8388", "#3d4246", "#9aa0a4"], 0.18)),
+    "terrazzo": (256, lambda n: tex_speckle(n, 29, "#d9d3c7", ["#a49a8a", "#7a6e60", "#efe9de", "#b86b4b"], 0.3)),
+    "stone": (128, lambda n: tex_noise(n, 30, "#b9b3a8", 0.12, 8)),
 }
 
 
@@ -341,13 +363,17 @@ def _finish_bm(bm, name, m, pos, rot, smooth, parent, uv=True, scale=None):
     bm.free()
     if smooth:
         me.use_auto_smooth = True
-        me.auto_smooth_angle = math.radians(38)
+        me.auto_smooth_angle = math.radians(50)
     if m is not None: me.materials.append(m)
     ob = bpy.data.objects.new(name, me)
     return link(ob, parent)
 
 
-def box(size, pos, m, bevel=0.0, seg=2, rot=(0, 0, 0), name="box", parent=None):
+def box(size, pos, m, bevel=None, seg=2, rot=(0, 0, 0), name="box", parent=None):
+    """a box; edges are rounded (chunky, toy-like) unless bevel=0 or the model turned ROUND off"""
+    if bevel is None:
+        thin = min(size)
+        bevel = min(0.014, thin * 0.22) if ROUND[0] and thin >= 0.006 else 0.0
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=1.0)
     for v in bm.verts:
@@ -554,6 +580,69 @@ def blobs(elems, m, res=0.012, name="blob", parent=None, thresh=0.6, tris=None):
     return o2
 
 
+def densify(ob, max_len):
+    """cut long edges so baked shading has vertices to live on (big walls and floors)"""
+    bm = bmesh.new()
+    bm.from_mesh(ob.data)
+    for _ in range(7):
+        long = [e for e in bm.edges if e.calc_length() > max_len]
+        if not long: break
+        bmesh.ops.subdivide_edges(bm, edges=long, cuts=1, use_grid_fill=True)
+    bm.to_mesh(ob.data)
+    bm.free()
+
+
+def bake_ao(objs, dist=0.35, samples=32, tint=(0.56, 0.47, 0.44), strength=1.0, max_len=None, ground=True):
+    """paint ambient occlusion into vertex colours (the game multiplies them into the colours): corners, creases and
+    where things meet the ground go softly darker, in a warm tint rather than black. Everything else in the scene
+    counts as an occluder, so a room can be baked with its fixtures standing in it."""
+    sc = bpy.context.scene
+    sc.render.engine = "CYCLES"
+    sc.cycles.device = "CPU"
+    sc.cycles.samples = samples
+    sc.cycles.use_denoising = False          # this Blender has no denoiser: with it on, the bake fails silently (all black)
+    if sc.world is None: sc.world = bpy.data.worlds.new("bake_world")
+    sc.world.light_settings.distance = dist
+    plane = None
+    meshes = [o for o in objs if o is not None and o.type == "MESH"]
+    if not meshes: return
+    if ground:
+        # a floor under the model, so its base darkens where it stands
+        lo = min((o.matrix_world @ Vector(c)).y for o in meshes for c in o.bound_box)
+        pm = bpy.data.meshes.new("bake_ground")
+        s = 30.0
+        pm.from_pydata([(-s, lo, -s), (s, lo, -s), (s, lo, s), (-s, lo, s)], [], [(0, 3, 2, 1)])
+        plane = bpy.data.objects.new("bake_ground", pm)
+        link(plane)
+    for ob in meshes:
+        if max_len: densify(ob, max_len)
+        me = ob.data
+        for a in list(me.color_attributes): me.color_attributes.remove(a)
+        attr = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
+        me.color_attributes.active_color = attr
+        me.color_attributes.render_color_index = me.color_attributes.active_color_index
+        bpy.ops.object.select_all(action="DESELECT")
+        ob.select_set(True)
+        bpy.context.view_layer.objects.active = ob
+        bpy.ops.object.bake(type="AO", target="VERTEX_COLORS")
+        attr = me.color_attributes["Col"]
+        n = len(attr.data)
+        c = np.empty(n * 4, dtype=np.float32)
+        attr.data.foreach_get("color", c)
+        c = c.reshape(-1, 4)
+        if c[:, 0].max() <= 0.0:
+            raise RuntimeError("ambient occlusion bake came out black for " + ob.name)
+        ao = np.clip(c[:, 0], 0, 1) ** (0.8 * strength)
+        t = np.array(tint, dtype=np.float32)
+        rgb = t[None, :] + (1 - t[None, :]) * ao[:, None]
+        c[:, :3] = rgb
+        c[:, 3] = 1.0
+        attr.data.foreach_set("color", c.ravel())
+    if plane is not None:
+        bpy.data.objects.remove(plane)
+        bpy.data.meshes.remove(pm)
+
+
 def join(objs, name):
     """merge meshes into one object (fewer draw calls on a phone)"""
     objs = [o for o in objs if o is not None and o.type == "MESH"]
@@ -598,7 +687,7 @@ def export(key):
         if o.type == "MESH":
             o.data.update()
     kw = dict(filepath=path, export_format="GLTF_SEPARATE", export_texture_dir="tex", export_yup=False, export_apply=True,
-              use_selection=False, export_image_format="JPEG", export_cameras=False, export_lights=False,
+              use_selection=False, export_image_format="JPEG", export_cameras=False, export_lights=False, export_colors=True,
               export_animations=False, export_extras=False)
     try:
         bpy.ops.export_scene.gltf(**kw, export_jpeg_quality=85)

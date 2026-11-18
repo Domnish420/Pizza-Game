@@ -82,7 +82,10 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [x] 3D first-person service world (GoPro angle): room, stations, look and gyro, touch on 3D objects and surfaces
 - [x] First-pass models for every `fp.*` key, generated in Blender (`tools/models/`): rooms, street, dining room,
       counters, ovens, back of house, props, customers that sit at tables, hands
-- [ ] Hand-made models to replace them, rigged hands and customers with animations, the dough as a deforming 3D mesh
+- [x] The art style: chunky, toy-like, warm ingredient colours, painted-in shadows, cartoon customers
+      (REPLIT_BRIEF.md, "The art style"); a Retro (PS2) look as an option on the phone
+- [ ] The pizza in 3D as the hero of the style: deforming dough, glossy sauce, melting cheese, char, steam
+- [ ] Hand-made models to replace the generated ones, rigged hands and customers with animations
 - [x] The morning and evening in the same 3D kitchen: every job a prop you tap (deliveries, prep, wash-up, counter,
       dough, cleaning, traps, boxes, temperatures, stores, checklist, open / lock up); management on a phone
 - [ ] The hands-on minigames (prep, cleaning, unpacking, traps, folding, dough) done on the 3D props instead of 2D sheets

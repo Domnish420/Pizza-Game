@@ -41,11 +41,11 @@ def room(dine):
         wall = mat("subway", "#ffffff", rough=0.22, tex="subway", normal="subway", uvs=0.6)
         floor_m = mat("quarry", "#ffffff", rough=0.55, tex="quarry", normal="quarry", uvs=0.6)
     else:
-        wall = mat("cladding", "#ffffff", rough=0.35, tex="cladding", uvs=1.2)
-        floor_m = mat("plate", "#ffffff", rough=0.42, metal=0.45, tex="plate", normal="plate", uvs=0.45)
+        wall = mat("cladding", "#f7f1e6", rough=0.45)
+        floor_m = mat("checker", "#ffffff", rough=0.5, tex="checker", uvs=0.6)          # red and cream pizzeria tiles
     ceil = mat("ceiling", "#f3f3f0", rough=0.75)
     alu = mat("alu", "#c4c9cc", rough=0.3, metal=0.7)
-    paint = mat("van_paint", "#a8302a", rough=0.32, metal=0.25)
+    paint = mat("van_paint", TOMATO, rough=0.4)
     # floor and ceiling
     box((3.32, 0.06, 2.48), (0, -0.03, 0.08), floor_m, name="floor")
     box((3.32, 0.04, 2.48), (0, 2.27, 0.08), ceil, name="ceiling")
@@ -117,6 +117,10 @@ def room(dine):
         box((0.42, 0.04, 0.42), (-0.1, 2.235, 0.55), white(), bevel=0.01, name="roof_vent")
         for i in range(6): box((0.38, 0.006, 0.012), (-0.1, 2.213, 0.38 + i * 0.065), mat("vent_slot", "#9aa0a3", rough=0.5), name="vent_slot")
     _canopy()
+    # a band of colour round the walls, just above the counters
+    band = mat("band", TOMATO if not dine else BASIL, rough=0.45)
+    for (sx, sz, cx, cz) in [(3.24, 0.012, 0, 1.274), (0.012, 2.4, 1.614, 0.08), (0.012, 1.48, -1.614, -0.4), (0.012, 0.15, -1.614, 1.22)]:
+        box((sx, 0.07, sz), (cx, 1.06, cz), band, bevel=0, name="band")
     # on the back wall: a clock, the fuse box, a paper towel dispenser, a fire extinguisher
     _clock((-0.16, 1.98, 1.28))
     box((0.3, 0.36, 0.1), (-1.25, 1.92, 1.25), mat("fusebox", "#e6e6e2", rough=0.5), bevel=0.01, name="fusebox")
@@ -145,6 +149,7 @@ def _tree(x, z, h=3.2):
 
 @model("street")
 def street():
+    ROUND[0] = False                  # far away: plain boxes keep it cheap
     slabs = mat("slabs", "#ffffff", rough=0.8, tex="slabs", normal="slabs", uvs=1.2)
     road = mat("asphalt", "#ffffff", rough=0.9, tex="asphalt", uvs=3.0)
     stone = mat("kerb", "#b0aba2", rough=0.8, tex="stone", uvs=0.8)
@@ -231,9 +236,10 @@ def street():
 
 @model("dining")
 def dining():
+    ROUND[0] = False
     floor_m = mat("planks", "#ffffff", rough=0.55, tex="planks", normal="planks", uvs=2.0)
     plaster = mat("plaster", "#ffffff", rough=0.85, tex="plaster", uvs=2.0)
-    panel = mat("wainscot", "#2f4a3a", rough=0.5)
+    panel = mat("wainscot", "#3f7a55", rough=0.5)
     beam = walnut()
     x0, x1, z0, z1, H = -5.2, 4.2, -14.1, -1.12, 3.0
     cx, cz, W, D = (x0 + x1) / 2, (z0 + z1) / 2, x1 - x0, z1 - z0

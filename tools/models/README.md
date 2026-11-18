@@ -50,6 +50,17 @@ at them in the game.
 | `people.py` | Six customers, the delivery rider, your hands |
 | `preview.py` | The diagnostic contact sheets and checks (see below) |
 
+The look is the art style in `REPLIT_BRIEF.md`. The toolkit enforces most of it: boxes get rounded edges unless
+a model turns `ROUND` off, materials are capped at a painted-metal look with no bump maps, the palette and shared
+materials are in `common.py`, and every model gets its shadows baked in (below).
+
+**Painted-in shadows.** After a model is built, `build.py` bakes ambient occlusion into its vertex colours with
+Cycles (`lib.bake_ao`): big faces are cut finer first so the shading has somewhere to live, a floor is put under the
+model so its base darkens where it stands, and the result is tinted warm. The two rooms are baked with the counters,
+oven, prep station and props standing in them (`PLACES` in `common.py`), then those are removed before export. The
+game multiplies the vertex colours into the material colours. (This Blender has no denoiser, so the bake turns
+denoising off; with it on, the bake fails silently and comes out black, which `bake_ao` now refuses.)
+
 Everything is modelled directly in the game's own space (metres, Y up, the player at the origin facing -Z) and
 exported without axis conversion, so a shape placed at (1.04, 1.1, 0.2) here is at (1.04, 1.1, 0.2) in the game.
 

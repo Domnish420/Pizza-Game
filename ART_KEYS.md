@@ -14,6 +14,10 @@ Every key below has a first-pass model, generated in Blender by the scripts in `
 `assets/models/tex/`. To replace one, drop `assets/models/fp-<key>.glb` next to it: a `.glb` is loaded before the
 `.gltf`, so yours wins with no code change. Delete the generated `.gltf` and `.bin` once you are happy with yours.
 
+Follow the art style in `REPLIT_BRIEF.md` (chunky, rounded, warm colours, painted-in shadows). Shading baked into
+vertex colours (`COLOR_0`) is multiplied into the material colour by the game, so bake ambient occlusion there
+rather than into textures.
+
 Metres, Y up, the player stands at the origin facing -Z with eyes at 1.62 m. Room and fixture models are placed at
 the origin, so model them in room coordinates; small props are placed at their own position, so model them around
 their own origin (base at y = 0). If no model exists for a key, the game builds a placeholder shape instead.
@@ -28,7 +32,7 @@ their own origin (base at y = 0). If no model exists for a key, the game builds 
 | `fp.oven.electric`, `fp.oven.gas`, `fp.oven.wood`, `fp.oven.rotary` | The oven on the right, mouth facing the player at x 1.04, centred y 1.1, z 0.2, 0.78 x 0.62 (z -0.19..0.59, y 0.79..1.41). Nothing may stand in front of that rectangle: the oven view is drawn there in service. The body sits at x 1.0..1.62, z -0.27..0.83 |
 | `fp.prep` | The prep station on the left: counter (x -1.63..-1.01, z -1.1..0.2), sink, tubs, shelf; the prep tablet's screen is at (-1.6, 1.42, -0.42), 0.86 x 0.63, facing +X |
 | `fp.crates` | A delivery stacked by the back door, placed at (-1.2, 0, 0.75) |
-| `fp.customer.0` .. `fp.customer.5` | A customer, 1.75 m, facing +Z. Each leg hangs from a node named `hip_l` / `hip_r` at hip height (0.92), with `knee_l` / `knee_r` below at 0.5: the game turns those joints to sit the customer at a table (and lowers them 0.39 m) |
+| `fp.customer.0` .. `fp.customer.5` | A cartoon customer, about 1.76 m, facing +Z. Each leg hangs from a node named `hip_l` / `hip_r` (now at 0.79), with `knee_l` / `knee_r` below (at 0.44): the game turns those joints to sit the customer at a table, lowering them until the hips are at seat height (0.53 m) |
 | `fp.rider` | A delivery-app rider with helmet and insulated bag, built like a customer |
 | `fp.table` | A dining table (top surface at 0.765 m; plates go at x ±0.17) with four chairs 0.62 m out, facing it |
 | `fp.pan` | One gastronorm pan, 0.1 m wide x 0.2 deep, rim at y +0.03. The game stretches its width to fit the slot; the fill is drawn by code |

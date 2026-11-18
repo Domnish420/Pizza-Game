@@ -30,6 +30,7 @@ import numpy as np
 from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 MODELS = os.path.join(ROOT, "assets", "models")
 OUTDIR = "/tmp/previews"
@@ -206,8 +207,27 @@ def setup_scene():
     sc.render.stamp_font_size = 18
     for m in bpy.data.materials:            # untextured materials show their base colour
         if m.use_nodes:
-            b = m.node_tree.nodes.get("Principled BSDF")
-            if b: m.diffuse_color = b.inputs["Base Color"].default_value
+            m.diffuse_color = _base_colour(m)
+
+
+def _base_colour(m):
+    """a material's flat colour: the Base Color, or (with baked vertex colours, which the importer multiplies in
+    through a mix node) the colour factor on that node"""
+    b = m.node_tree.nodes.get("Principled BSDF")
+    if b is None: return (0.8, 0.8, 0.8, 1.0)
+    sock = b.inputs["Base Color"]
+    if not sock.is_linked: return tuple(sock.default_value)
+    seen, todo = set(), [sock.links[0].from_node]
+    while todo:
+        n = todo.pop()
+        if n.name in seen: continue
+        seen.add(n.name)
+        if n.type == "RGB": return tuple(n.outputs[0].default_value)
+        for i in n.inputs:
+            if i.type == "RGBA" and not i.is_linked and i.enabled and tuple(i.default_value)[:3] != (0.5, 0.5, 0.5):
+                return tuple(i.default_value)
+            if i.is_linked: todo.append(i.links[0].from_node)
+    return (0.8, 0.8, 0.8, 1.0)
 
 
 def _aim(cam, d):
@@ -354,7 +374,8 @@ def scene(name):
                 a = Vector((0.62, 0)).copy()
                 ang = i * math.pi
                 ax, az = math.cos(ang) * 0.62, math.sin(ang) * 0.62
-                objs = load("customer.%d" % look, (tx + ax, -0.39, tz + az), yaw=math.atan2(-ax, -az))
+                from people import HIP_Y, GROW
+                objs = load("customer.%d" % look, (tx + ax, -(HIP_Y * GROW - 0.53), tz + az), yaw=math.atan2(-ax, -az))
                 _seat(objs, ang)
     bad = check(name)
     lo, hi = bounds(room)                         # frame the room, not the whole street

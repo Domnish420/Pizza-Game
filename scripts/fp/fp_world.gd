@@ -42,6 +42,7 @@ var job_labels := {}                   # job -> Label3D saying how that job stan
 var job_nodes := {}                    # job -> Node3D (things that change with the state)
 var job_t := 0.0
 var dine := false
+var retro := false                     # the Retro look: lighting per polygon corner, as 2000s consoles did
 var ground_y := -0.6                   # the street is lower than the van floor
 var head: Node3D
 var cam: Camera3D
@@ -90,6 +91,7 @@ func goto(v: String) -> void:
 	else: view_closed = v
 
 func _ready() -> void:
+	retro = Game.s.get("retro", false)
 	dine = bool(svc.L.dine) if svc != null else Game.calc_tables() > 0
 	ground_y = 0.0 if dine else -0.42
 	for st in STATION_AT:
@@ -123,6 +125,7 @@ func _mat(col: Color, rough: float = 0.75, metal: float = 0.0, unshaded: bool = 
 	m.metallic = metal
 	if col.a < 1.0: m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	if unshaded: m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	elif retro: m.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
 	_mats[key] = m
 	return m
 
@@ -183,9 +186,21 @@ func _prop(key: String, pos: Vector3, make: Callable, parent: Node = null) -> No
 	root.position = pos
 	(parent if parent != null else self).add_child(root)
 	var m := Art.model("fp." + key)
-	if m != null: root.add_child(m)
+	if m != null:
+		root.add_child(m)
+		_shade(m)
 	else: make.call(root)
 	return root
+
+## a model's materials lit per pixel, or per corner in the Retro look (they are shared, so this is quick after once)
+func _shade(n: Node) -> void:
+	var want := BaseMaterial3D.SHADING_MODE_PER_VERTEX if retro else BaseMaterial3D.SHADING_MODE_PER_PIXEL
+	if n is MeshInstance3D and n.mesh != null:
+		for s in n.mesh.get_surface_count():
+			var mt = n.get_active_material(s)
+			if mt is BaseMaterial3D and mt.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED and mt.shading_mode != want:
+				mt.shading_mode = want
+	for c in n.get_children(): _shade(c)
 
 # ---------- the room ----------
 func _environment() -> void:
@@ -194,19 +209,23 @@ func _environment() -> void:
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color("9cc6e8") if not dine else Color("2a2622")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color("fff4e6")
+	env.ambient_light_color = Color("fff0dc")
 	env.ambient_light_energy = 0.55
 	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.adjustment_enabled = true                  # a touch richer colour: the warm, toy-like look
+	env.adjustment_saturation = 1.12
+	env.adjustment_contrast = 1.03
 	we.environment = env
 	add_child(we)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-50, -30, 0)
-	sun.light_energy = 0.9 if not dine else 0.35
+	sun.light_energy = 0.75 if not dine else 0.35
+	sun.light_color = Color("fff1d8")
 	add_child(sun)
 	var lamp := OmniLight3D.new()
 	lamp.position = Vector3(0, 2.1, -0.4)
 	lamp.omni_range = 4.5
-	lamp.light_energy = 1.3
+	lamp.light_energy = 1.0
 	lamp.light_color = Color("ffe2b8")
 	add_child(lamp)
 
@@ -753,8 +772,8 @@ func _person(p: Dictionary) -> Dictionary:
 		e.figs.append(fig)
 	_arrange(e, e.figs.size(), false)
 	_tappable(root, Vector3(0.6 + 0.4 * (e.figs.size() - 1), 1.9, 0.6), Vector3(0, 0.95, 0), {"kind": "party", "id": p.id})
-	e.lbl = _label("", Vector3(0, 2.05, 0), 64, Color.WHITE, root, true, 0.004)
-	if p.has("reg") or app: _label(p.get("reg", Data.APP.name), Vector3(0, 1.86, 0), 40, Color("f4c64f") if not app else Color("4fc7a8"), root, true, 0.003)
+	e.lbl = _label("", Vector3(0, 1.9, 0), 64, Color.WHITE, root, true, 0.004)
+	if p.has("reg") or app: _label(p.get("reg", Data.APP.name), Vector3(0, 1.74, 0), 40, Color("f4c64f") if not app else Color("4fc7a8"), root, true, 0.003)
 	return e
 
 ## stand side by side, or sit round the table
@@ -769,7 +788,8 @@ func _arrange(e: Dictionary, n: int, seated: bool) -> void:
 		var jointed: bool = hips[0] != null
 		if seated:
 			var a := Vector2(0.62, 0).rotated(i * PI / 2.0)
-			f.position = Vector3(a.x, -0.39 if jointed else -0.3, a.y)
+			# lower them until the hips sit on the seat (0.53 m: the seat top plus the seat of the trousers)
+			f.position = Vector3(a.x, -(hips[0].position.y - 0.53) if jointed else -0.3, a.y)
 			f.rotation.y = atan2(-a.x, -a.y)           # face the middle of the table
 		else:
 			f.position = Vector3((i - (n - 1) / 2.0) * 0.45, 0, 0)

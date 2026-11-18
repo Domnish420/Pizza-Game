@@ -18,7 +18,7 @@ def fridge():
         box((0.56, 0.012, 0.01), (0, 1.73 + i * 0.022, -0.322), steel_dark(), name="louvre")
     box((0.1, 0.035, 0.008), (-0.2, 1.8, -0.324), black(), name="display")
     text("3.0", (-0.2, 1.8, -0.319), mat("led_green", "#5cff8a", emit="#4cff7a", emit_k=2.0), size=0.024, depth=0.001, rot=(0, 180, 0), name="display_text")
-    box((0.025, 0.42, 0.035), (0.25, 0.95, -0.37), chrome(), bevel=0.01, name="handle")
+    box((0.04, 0.42, 0.045), (0.25, 0.95, -0.375), mat("handle_teal", TEAL, rough=0.45), bevel=0.016, name="handle")
     for y in (0.75, 1.15):
         box((0.03, 0.03, 0.03), (0.25, y, -0.355), chrome(), name="handle_post")
     for x in (-0.28, 0.28):
@@ -48,7 +48,7 @@ def freezer():
     box((0.6, 0.82, 0.45), (0, 0.45, 0), body, bevel=0.015, name="body")
     box((0.6, 0.06, 0.45), (0, 0.89, 0), body, bevel=0.015, name="lid")
     box((0.58, 0.012, 0.43), (0, 0.86, 0), mat("seal", "#3a3a3a", rough=0.8), name="seal")
-    box((0.22, 0.03, 0.04), (0, 0.86, -0.24), mat("freezer_handle", "#8f9a9f", rough=0.4), bevel=0.008, name="handle")
+    box((0.22, 0.036, 0.045), (0, 0.86, -0.243), mat("handle_teal", TEAL, rough=0.45), bevel=0.014, name="handle")
     box((0.6, 0.04, 0.45), (0, 0.02, 0), black(), name="plinth")
     for i in range(5):
         box((0.008, 0.02, 0.2), (0.302, 0.15 + i * 0.035, 0.05), steel_dark(), name="vent")
@@ -166,7 +166,7 @@ boxes.keep = ("flat_mesh", "folded_mesh")
 @model("mixer")
 def mixer():
     """a countertop spiral mixer, its front toward +X (the room)"""
-    body = mat("mixer_body", "#e9e7e2", rough=0.35, metal=0.2)
+    body = mat("mixer_body", TOMATO, rough=0.4)                   # a bright stand mixer
     box((0.3, 0.07, 0.34), (0, 0.035, 0), body, bevel=0.015, name="base")
     box((0.1, 0.42, 0.14), (-0.1, 0.28, 0), body, bevel=0.02, name="column")
     box((0.3, 0.1, 0.16), (0.02, 0.5, 0), body, bevel=0.03, name="head")

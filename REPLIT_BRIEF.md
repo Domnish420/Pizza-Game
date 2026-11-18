@@ -61,6 +61,31 @@ The owner supplied reference photos of the real kit: white 2 L and 4 L deli tubs
 with a granite/marble top, drawers and doors below, and a refrigerated rail of about ten gastronorm pans under a glass
 sneeze guard. Ask the owner for the photos; the counter, tubs and rail should look like them.
 
+## The art style (decided with the owner)
+
+Chunky, bright and toy-like, in the spirit of *Job Simulator* and *Overcooked*: a first-person game you play with
+your hands, where everything looks good to pick up. The owner tried the idea of a PS2-era look and chose this
+instead; the PS2 look lives on as an optional "Retro look" switch on the phone's Today page.
+
+- **Shapes**: chunky and rounded. Every box has soft rounded edges, handles and knobs are oversized and easy to
+  read as "grab me", props are slightly larger than life. No fine fiddly detail.
+- **Colour**: warm and saturated, from the ingredients: tomato `#e0533a`, basil `#4caf50`, mozzarella/cheese
+  `#f4c64f`, cream `#f6efe0`, crust `#e3a35c`, terracotta `#c8643a`, wood `#c98b52`, teal `#2fb39a` as the accent
+  for handles and the bin, charcoal `#33383b` instead of black. Steel is light and painted-looking, not a dark
+  mirror. The palette is in `tools/models/common.py`.
+- **Light**: warm and soft. Shadows are painted in: ambient occlusion is baked into every model's vertex colours
+  (corners, creases, contact with the floor), in a warm tint rather than black, and the game multiplies them into the
+  colours. Rooms are baked with their fixtures standing in them, so the floor darkens round the counters.
+- **Textures**: few and soft. Flat colour by default; small (128-256 px) painted-looking textures only where they add
+  something (marble, wood, tiles, the oven's mosaic). No bump or normal maps.
+- **People**: friendly cartoon proportions: big round heads with simple faces (big eyes, eyebrows, a smile), short
+  chunky bodies, mitten hands, big shoes, lots of colour. Never realistic faces.
+- **The pizza is the hero**: the one thing allowed real detail and appetite appeal (stretchy dough, glossy sauce,
+  melting cheese, leopard-spot char, steam), standing out against the simple world.
+- **Text stays sharp**: labels, tickets and the HUD are always drawn at full resolution.
+- **Phone budget**: about 4,000 triangles for a person, a few hundred to 5,000 for a prop, up to about 15,000 for a
+  room; a whole scene is about 100,000.
+
 ## How the code is split (keep it this way)
 
 - **Data** (`data/*.json`): every number and name. Add ingredients, suppliers, pizzas, menus, ovens here.
@@ -109,7 +134,7 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   tables, delivery-app riders and the delivery crates by the back door. Each is a StaticBody3D with an `act` meta;
   keep that when you swap in a model.
 - **Models**: every prop calls `Art.model("fp.<key>")` and falls back to a placeholder. All 50 keys now have a
-  first-pass model, generated in Blender by the scripts in `tools/models/` (`tools/models/README.md`): the van
+  model in the art style above, generated in Blender by the scripts in `tools/models/` (`tools/models/README.md`): the van
   interior with its propped-up hatch, the street of shops outside, the restaurant kitchen (tiled) and dining room
   (beams, lamps, pictures, windows, plants), the counter with its marble top and chilled rail, the side counter and
   ladle rail, all four ovens (electric and gas decks, a mosaic wood dome, a rotary), the prep station, fridge,
