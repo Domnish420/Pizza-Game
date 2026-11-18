@@ -108,12 +108,18 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   ladles on their rack, the paper tickets on the ticket rail (with a patience strip), customers with their markers,
   tables, delivery-app riders and the delivery crates by the back door. Each is a StaticBody3D with an `act` meta;
   keep that when you swap in a model.
-- **Models**: every prop calls `Art.model("fp.<key>")` and falls back to a placeholder. Drop
-  `assets/models/fp-<key>.glb` and it appears; the keys and sizes are in `ART_KEYS.md`. The van interior, the street
-  outside the hatch, the kitchen and dining room, the counter, the ovens (electric, gas, wood, rotary), customers (six
-  looks), the rider, tables, pans, ladles and tickets.
-- **Customers** are placed from the simulation's 2D positions (`FPWorld._to3d`). They need walk, idle, order (talking),
-  waiting-impatiently, eating and leaving animations, and seated poses at tables.
+- **Models**: every prop calls `Art.model("fp.<key>")` and falls back to a placeholder. All 50 keys now have a
+  first-pass model, generated in Blender by the scripts in `tools/models/` (`tools/models/README.md`): the van
+  interior with its propped-up hatch, the street of shops outside, the restaurant kitchen (tiled) and dining room
+  (beams, lamps, pictures, windows, plants), the counter with its marble top and chilled rail, the side counter and
+  ladle rail, all four ovens (electric and gas decks, a mosaic wood dome, a rotary), the prep station, fridge,
+  freezer, dry store, mop, boxes, mixer, trays, crates, pans, eight colour-coded ladles, tickets, tables with
+  chairs, six customers, the rider, the hands and a mouse. They are deliberately simple and clean. Improve on them
+  freely: drop `assets/models/fp-<key>.glb` and it replaces the generated `.gltf` with no code change, or edit the
+  scripts and rebuild. The keys, sizes and positions are in `ART_KEYS.md`.
+- **Customers** are placed from the simulation's 2D positions (`FPWorld._to3d`) and face the hatch or pass with their
+  front (+Z). They sit at tables by bending the `hip_*` and `knee_*` joints in the model. They still need walk, idle,
+  order (talking), waiting-impatiently, eating and leaving animations.
 - **Between services** (`scripts/fp/kitchen_screen.gd`): the morning and evening happen in the same 3D kitchen with
   no service running. Every job is a prop with a live label: the delivery crates, prep tubs, sink with dirty tubs,
   pans on the rail, mixer or bowl, proving trays, mop and bucket, spray, box of traps, pizza boxes on the shelf, the

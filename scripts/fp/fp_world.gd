@@ -234,7 +234,7 @@ func _mk_room(r: Node3D) -> void:
 func _counter() -> void:
 	_prop("counter", Vector3.ZERO, _mk_counter)
 	# what used to be buttons: the pass you send pizzas out on, the bin, the dough sheeter
-	var pass_n := _prop("pass", Vector3(1.47, 0.92, -1.0), _mk_pass)
+	var pass_n := _prop("pass", Vector3(1.5, 0.92, -1.02), _mk_pass)
 	job_nodes.pass = pass_n
 	_tappable(pass_n, Vector3(0.32, 0.16, 0.24), Vector3(0, 0.06, 0), {"kind": "pass"})
 	job_labels.pass = _small_label("Pass", Vector3(0, 0.2, 0), pass_n)
@@ -305,7 +305,7 @@ func _oven() -> void:
 	var kind: String = Game.tier("oven").type
 	_prop("oven." + kind, Vector3.ZERO, _mk_oven.bind(kind))
 	if Game.tier("oven").type == "wood":       # the logs, stacked beside the mouth
-		var logs := _prop("logs", Vector3(1.08, 0.62, 0.74), _mk_logs)
+		var logs := _prop("logs", Vector3(1.12, 0.6, 0.72), _mk_logs)
 		_tappable(logs, Vector3(0.2, 0.3, 0.26), Vector3(0, 0.15, 0), {"kind": "log"})
 		job_labels.logs = _small_label("Logs", Vector3(0, 0.38, 0), logs)
 	if svc == null:                         # between services: the oven door, closed
@@ -444,6 +444,11 @@ func _back_of_house() -> void:
 	_job("traps", trap, Vector3(0.35, 0.3, 0.3), Vector3(0, 0.12, 0), Vector3(0, 0.45, 0))
 	# pizza boxes on the shelf above the side counter: flat ones, and the folded stack
 	var bx := _prop("boxes", Vector3(1.32, 1.8, -1.0), _mk_boxshelf)
+	if not job_nodes.has("boxes_flat"):                # a model: its stacks are the parts named flat and folded
+		var f = bx.find_child("flat", true, false)
+		var g = bx.find_child("folded", true, false)
+		if f != null: job_nodes.boxes_flat = f
+		if g != null: job_nodes.boxes_folded = g
 	_job("boxes", bx, Vector3(0.62, 0.4, 0.4), Vector3(0, 0.15, 0), Vector3(0, 0.55, 0))
 	# the sink, with the dirty tubs in it
 	var sink := Node3D.new()
@@ -458,7 +463,7 @@ func _back_of_house() -> void:
 	# the dough: the mixer (or bowl) and the proving trays
 	var mx := _prop("mixer" if int(Game.s.upg.mixer) > 0 else "bowl", Vector3(-1.38, 0.92, -1.0), _mk_mixer.bind(int(Game.s.upg.mixer) > 0))
 	_job("dough", mx, Vector3(0.36, 0.55, 0.36), Vector3(0, 0.25, 0), Vector3(0, 0.66, 0))
-	var trays := _prop("dough_trays", Vector3(1.45, 0.92, -0.42), _mk_trays)
+	var trays := _prop("dough_trays", Vector3(1.47, 0.92, -0.38), _mk_trays)
 	_job("dough_trays", trays, Vector3(0.36, 0.4, 0.5), Vector3(0, 0.15, 0), Vector3(0, 0.5, 0))
 	# the opening checklist on its clipboard, and the sign at the hatch
 	var cb := _prop("clipboard", Vector3(-0.98, 1.55, -1.08), _mk_clipboard)
@@ -626,9 +631,9 @@ func _camera() -> void:
 	hands[0].node.add_child(held)
 
 func _mk_hand(r: Node3D) -> void:
-	var arm := _cyl(0.04, 0.38, Vector3(0, 0, 0.19), Color("d9a77f"), r)
+	var arm := _cyl(0.04, 0.38, Vector3(0, 0, 0.27), Color("d9a77f"), r)
 	arm.rotation_degrees.x = 90
-	_box(Vector3(0.09, 0.03, 0.11), Vector3(0, 0, -0.03), Color("e2b58f"), r)
+	_box(Vector3(0.09, 0.03, 0.11), Vector3(0, 0, 0.055), Color("e2b58f"), r)
 
 # ---------- where things are ----------
 ## a point in the 2D front-of-house layout (640 x 320) in the 3D world
@@ -698,7 +703,7 @@ func _sync_people(dt: float) -> void:
 		if seated != e.seated: _arrange(e, int(p.n), seated)
 		if not seated:
 			var face := Vector3(0, e.root.position.y, -1.1 if not dine else 0.0)
-			if e.root.position.distance_to(face) > 0.3: e.root.look_at(face, Vector3.UP)
+			if e.root.position.distance_to(face) > 0.3: e.root.look_at(face, Vector3.UP, true)
 		var kind: String = acts.get(p.id, "")
 		var lbl: Label3D = e.lbl
 		if kind != "":
@@ -755,13 +760,24 @@ func _person(p: Dictionary) -> Dictionary:
 ## stand side by side, or sit round the table
 func _arrange(e: Dictionary, n: int, seated: bool) -> void:
 	e.seated = seated
+	if seated: e.root.rotation = Vector3.ZERO           # the chairs face the table, whichever way the party came in
 	for i in e.figs.size():
 		var f: Node3D = e.figs[i]
+		# a model's legs hang from hip and knee joints: bend them to sit down
+		var hips := [f.find_child("hip_l", true, false), f.find_child("hip_r", true, false)]
+		var knees := [f.find_child("knee_l", true, false), f.find_child("knee_r", true, false)]
+		var jointed: bool = hips[0] != null
 		if seated:
 			var a := Vector2(0.62, 0).rotated(i * PI / 2.0)
-			f.position = Vector3(a.x, -0.3, a.y)
+			f.position = Vector3(a.x, -0.39 if jointed else -0.3, a.y)
+			f.rotation.y = atan2(-a.x, -a.y)           # face the middle of the table
 		else:
 			f.position = Vector3((i - (n - 1) / 2.0) * 0.45, 0, 0)
+			f.rotation.y = 0.0
+		for h in hips:
+			if h != null: h.rotation.x = -PI / 2.0 if seated else 0.0
+		for k in knees:
+			if k != null: k.rotation.x = PI / 2.0 if seated else 0.0
 
 func _sync_tables() -> void:
 	for e in table_nodes:
@@ -786,6 +802,7 @@ func _sync_pans() -> void:
 			var pos := Vector3(-0.75 + pw * (col + 0.5), 0.99 + row * 0.07, -1.0 - row * 0.05)
 			var id: String = r[i].ing
 			var root := _prop("pan", pos, _mk_pan.bind(pw))
+			if Art.has_model("fp.pan"): root.get_child(0).scale.x = pw * 0.96 / 0.1
 			var fill := _box(Vector3(pw * 0.84, 0.05, 0.17), Vector3(0, 0.0, 0), Color(Data.ING[id].col) if id != "" else Color("777777"), root)
 			var ring := _box(Vector3(pw * 0.96, 0.005, 0.22), Vector3(0, 0.035, 0), Color(0.96, 0.78, 0.31), root)
 			var nm: String = "" if id == "" else Data.ING[id].name
@@ -813,13 +830,13 @@ func _mk_pan(r: Node3D, pw: float) -> void:
 	_box(Vector3(0.006, 0.06, 0.2), Vector3(w / 2.0, 0, 0), steel, r, 0.25, 0.85)
 
 func _mk_ladle(r: Node3D, oz: int) -> void:
-	_cyl(0.008, 0.26, Vector3(0, 0, 0), Color("c3c9cc"), r, 0.8)
+	_cyl(0.008, 0.26, Vector3(0, -0.13, 0), Color("c3c9cc"), r, 0.8)
 	var bowl := MeshInstance3D.new()
 	var sp := SphereMesh.new()
 	sp.radius = 0.025 + 0.006 * oz
 	sp.height = sp.radius
 	bowl.mesh = sp
-	bowl.position = Vector3(0, -0.14, 0)
+	bowl.position = Vector3(0, -0.27, 0)
 	bowl.material_override = _mat(Color("c3c9cc"), 0.3, 0.8)
 	r.add_child(bowl)
 
@@ -844,10 +861,10 @@ func _sync_ladles() -> void:
 	for i in sizes.size():
 		var oz: int = sizes[i]
 		var on: bool = oz == held
-		var root := _prop("ladle.%d" % oz, Vector3(0.9 + i * 0.11, 1.17, -1.02), _mk_ladle.bind(oz), ladle_root)
-		var ll := _label("%d oz" % oz, Vector3(0, 0.17, 0), 32, Color("f4c64f") if on else Color.WHITE, root, false, 0.0012)
+		var root := _prop("ladle.%d" % oz, Vector3(0.9 + i * 0.11, 1.3, -1.02), _mk_ladle.bind(oz), ladle_root)
+		var ll := _label("%d oz" % oz, Vector3(0, 0.05, 0.01), 32, Color("f4c64f") if on else Color.WHITE, root, false, 0.0012)
 		ll.outline_size = 6
-		_tappable(root, Vector3(0.1, 0.36, 0.1), Vector3(0, -0.05, 0), {"kind": "ladle", "oz": oz})
+		_tappable(root, Vector3(0.1, 0.36, 0.1), Vector3(0, -0.16, 0), {"kind": "ladle", "oz": oz})
 
 func _sync_tickets() -> void:
 	var shown: Array = svc.tickets.slice(0, 8)
@@ -969,7 +986,7 @@ func _sync_hands(dt: float) -> void:
 	for i in hands.size():
 		var h: Dictionary = hands[i]
 		var goal: Vector3 = h.rest
-		if h.target != null: goal = cam.to_local(h.target) + Vector3(0.02 * (1 if i == 0 else -1), 0.02, 0.12)
+		if h.target != null: goal = cam.to_local(h.target) + Vector3(0.02 * (1 if i == 0 else -1), 0.02, 0.05)
 		h.node.position = h.node.position.lerp(goal, 1.0 - exp(-dt * 14.0))
 
 # ---------- touch ----------

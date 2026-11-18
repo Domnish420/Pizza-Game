@@ -201,6 +201,7 @@ and invoices are paid when they fall due.
 | `scripts/orders.gd` | Order notes and allergies turned into a recipe card per ticket |
 | `scripts/checks.gd` | Opening and closing checklists, the temperature log (autoload `Checks`) |
 | `scripts/story.gd` | The career: the employer, the crew, shift reviews, promotions, going solo (autoload `Story`) |
+| `tools/models/` | The Blender scripts that generate every 3D model into `assets/models/` (see `tools/models/README.md`) |
 | `scripts/tutor.gd` | The training days before the first pizzaiolo and first senior shift: Marco's steps, the marker, put the game back after (autoload `Tutor`) |
 | `scripts/equip.gd` | Utensils and small equipment: what you own, what each one does, what you need, KitBox orders and parcels (autoload `Equip`) |
 | `scripts/shop_page.gd` | The KitBox catering-supplies website |

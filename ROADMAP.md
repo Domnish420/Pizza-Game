@@ -80,7 +80,9 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 ## 5. Look, sound and feel (Replit)
 
 - [x] 3D first-person service world (GoPro angle): room, stations, look and gyro, touch on 3D objects and surfaces
-- [ ] Models for every `fp.*` key, rigged hands and customers, the dough as a deforming 3D mesh
+- [x] First-pass models for every `fp.*` key, generated in Blender (`tools/models/`): rooms, street, dining room,
+      counters, ovens, back of house, props, customers that sit at tables, hands
+- [ ] Hand-made models to replace them, rigged hands and customers with animations, the dough as a deforming 3D mesh
 - [x] The morning and evening in the same 3D kitchen: every job a prop you tap (deliveries, prep, wash-up, counter,
       dough, cleaning, traps, boxes, temperatures, stores, checklist, open / lock up); management on a phone
 - [ ] The hands-on minigames (prep, cleaning, unpacking, traps, folding, dough) done on the 3D props instead of 2D sheets

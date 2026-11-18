@@ -46,3 +46,8 @@ func model(key: String) -> Node3D:
 	var ps = _models[key]
 	if ps is PackedScene: return ps.instantiate() as Node3D
 	return null
+
+## is there a model for this key (so the game can fit it: stretch a pan, find a named part)
+func has_model(key: String) -> bool:
+	if not _models.has(key): model(key)
+	return _models[key] is PackedScene
