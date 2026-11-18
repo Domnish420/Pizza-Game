@@ -89,9 +89,10 @@ def room(dine):
         box((1.66, 0.03, 0.08), (0, 1.04, -1.12), alu, name="hatch_sill")
         box((1.66, 0.03, 0.08), (0, 1.865, -1.12), alu, name="hatch_head")
         for side in (-1, 1): box((0.03, 0.85, 0.08), (side * 0.815, 1.45, -1.12), alu, name="hatch_jamb")
-        box((1.7, 0.035, 0.26), (0, 1.05, -1.27), steel(), bevel=0.006, name="ledge")
+        # (slim and just under the sill, so the customer at the hatch shows over it down to the chin)
+        box((1.7, 0.03, 0.13), (0, 1.0, -1.2), steel(), bevel=0.006, name="ledge")
         for side in (-1, 1):
-            box((0.03, 0.18, 0.03), (side * 0.7, 0.95, -1.2), steel_dark(), rot=(-45, 0, 0), name="ledge_bracket")
+            box((0.03, 0.12, 0.03), (side * 0.7, 0.93, -1.17), steel_dark(), rot=(-45, 0, 0), name="ledge_bracket")
         # the hatch door, propped up outside as an awning, on gas struts
         ang = 22
         L = 0.9

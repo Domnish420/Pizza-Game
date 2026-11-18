@@ -275,8 +275,46 @@ def tex_checker(n, a, b, cells=4, var=0.03, seed=31):
     return c * (0.82 + 0.18 * _soft(d, 0.004))[..., None], None
 
 
+def tex_stripes(n, cols, widths, var=0.03, seed=40):
+    """horizontal stripes (v runs up the garment)"""
+    x, y = _grid(n)
+    edges = np.cumsum(widths) / float(sum(widths))
+    idx = np.searchsorted(edges, y, side="right")
+    a = np.zeros((n, n, 3))
+    for i, c in enumerate(cols): a[idx == i] = _rgb(c)
+    return a * (1 + var * (fbm(n, 8, 3, seed) - 0.5))[..., None], None
+
+
+def tex_floral(n, seed, base, petals, centre, cells=4):
+    """a print of small five-petalled flowers on a plain ground, seamless"""
+    x, y = _grid(n)
+    a = (_rgb(base)[None, None, :] * (1 + 0.05 * (fbm(n, 6, 3, seed) - 0.5))[..., None]).copy()
+    rng = np.random.default_rng(seed)
+    k = 0
+    for i in range(cells):
+        for j in range(cells):
+            for sub in (0.0, 0.5):
+                cx = (i + 0.25 + sub + rng.uniform(-0.12, 0.12)) / cells
+                cy = (j + 0.25 + sub + rng.uniform(-0.12, 0.12)) / cells
+                dx = (x - cx + 0.5) % 1.0 - 0.5
+                dy = (y - cy + 0.5) % 1.0 - 0.5
+                r = np.sqrt(dx * dx + dy * dy) * cells
+                ang = np.arctan2(dy, dx) + rng.uniform(0, 6.283)
+                size = rng.uniform(0.17, 0.22)
+                a[r < size * (0.55 + 0.45 * np.abs(np.cos(ang * 2.5)))] = _rgb(petals[k % len(petals)])
+                a[r < size * 0.3] = _rgb(centre)
+                k += 1
+    return a, None
+
+
 TEXTURES = {
     "checker": (256, lambda n: tex_checker(n, "#c8432f", "#f3ead6")),
+    # clothes
+    "floral": (256, lambda n: tex_floral(n, 41, "#94603e", ["#f3d9a6", "#eba45e", "#f7ecd6"], "#c0582e", cells=4)),
+    "stripes_ginger": (128, lambda n: tex_stripes(n, ["#ea7a3c", "#f4e7d0"], [1, 1])),
+    "check_bw": (256, lambda n: tex_checker(n, "#34302c", "#ece6da", cells=8, var=0.02)),
+    "denim": (128, lambda n: tex_noise(n, 42, "#56769c", 0.14, 14)),
+    "denim_dark": (128, lambda n: tex_noise(n, 43, "#3b4c66", 0.14, 14)),
     # name: (size, generator)
     "quarry": (256, lambda n: tex_tiles(n, 4, 4, "#c0603f", "#8c7a68", 0.05, 11, gw=0.006, jitter=0.04)),
     "subway": (256, lambda n: tex_tiles(n, 4, 8, "#f4f2ee", "#b9b5ad", 0.012, 12, offset_rows=True, gw=0.004, jitter=0.03)),
@@ -480,6 +518,20 @@ def tube(points, r, m, seg=10, name="tube", parent=None, caps=True, radii=None):
     return _finish_bm(bm, name, m, (0, 0, 0), (0, 0, 0), True, parent)
 
 
+def cap(center, radii, plane_co, plane_no, m, seg=28, rings=18, name="cap", parent=None):
+    """an ellipsoid cut by a plane, keeping the side plane_no points toward, the cut closed flat: a hair cap with a
+    crisp hairline, a helmet, a hat's crown"""
+    bm = bmesh.new()
+    bmesh.ops.create_uvsphere(bm, u_segments=seg, v_segments=rings, radius=1.0)
+    bm.transform(Matrix.Translation(Vector(center)) @ Matrix.Diagonal(Vector(list(radii) + [1.0])))
+    res = bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=Vector(plane_co),
+                                 plane_no=Vector(plane_no).normalized(), clear_inner=True)
+    cut = [g for g in res["geom_cut"] if isinstance(g, bmesh.types.BMEdge)]
+    bmesh.ops.holes_fill(bm, edges=cut, sides=0)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return _finish_bm(bm, name, m, (0, 0, 0), (0, 0, 0), True, parent)
+
+
 def torus(R, r, pos, m, seg=24, rseg=8, rot=(0, 0, 0), name="torus", parent=None):
     pts = [(math.sin(2 * math.pi * i / seg) * R, 0.0, math.cos(2 * math.pi * i / seg) * R) for i in range(seg + 1)]
     ob = tube(pts, r, m, seg=rseg, name=name, caps=False)
@@ -584,7 +636,28 @@ def blobs(elems, m, res=0.012, name="blob", parent=None, thresh=0.6, tris=None):
     o2 = bpy.data.objects.new(name, me)
     link(o2, parent)
     if tris: decimate(o2, tris)
+    boxuv(o2, float(m.get("uvs", 1.0)) if m is not None else 1.0)
     return o2
+
+
+def boxuv(ob, scale=1.0):
+    """UVs projected from whichever side each face looks to (as the hard shapes get them), for a mesh made without
+    any: so a soft shape can wear a print (a floral cardigan, stripes, checked trousers)"""
+    me = ob.data
+    # the same name bmesh gives the hard shapes' UVs ("Float2"), so a joined model keeps a single UV layer (with two,
+    # the material reads one and the print is lost on the other)
+    if not me.uv_layers: me.uv_layers.new(name="Float2")
+    uvl = me.uv_layers.active.data
+    k = 1.0 / scale
+    for p in me.polygons:
+        n = p.normal
+        ax = max(range(3), key=lambda i: abs(n[i]))
+        for li in p.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            if ax == 0: u, v = co.z * (-1 if n.x > 0 else 1), co.y
+            elif ax == 1: u, v = co.x, co.z * (-1 if n.y > 0 else 1)
+            else: u, v = co.x * (1 if n.z > 0 else -1), co.y
+            uvl[li].uv = (u * k, v * k)
 
 
 def densify(ob, max_len):

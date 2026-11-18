@@ -92,6 +92,10 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
       dome that heats and cools slowly, a deck hotter by the fire than by the mouth that cools under each pizza, every
       pizza baking from where it sits; launching and turning peels in your hand; a round firebrick dome
 - [x] Customers that move: walking, standing, ordering, impatient, sitting down, eating (procedural, on joints)
+- [x] The cast as soft clay toys after the owner's reference: big wide heads, round noses, ears, open smiles, sculpted
+      hair, a kid, a granny, a ginger, a teen, a businessman, a papa and the rider, clothes with their details,
+      four-finger hands
+- [ ] Lower-detail versions of the people for far tables in a busy dining room
 - [x] Hands that change pose with what they hold (open, pinch, grip)
 - [ ] Hand-made models to replace the generated ones; keyframed animation (waving, paying, leaving with a box)
 - [x] The morning and evening in the same 3D kitchen: every job a prop you tap (deliveries, prep, wash-up, counter,

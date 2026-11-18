@@ -1107,15 +1107,21 @@ func _person(p: Dictionary) -> Dictionary:
 	root.position = _to3d(p.pos)
 	var e := {"root": root, "figs": [], "seated": false, "lbl": null, "speed": 0.0}
 	var app: bool = p.get("app", false)
-	for i in int(p.n) if not app else 1:
-		var key := "rider" if app else "customer.%d" % ((int(p.look) + i) % 6)
+	var looks := []
+	for i in int(p.n) if not app else 1: looks.append((int(p.look) + i) % 6)
+	# customer.0 is a kid: never the one ordering at the front (a kid alone gets an adult's look)
+	if looks.size() > 0 and looks[0] == 0:
+		if looks.size() > 1: looks.append(looks.pop_front())
+		else: looks[0] = 1 + int(p.id) % 5
+	for i in looks.size():
+		var key := "rider" if app else "customer.%d" % looks[i]
 		var col := Color("2fa88a") if app else Color.from_hsv(fmod(float(p.hue) + i * 0.17, 1.0), 0.45, 0.78)
 		var fig := _prop(key, Vector3.ZERO, _mk_person.bind(col, app), root)
 		e.figs.append(fig)
 	_arrange(e, e.figs.size(), false)
-	_tappable(root, Vector3(0.6 + 0.4 * (e.figs.size() - 1), 1.9, 0.6), Vector3(0, 0.95, 0), {"kind": "party", "id": p.id})
-	e.lbl = _label("", Vector3(0, 1.9, 0), 64, Color.WHITE, root, true, 0.004)
-	if p.has("reg") or app: _label(p.get("reg", Data.APP.name), Vector3(0, 1.74, 0), 40, Color("f4c64f") if not app else Color("4fc7a8"), root, true, 0.003)
+	_tappable(root, Vector3(0.6 + 0.4 * (e.figs.size() - 1), 2.05, 0.6), Vector3(0, 1.02, 0), {"kind": "party", "id": p.id})
+	e.lbl = _label("", Vector3(0, 2.3, 0), 64, Color.WHITE, root, true, 0.004)          # above the hair (the tallest is about 2.05 m)
+	if p.has("reg") or app: _label(p.get("reg", Data.APP.name), Vector3(0, 2.16, 0), 40, Color("f4c64f") if not app else Color("4fc7a8"), root, true, 0.003)
 	return e
 
 ## stand side by side, or sit round the table

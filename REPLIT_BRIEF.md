@@ -78,12 +78,17 @@ instead; the PS2 look lives on as an optional "Retro look" switch on the phone's
   colours. Rooms are baked with their fixtures standing in them, so the floor darkens round the counters.
 - **Textures**: few and soft. Flat colour by default; small (128-256 px) painted-looking textures only where they add
   something (marble, wood, tiles, the oven's mosaic). No bump or normal maps.
-- **People**: friendly cartoon proportions: big round heads with simple faces (big eyes, eyebrows, a smile), short
-  chunky bodies, mitten hands, big shoes, lots of colour. Never realistic faces.
+- **People**: soft clay toys, after the owner's reference (`docs/people-style-reference.jpg`): a big wide head (about a
+  third of the figure) with a round bulb of a nose, ears that stick out, small glossy bead eyes (or happy closed
+  ones), thick brows, rosy cheeks and a wide open smile with teeth; sculpted hair in chunky clumps and curls; bodies
+  that differ (a kid, a plump granny, a big-bellied papa, a tall thin businessman); clothes with their details (a
+  hoodie's hood and drawstrings, a floral cardigan, a varsity jacket, a suit and tie, a quilted puffer); four-finger
+  cartoon hands on the arms; big shoes with real soles. Adults' faces sit at your eye height, so they look at you over
+  the van's ledge. Never realistic faces.
 - **The pizza is the hero**: the one thing allowed real detail and appetite appeal (stretchy dough, glossy sauce,
   melting cheese, leopard-spot char, steam), standing out against the simple world.
 - **Text stays sharp**: labels, tickets and the HUD are always drawn at full resolution.
-- **Phone budget**: about 4,000 triangles for a person, a few hundred to 5,000 for a prop, up to about 15,000 for a
+- **Phone budget**: about 12,000-18,000 triangles for a person (a far-table version with fewer is still to do), a few hundred to 5,000 for a prop, up to about 15,000 for a
   room; a whole scene is about 100,000.
 
 ## How the code is split (keep it this way)
