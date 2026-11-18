@@ -281,11 +281,6 @@ func _build_2d_body() -> void:
 	var sv := Kit.vbox(6)
 	info = Kit.vbox(3)
 	palette = Kit.vbox(5)
-	stats_row = Kit.hbox(10)                   # served and dough, on the full card only
-	stats_row.add_child(top_lbl.count)
-	stats_row.add_child(top_lbl.dough)
-	stats_row.visible = false
-	sv.add_child(stats_row)
 	sv.add_child(info)
 	sv.add_child(palette)
 	sp.add_child(sv)
