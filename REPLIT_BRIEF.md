@@ -118,10 +118,16 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
 - **The surfaces**: the marble bench, the cutting board, the oven mouth and the prep tablet each show the game's 2D
   control (Bench, OvenView, the prep list) rendered onto a flat quad, with touches projected through. Every mechanic
   already works in 3D this way.
-  - The goal is to make them truly 3D one at a time: a deformable dough mesh driven by `PizzaBase` (`r`, `rim` per
-    sector, thickness), sauce and cheese as decals or vertex colours from `Pizza.sauce_amt` and `cheese_amt`, and
-    toppings as instanced meshes from `Pizza.tops`.
-  - Pizzas on the oven deck can become real meshes, and the shelf a real peel.
+  - **The pizza is now 3D on the bench and the board** (`scripts/fp/pizza_3d.gd`, `shaders/pizza.gdshader`). It is
+    rebuilt live from the pizza's data whenever it changes: the dough is a mesh round `PizzaBase` (a dome as a ball,
+    then a flat middle and a puffy cornicione wherever the rim is still unpressed); sauce and cheese come from a
+    one-pixel-per-cell map of `sauce_amt` / `cheese_amt` and are drawn per pixel (glossy sauce, raw shreds, melted
+    pools with golden blisters); toppings are instanced meshes per shape from `Pizza.tops`; the crust browns sector
+    by sector from `Pizza.bake` with leopard spots when pushed; cuts are grooves; it steams on the board; a pan pizza
+    sits in its pan. The bench and board quads are now see-through overlays drawn on top (`FPSurface.overlay()`,
+    `Bench.draw3d`), so the size guides and your fingertips still show and touches map exactly as before.
+  - Next: the oven. `OvenView` still draws the deck as a flat top-down map on the oven mouth. Making it 3D means a
+    hollow oven with a visible deck, a horizontal touch surface inside it, and `Pizza3D` per deck spot.
   - Keep the touch mapping: either keep the quad as an invisible hit plane (`FPSurface.to_px`), or raycast onto the new
     mesh and convert to the same bench coordinates.
 - **No step buttons.** The owner wants the pizza free: "Don't need the base is ready button, get rid of the buttons.
@@ -186,7 +192,8 @@ dough look like dough: a deforming mesh or shader that shows thickness, the puff
 
 ### 2. The pizza and the bake
 
-`scripts/pizza_draw.gd` draws a `Pizza` in layers: base, sauce (`sauce_amt`, a grid of how thick it was spread),
+In the 3D kitchen the pizza on the bench and the board is `Pizza3D` (see section 0); in the oven and the classic
+2D layout, `scripts/pizza_draw.gd` draws a `Pizza` in layers: base, sauce (`sauce_amt`, a grid of how thick it was spread),
 cheese (`cheese_amt`), toppings (`tops`, each with position and angle), browning, cuts. Browning comes from
 `Pizza.bake`: 12 values round the edge, 1.0 = done, 1.4 = burnt, plus `floor` for the underside.
 The wood oven makes the side facing the fire brown first, so those 12 values differ. Show it: leopard spotting,

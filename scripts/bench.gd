@@ -26,6 +26,7 @@ var cut_to = null
 var pin_at = null
 var last_touch := 0
 var mode := ""                   # "bench" or "board" for a fixed surface in the 3D kitchen; "" follows svc.view (2D layout)
+var draw3d := false              # the 3D kitchen draws the surface and the pizza itself (Pizza3D): only draw the guides
 
 func _init(service: ServiceScreen) -> void:
 	svc = service
@@ -189,7 +190,8 @@ func _draw() -> void:
 	draw_set_transform(off, 0, Vector2(k, k))
 	var on_board: bool = _v() == "board"
 	var t = Art.tex("board.bg" if on_board else "bench.bg")
-	if t != null: draw_texture_rect(t, Rect2(0, 0, S, S), false)
+	if draw3d: pass
+	elif t != null: draw_texture_rect(t, Rect2(0, 0, S, S), false)
 	elif on_board:
 		draw_rect(Rect2(0, 0, S, S), Color("6b4a2b"))
 		draw_circle(C, 152, Color("c69a62"))
@@ -202,14 +204,15 @@ func _draw() -> void:
 	var shaping: bool = pz.stage == "shape"
 	if pz.base.method == "press":
 		var pt = Art.tex("pan")
-		if pt != null: draw_texture_rect(pt, Rect2(C - Vector2.ONE * (pz.base.R + 12), Vector2.ONE * (pz.base.R + 12) * 2), false)
+		if draw3d: pass                                   # the 3D pizza has its own pan
+		elif pt != null: draw_texture_rect(pt, Rect2(C - Vector2.ONE * (pz.base.R + 12), Vector2.ONE * (pz.base.R + 12) * 2), false)
 		else:
 			draw_circle(C, pz.base.R + 10, Color("2b2b2b"))
 			draw_circle(C, pz.base.R + 3, Color("3d3d3d"))
 	elif shaping:
 		draw_arc(C, pz.base.R, 0, TAU, 64, Color(1, 1, 1, 0.85), 2.0)
 		if pz.base.crust >= 1.0: draw_arc(C, pz.base.R - pz.base.crust, 0, TAU, 64, Color(1, 1, 1, 0.3), 1.0)
-	PizzaDraw.draw(self, pz, off + C * k, k)
+	if not draw3d: PizzaDraw.draw(self, pz, off + C * k, k)
 	draw_set_transform(off, 0, Vector2(k, k))
 	if on_board and cut_from != null and cut_to != null:
 		draw_dashed_line(C + cut_from, C + cut_to, Color(1, 1, 1, 0.75), 2.0, 6.0)

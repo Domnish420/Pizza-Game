@@ -197,6 +197,7 @@ and invoices are paid when they fall due.
 | `scripts/prep_task.gd`, `clean_task.gd`, `shelf_task.gd` | Prepping, cleaning and unpacking by hand |
 | `scripts/rail_view.gd` | The rail of gastro pans above the bench (2D layout) |
 | `scripts/fp/fp_world.gd`, `fp_view.gd`, `fp_surface.gd` | The 3D first-person kitchen: room, camera, look, touch, 3D props and job props, and the station surfaces |
+| `scripts/fp/pizza_3d.gd`, `shaders/pizza.gdshader` | The pizza in 3D on the bench and board, rebuilt live from its data (dough, sauce, cheese, toppings, browning, cuts, steam) |
 | `scripts/fp/kitchen_screen.gd` | Between services in 3D: the jobs you tap in the room, the checklist, the phone with the management screens |
 | `scripts/orders.gd` | Order notes and allergies turned into a recipe card per ticket |
 | `scripts/checks.gd` | Opening and closing checklists, the temperature log (autoload `Checks`) |

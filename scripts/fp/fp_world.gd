@@ -56,6 +56,7 @@ var t_lean := Vector3.ZERO
 var t_fov := 74.0
 var last_view := ""
 var surfaces := {}                     # station -> FPSurface
+var pizza3d := {}                      # "bench" / "board" -> Pizza3D, the pizza being worked on there, in 3D
 var people := {}                       # party id -> {root, figs, lbl, seated}
 var table_nodes := []                  # [{root, plates, dirt}]
 var pan_nodes := []                    # [{fill, ring, label, i, depth}]
@@ -272,6 +273,7 @@ func _counter() -> void:
 	s.rotation_degrees.x = -90
 	add_child(s)
 	surfaces.bench = s
+	_pizza_on("bench", s, Vector3(0, 0.921, -0.62), 0.6 / 320.0)
 
 func _mk_counter(r: Node3D) -> void:
 	_box(Vector3(1.6, 0.88, 0.64), Vector3(0, 0.44, -0.78), Color("aab1b5"), r, 0.35, 0.7)       # stainless body
@@ -280,6 +282,18 @@ func _mk_counter(r: Node3D) -> void:
 	var glass := _box(Vector3(1.6, 0.01, 0.2), Vector3(0, 1.12, -1.0), Color(0.85, 0.95, 1.0, 0.08), r, 0.05)
 	glass.rotation_degrees.x = 25                                                                   # sneeze guard
 	_box(Vector3(1.7, 0.02, 0.03), Vector3(0, 1.96, -1.06), Color("8d969b"), r, 0.3, 0.8)         # ticket rail
+
+## the pizza at a working surface is a real 3D pizza; the surface itself becomes a see-through overlay drawn on top
+## (guides, your fingertips, the cut line), still taking the touches exactly where they were
+func _pizza_on(station: String, s: FPSurface, at: Vector3, unit: float) -> void:
+	s.overlay()
+	s.control.draw3d = true
+	var p := Pizza3D.new()
+	p.unit = unit
+	p.position = at
+	p.steam_on = station == "board"
+	add_child(p)
+	pizza3d[station] = p
 
 func _small_label(text: String, at: Vector3, parent: Node3D) -> Label3D:
 	var l := _label(text, at, 34, Color.WHITE, parent, true, 0.0009)
@@ -314,6 +328,7 @@ func _board_counter() -> void:
 	s.rotation_degrees = Vector3(-90, 0, 0)
 	add_child(s)
 	surfaces.board = s
+	_pizza_on("board", s, Vector3(1.16, 0.941, -0.72), 0.5 / 320.0)
 
 func _mk_side(r: Node3D) -> void:
 	_box(Vector3(0.82, 0.88, 0.64), Vector3(1.22, 0.44, -0.78), Color("aab1b5"), r, 0.35, 0.7)
@@ -700,6 +715,8 @@ func _process(dt: float) -> void:
 	if svc == null: return
 	for st in ["bench", "board", "oven"]:
 		surfaces[st].control.queue_redraw()
+	if pizza3d.has("bench"): pizza3d.bench.show_pizza(svc.bench)
+	if pizza3d.has("board"): pizza3d.board.show_pizza(svc.board[0] if svc.board.size() > 0 else null)
 	_sync_people(dt)
 	_sync_tables()
 	_sync_tickets()
