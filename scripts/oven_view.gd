@@ -57,10 +57,10 @@ func _down(p: Vector2) -> void:
 	var best = null
 	for o in ov.mine():
 		if o.auto: continue
-		var dd: float = p.distance_to(ov.pos[o.slot])
-		if dd < _pizza_r(o.pz) * 1.3 and (best == null or dd < p.distance_to(ov.pos[best.slot])): best = o
+		var dd: float = p.distance_to(o.at)
+		if dd < _pizza_r(o.pz) * 1.3 and (best == null or dd < p.distance_to(best.at)): best = o
 	if best == null: return
-	var centre: Vector2 = ov.pos[best.slot]
+	var centre: Vector2 = best.at
 	if p.distance_to(centre) < _pizza_r(best.pz) * 0.5:
 		drag = {"pz": best.pz, "o": best, "mode": "move", "pos": p, "start": p}
 	elif not Equip.has("turner"):
@@ -71,7 +71,7 @@ func _down(p: Vector2) -> void:
 func _move(p: Vector2) -> void:
 	drag.pos = p
 	if drag.mode == "turn":
-		var ang: float = (p - svc.oven.pos[drag.o.slot]).angle()
+		var ang: float = (p - drag.o.at).angle()
 		drag.pz.turn += angle_difference(drag.last_ang, ang)
 		drag.last_ang = ang
 
@@ -92,15 +92,47 @@ func _up(p: Vector2) -> void:
 	var tapped: bool = p.distance_to(dg.start) < 8.0
 	if dg.o == null:
 		var slot: int = ov.free_slot() if tapped else _nearest_free(p)
-		if slot >= 0: svc.oven_load(dg.pz, slot)
+		if ov.free_place() and not tapped:
+			# a wood oven: it goes where you put it, if there is room there
+			if ov.free_slot() < 0: Kit.main.toast("The oven is full", true)
+			elif ov.spot_ok(p): svc.oven_load(dg.pz, ov.free_slot(), p)
+			elif p.distance_to(ov.fire_pos) < 52.0 + ov.prad: Kit.main.toast("Not on the fire!", true)
+			elif slot >= 0: svc.oven_load(dg.pz, slot)
+			else: Kit.main.toast("No room there", true)
+		elif slot >= 0: svc.oven_load(dg.pz, slot)
 		elif tapped: Kit.main.toast("The oven is full", true)
 	elif p.y > MOUTH_Y:
 		svc.oven_pull(dg.o)
+	elif ov.free_place():
+		if ov.spot_ok(p, dg.o): dg.o.at = p              # slide it nearer the fire or further away
 	else:
 		var slot := _nearest_free(p, dg.o.slot)
-		if slot >= 0: dg.o.slot = slot
+		if slot >= 0:
+			dg.o.slot = slot
+			dg.o.at = ov.pos[slot]
 
 # ---------- drawing ----------
+## the deck's heat as a faint glow: hotter is brighter and more orange (where a pizza will cook faster)
+## the deck's heat as a faint haze over the floor, warmer where it is hotter: one texel per cell of the oven's heat grid,
+## stretched smoothly over the deck (so it reads as a gradient, not tiles). Hotter than the deck around it shows more.
+var heat_img: Image
+var heat_tex: ImageTexture
+
+func _heat_glow(ov: Oven) -> void:
+	if ov.deck.is_empty(): return
+	if heat_img == null:
+		heat_img = Image.create(Oven.GW, Oven.GH, false, Image.FORMAT_RGBA8)
+	for i in Oven.GW * Oven.GH:
+		var tv: float = ov.deck[i]
+		var k: float = clamp((tv - 330.0) / 200.0, 0.0, 1.0)
+		var a: float = 0.0 if not ov.on_floor(ov.cell_at(i), 0.0) else 0.03 + 0.24 * k
+		if tv < 280.0: a = 0.0
+		heat_img.set_pixel(i % Oven.GW, i / Oven.GW, Color(1.0, 0.3 + 0.5 * k, 0.08 + 0.3 * k, a))
+	if heat_tex == null: heat_tex = ImageTexture.create_from_image(heat_img)
+	else: heat_tex.update(heat_img)
+	# one texel per cell, so each texel's centre lands on its cell's centre; filtered smoothly in between
+	draw_texture_rect(heat_tex, Rect2(Vector2.ZERO, Vector2(Oven.GW, Oven.GH) * Oven.GC), false)
+
 func _text(pos: Vector2, text: String, px: int, col: Color) -> void:
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x
 	draw_string(font, pos - Vector2(w / 2.0, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1, px, col)
@@ -111,9 +143,15 @@ func _draw() -> void:
 	var ov: Oven = svc.oven
 	draw_set_transform(off, 0, Vector2(k, k))
 	if draw3d:
-		# only the empty spots, faintly, so you can see where a pizza will go
-		for i in ov.slots:
-			if ov.item_in(i) == null: draw_arc(ov.pos[i], ov.prad, 0, TAU, 40, Color(1, 0.85, 0.6, 0.35), 2.0)
+		if ov.free_place():
+			_heat_glow(ov)
+			if drag != null and drag.mode == "move":
+				var ok: bool = ov.spot_ok(drag.pos, drag.o) or drag.pos.y > MOUTH_Y
+				draw_arc(drag.pos, ov.prad * 1.5, 0, TAU, 48, Color(0.5, 1, 0.5, 0.6) if ok else Color(1, 0.3, 0.2, 0.75), 3.5)
+		else:
+			# the empty spots, faintly, so you can see where a pizza will go
+			for i in ov.slots:
+				if ov.item_in(i) == null: draw_arc(ov.pos[i], ov.prad, 0, TAU, 40, Color(1, 0.85, 0.6, 0.35), 2.0)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		return
 	var bg = Art.tex("oven." + ov.kind)
@@ -122,9 +160,16 @@ func _draw() -> void:
 	else:
 		draw_rect(Rect2(0, 0, W, H), Color("2a2623"))
 		if ov.def.feeds or ov.kind == "rotary":
+			# the dome's round floor (Oven.on_floor keeps pizzas on it), its wall drawn as a dark rim
 			draw_circle(Vector2(200, 129), 190, Color("7a4a36"))
-			draw_rect(Rect2(20, 10, 360, 236), Color("3b2b24"))
-			draw_rect(Rect2(28, 18, 344, 222), Color("57463a"))
+			var pts := PackedVector2Array()
+			for i in 64:
+				var a := TAU * i / 64.0
+				var q := Oven.FLOOR_C + Vector2(cos(a) * Oven.FLOOR_R.x, sin(a) * Oven.FLOOR_R.y)
+				pts.append(Vector2(q.x, min(q.y, 246.0)))
+			draw_colored_polygon(pts, Color("57463a"))
+			pts.append(pts[0])
+			draw_polyline(pts, Color("3b2b24"), 8.0)
 		else:
 			draw_rect(Rect2(20, 12, 360, 232), Color("9aa0a3"))
 			draw_rect(Rect2(30, 22, 340, 212), Color("4a4743"))
@@ -148,7 +193,7 @@ func _draw() -> void:
 		if ov.item_in(i) == null: draw_arc(ov.pos[i], ov.prad, 0, TAU, 40, Color(1, 1, 1, 0.14), 1.5)
 	# pizzas
 	for o in ov.items:
-		var p: Vector2 = ov.pos[o.slot]
+		var p: Vector2 = o.at
 		if o.owner == "staff":
 			draw_circle(p, ov.prad * 0.92, PizzaDraw.CRUST)
 			draw_circle(p, ov.prad * 0.74, Color("c8321f"))

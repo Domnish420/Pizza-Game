@@ -153,6 +153,43 @@ def _chamber(x0, x1, z0, z1, y1, soot, deck_m, bevel):
     box((x1 - x0, 0.02, z1 - z0), ((x0 + x1) / 2, YD - 0.01, (z0 + z1) / 2), deck_m, bevel=0, name="deck")
 
 
+# the vault of a dome oven: its floor is an ellipse round (VX, VZ) with radii VRX (front to back) and VRZ (across),
+# reaching the mouth at x 1.05; the crown is VH above the deck. The game keeps pizzas inside the same ellipse
+# (Oven.on_floor), and the fire burns against the left wall at FIRE (the deck map's fire_pos).
+VX, VZ, VRX, VRZ, VH = 1.335, 0.2, 0.285, 0.465, 0.71
+FIRE = (1.33, -0.135)
+
+
+def _vault(lining, deck_m):
+    """the inside of a dome oven: an inside-out low dome (seen from within, invisible from outside) standing on a
+    short upright wall, over an elliptical stone deck that runs forward to the mouth under the entrance tunnel"""
+    n = 12
+    prof = [(0.0, 0.0), (1.0, 0.0), (1.0, 0.07)]
+    prof += [(math.cos(math.pi / 2 * i / n), 0.07 + 0.93 * math.sin(math.pi / 2 * i / n)) for i in range(1, n + 1)]
+    lathe(prof, (VX, YD - 0.01, VZ), lining, seg=40, scale=(VRX, VH, VRZ), flip=True, name="chamber")
+    lathe([(0.0, -0.01), (1.0, -0.01), (1.0, 0.01), (0.0, 0.01)], (VX, YD - 0.01, VZ), deck_m, seg=40, scale=(VRX, 1.0, VRZ), name="deck")
+    # the tunnel's floor, a hair below the deck so the two never fight where they overlap
+    box((VX - 1.03, 0.02, MZ1 - MZ0), ((1.03 + VX) / 2, YD - 0.0105, (MZ0 + MZ1) / 2), deck_m, bevel=0, name="deck_mouth")
+
+
+def _soot(kind):
+    """a wood oven's dome burns clean over the fire and across the crown, where the flame rolls; it is black with soot
+    toward the mouth, where the smoke leaves, and low down away from the fire"""
+    ob = bpy.data.objects.get("chamber")
+    if kind != "wood" or ob is None: return
+    fx, fz = FIRE
+
+    def col(p):
+        h = max(0.0, min(1.0, (p.y - YD) / VH))
+        d = math.sqrt((p.x - fx) ** 2 + (p.y - (YD + 0.08)) ** 2 + (p.z - fz) ** 2)
+        clean = max(0.0, 1.2 - d / 0.4) + 0.45 * h * h
+        front = max(0.0, min(1.0, (VX - p.x) / VRX)) * h
+        c = max(0.0, min(1.0, clean - 0.55 * front)) ** 1.2
+        soot, white = (0.13, 0.1, 0.085), (1.0, 0.95, 0.88)
+        return tuple(soot[i] + (white[i] - soot[i]) * c for i in range(3))
+    paint_vertices(ob, col)
+
+
 def _deck_stone():
     return mat("deck_stone", "#dcc49c", rough=0.85, tex="stone", uvs=0.5)
 
@@ -329,15 +366,17 @@ def dome_oven(kind):
     box((0.24, 0.05, 0.98), (XF - 0.12, MY0 - 0.025, 0.2), stone_m, name="hearth_shelf")      # the landing (x 0.78..1.02)
     for z in (-0.18, 0.58):
         slab([(0.2, 0.0), (0.2, 0.15), (0.0, 0.15)], 0.05, (XF - 0.2, MY0 - 0.2, z - 0.025), stone_m, name="corbel")
-    # inside: a soot-dark vault over the stone deck (x 1.06..1.6, z -0.26..0.63: clear of the logs at the side)
-    _chamber(1.06, 1.6, -0.26, 0.63, 1.4, mat("soot", "#3a2b24", rough=0.9) if wood else mat("oven_steel_in", "#3b3836", rough=0.7), _deck_stone(), 0.16)
+    # inside: a low firebrick vault over an elliptical stone floor (its soot is painted on after the bake: _soot)
+    _vault(mat("firebrick", "#ffffff", rough=0.9, tex="firebrick", uvs=0.32) if wood else mat("oven_steel_in", "#3b3836", rough=0.7), _deck_stone())
     if wood:
-        # the fire bed on the left: embers in their ash, charred logs across them (the flames are the game's)
-        cyl(0.13, 0.008, (1.33, YD + 0.004, -0.135), mat("ash", "#8a8580", rough=0.95), seg=20, name="ash")
-        blobs([("ellipsoid", (1.33, YD + 0.012, -0.135), 0.1, (1.0, 0.22, 0.9))], mat("embers", "#ff6a1a", rough=0.6, emit="#ff4a0a", emit_k=2.2), res=0.012, name="embers", tris=200)
+        # the fire bed against the left wall: embers in their ash, the charred ends of logs laid along the wall (the
+        # game burns its own logs on top of these; the flames are the game's too)
+        fx, fz = FIRE
+        cyl(0.13, 0.008, (fx, YD + 0.004, fz), mat("ash", "#8a8580", rough=0.95), seg=20, name="ash")
+        blobs([("ellipsoid", (fx, YD + 0.012, fz), 0.1, (1.0, 0.22, 0.9))], mat("embers", "#ff6a1a", rough=0.6, emit="#ff4a0a", emit_k=2.2), res=0.012, name="embers", tris=200)
         char = mat("charred", "#2a1d16", rough=0.95)
-        for (ang, dy) in ((20, 0.03), (-35, 0.045), (80, 0.06)):
-            cyl(0.028, 0.24, (1.33, YD + dy, -0.135), char, axis="x", seg=10, rot=(0, ang, 0), name="charred_log")
+        for (ang, dy, dz) in ((6, 0.03, -0.04), (-8, 0.03, 0.03), (3, 0.075, -0.005)):
+            cyl(0.028, 0.22, (fx, YD + dy, fz + dz), char, axis="x", seg=10, rot=(0, ang, 0), name="charred_log")
     else:
         # the gas burner on the left, and the turning hearth itself
         box((0.22, 0.025, 0.06), (1.33, YD + 0.0125, -0.135), steel_dark(), bevel=0, name="burner")
@@ -370,6 +409,7 @@ def dome_oven(kind):
 # the inside-out chamber stays its own part, so the checks can tell it is meant to be inside out
 deck_oven.keep = ("chamber",)
 dome_oven.keep = ("chamber",)
+dome_oven.after = _soot
 
 
 @model("logs")

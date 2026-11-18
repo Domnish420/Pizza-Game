@@ -360,3 +360,40 @@ def mouse():
         sphere(0.004, (0.064, 0.038, z * 0.93), black(), seg=8, rings=5, name="eye")
     sphere(0.005, (0.082, 0.026, 0), pink, seg=8, rings=5, name="nose")
     tube([(-0.05, 0.025, 0), (-0.08, 0.012, 0.01), (-0.11, 0.008, -0.01), (-0.14, 0.012, 0.01)], 0.003, pink, name="tail")
+
+
+@model("peel")
+def peel():
+    """the launching peel: a perforated aluminium blade, its centre at the origin with its top at y 0.004, the neck and a
+    long wooden handle running back toward you along -X"""
+    alu = mat("peel_alu", "#d9dde0", rough=0.3, metal=0.3)
+    wood = oak()
+    W, L = 0.33, 0.33
+    poly = [(-L / 2, -W / 2)] + [(L / 2 - 0.08 + math.cos(-math.pi / 2 + math.pi * i / 8) * 0.08, math.sin(-math.pi / 2 + math.pi * i / 8) * W / 2) for i in range(9)] + [(-L / 2, W / 2)]
+    # the blade lies flat: the polygon is drawn in x-z, extruded up 4 mm
+    slab([(x, -z) for (x, z) in poly], 0.004, (0, 0.004, 0), alu, rot=(90, 0, 0), name="blade")
+    # the perforations: rows of slots across the blade
+    dark = mat("peel_holes", "#6f7478", rough=0.6)
+    for r in range(4):
+        for c in range(6):
+            box((0.03, 0.001, 0.008), (-0.1 + r * 0.065, 0.0045, -0.11 + c * 0.044), dark, bevel=0, name="slot")
+    # the neck tapering to the handle, the handle, its cap
+    slab([(-L / 2, -0.12), (-L / 2, 0.12), (-L / 2 - 0.09, 0.03), (-L / 2 - 0.09, -0.03)], 0.004, (0, 0.004, 0), alu, rot=(90, 0, 0), name="neck")
+    tube([(-L / 2 - 0.06, 0.012, 0), (-1.1, 0.03, 0)], 0.016, wood, name="handle")
+    cyl(0.019, 0.03, (-1.1, 0.03, 0), alu, axis="x", seg=14, bevel=0.006, name="handle_cap")
+    for x in (-L / 2 - 0.07, -L / 2 - 0.1):
+        cyl(0.005, 0.004, (x, 0.012 + 0.016, 0), alu, seg=8, name="rivet")
+
+
+@model("peel.turning")
+def turning_peel():
+    """the turning peel: a small round aluminium blade (its centre at the origin, top at y 0.003) on a long thin
+    handle with a wooden grip, running back toward you along -X"""
+    alu = mat("peel_alu", "#d9dde0", rough=0.3, metal=0.3)
+    cyl(0.1, 0.003, (0, 0.0015, 0), alu, seg=32, name="blade")
+    dark = mat("peel_holes", "#6f7478", rough=0.6)
+    for k in range(7):
+        a = k * math.tau / 7
+        cyl(0.009, 0.0008, (math.cos(a) * 0.055, 0.0034, math.sin(a) * 0.055), dark, seg=10, name="hole")
+    tube([(-0.09, 0.003, 0), (-0.16, 0.012, 0), (-1.2, 0.03, 0)], 0.0085, alu, name="shaft")
+    tube([(-0.95, 0.0272, 0), (-1.22, 0.0305, 0)], 0.016, oak(), name="grip")

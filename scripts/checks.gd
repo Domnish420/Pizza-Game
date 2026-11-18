@@ -55,6 +55,9 @@ func items(kind: String) -> Array:
 				out.append(_item("temp_" + st, "Record the %s temperature" % Data.STORE_NAME[st].to_lower(), logged(st, -1, "am"), "Jobs: temperature log"))
 			out.append(_item("deliveries", "Check in today's deliveries before opening", Game.s.dock.is_empty() and not Day.pending().any(func(o): return o.eta < Day.open_time()), "Jobs: back door"))
 			out.append(_item("traps", "Check and reset the traps", Hygiene.sprung() == 0 and Hygiene.laid() >= Hygiene.traps_wanted(), "Jobs: pest control"))
+			if Data.OVENS[Game.tier("oven").type].feeds:
+				var lit: Dictionary = Game.s.get("oven_lit", {})
+				out.append(_item("oven", "Light the wood oven, two hours before opening", int(lit.get("day", -1)) == Game.s.day, "The oven"))
 		var prep_done := true
 		for row in Day.prep_list():
 			if row.todo > row.need * 0.15 and row.raw > 0: prep_done = false

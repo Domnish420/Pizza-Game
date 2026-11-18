@@ -57,9 +57,13 @@ a model turns `ROUND` off, materials are capped at a painted-metal look with no 
 materials are in `common.py`, and every model gets its shadows baked in (below).
 
 **Single-sided.** Every material is exported single-sided (`use_backface_culling`, so glTF `doubleSided` is off), as
-the game and the preview both cull back faces. That is what lets an oven's chamber be an inside-out box: seen from
-within through the mouth, invisible from outside. Inside-out on purpose must be its own part named `chamber`
-(`keep` on the builder), which the FLIP check accepts.
+the game and the preview both cull back faces. That is what lets an oven's chamber be an inside-out box (or, in the
+dome ovens, an inside-out vault): seen from within through the mouth, invisible from outside. Inside-out on purpose
+must be its own part named `chamber` (`keep` on the builder), which the FLIP check accepts.
+
+**After the bake.** A builder can carry an `after` function, which `build.py` calls (with the builder's arguments)
+once the shadows are baked: the wood oven uses it to paint soot into its vault with `lib.paint_vertices` in place of
+the baked shadows (clean over the fire and across the crown, black toward the mouth).
 
 **Painted-in shadows.** After a model is built, `build.py` bakes ambient occlusion into its vertex colours with
 Cycles (`lib.bake_ao`): big faces are cut finer first so the shading has somewhere to live, a floor is put under the

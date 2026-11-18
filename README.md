@@ -75,8 +75,10 @@ The stations (the same in both layouts):
   - The moment the dough is on the bench it can go in the oven: turn to the oven and it comes with you on the peel
     (turn back without loading it and it comes back). Starting the next ticket sends the one on the bench to the shelf
     by the oven.
-- **Oven**: drag the pizza off the shelf onto the deck. Drag its edge to spin it. Drag it out when it is done. Wood
-  ovens: tap the stack of logs beside the mouth to feed the fire.
+- **Oven**: drag the pizza off the shelf onto the deck: it goes in on the peel. Drag its edge to spin it with the
+  turning peel. Drag it out when it is done. Wood ovens: put it where you like on the floor (hot by the fire, gentler
+  by the mouth), turn it so it colours evenly, and tap the stack of logs beside the mouth when the Oven button says
+  FEED THE FIRE.
 - **Board**: swipe across with an empty hand to slice; anything you pick up goes on wherever you put it (sauce or
   cheese after the oven is judged as uncooked; finishing toppings belong here). Tap the pass behind the board to send
   it out. The bin is at the end of the counter.
@@ -130,7 +132,9 @@ and invoices are paid when they fall due.
 - **Dough.** Six recipes in baker's percentages. Weigh every ingredient, knead, ball. Made the night before;
   binned after three days. Its quality and flour grade carry into every pizza.
 - **Ovens.** Electric deck (2 pizzas, even heat) to start, then twin-deck electric, gas (hotter at the back),
-  wood-fired (live fire to feed, turn every pizza), and rotating hearths (they turn for you).
+  wood-fired (live fire to feed, turn every pizza), and rotating hearths (they turn for you). A wood oven is lit in the
+  morning (tap it: about two hours to reach 450 °C) and kept fed; logs catch, burn down and leave coals, the deck is
+  hottest by the fire, and each pizza bakes from the spot it sits on.
 - **Customers.** Each party judges look, taste, service and value out of 5. Taste is lifted by ingredient grade
   against what your price level promises. Tips depend on all of it. Reviews move your rating, which moves footfall.
 - **Pizza boxes.** Boxes come flat. Fold a stack before you open (by hand, four folds a box, or quickly); takeaway

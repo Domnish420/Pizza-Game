@@ -88,6 +88,9 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
       puffy rim, glossy sauce, cheese shreds that melt and blister, toppings, browning with leopard spots, cuts, steam
 - [x] The pizza in 3D in the oven: hollow ovens with a visible deck and their heat source, the deck map laid on
       it, real pizzas browning as they bake, a peel, live flames, READY / TURN labels
+- [x] A real wood fire: lit in the morning two hours before opening, logs that catch, burn down and leave coals, a
+      dome that heats and cools slowly, a deck hotter by the fire than by the mouth that cools under each pizza, every
+      pizza baking from where it sits; launching and turning peels in your hand; a round firebrick dome
 - [x] Customers that move: walking, standing, ordering, impatient, sitting down, eating (procedural, on joints)
 - [x] Hands that change pose with what they hold (open, pinch, grip)
 - [ ] Hand-made models to replace the generated ones; keyframed animation (waving, paying, leaving with a box)

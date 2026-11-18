@@ -105,10 +105,7 @@ func _ready() -> void:
 	training = Tutor.training_service()
 	if G.s.day >= int(G.s.critic_next) and G.s.level >= 3 and not training: critic_at = randf_range(0.2, 0.7) * DAY
 	oven = Oven.new(G.tier("oven"))
-	if oven.def.feeds:
-		var lit := Stock.take("wood", 3.0)       # lighting the oven before service
-		oven.fire = 0.35 + 0.25 * lit.got
-		if lit.got > 0: oven.wood_grade = lit.g
+	if oven.def.feeds: _light_for_service()
 	for x in G.staff_of("pizzaiolo"): workers.append({"s": x, "job": null, "left": 0.0, "prep": "", "raw": 0.0})
 	for role in ["cashier", "server", "host", "porter", "driver"]:
 		for x in G.staff_of(role): foh.append({"s": x, "role": role, "cd": 1.0})
@@ -1455,7 +1452,7 @@ func step(dt: float) -> void:
 		for o in oven.mine():
 			if o.pz.bake_avg() >= 1.0: oven_pull(o)
 	# the oven tender keeps the fire just right; without one, a pizzaiolo throws a log on when it gets low
-	if oven.def.feeds and (oven.fire < 0.85 if c.fornaio else (oven.fire < 0.55 and workers.size() > 0)):
+	if oven.def.feeds and (oven.power_soon() < 0.85 if c.fornaio else (oven.power_soon() < 0.55 and workers.size() > 0)):
 		var lg := Stock.take("wood", 1.0)
 		if lg.got >= 1.0: oven.add_log(lg.g)
 	# end of day
@@ -1793,12 +1790,12 @@ func cut(a: Vector2, b: Vector2) -> void:
 		Kit.main.toast("Cut through the middle", true)
 
 # ---------- your oven ----------
-func oven_load(pz: Pizza, slot: int) -> void:
+func oven_load(pz: Pizza, slot: int, at: Vector2 = Vector2.INF) -> void:
 	if not is_free(): return
 	if not Equip.has("peel"):
 		Kit.main.toast("You need a pizza peel to get it in the oven. Order one from %s." % Equip.SHOP.name, true)
 		return
-	oven.load_pizza(pz, slot, false)
+	oven.load_pizza(pz, slot, false, at)
 	pz.tk.state = "oven"
 	dirty = true
 	Art.sfx("tap")
@@ -1814,6 +1811,24 @@ func oven_pull(o: Dictionary) -> void:
 	if view == "oven" and oven.mine().is_empty() and oven.shelf.is_empty(): set_view("board")
 	dirty = true
 	Art.sfx("tap")
+
+## a wood oven at opening: lit this morning (the oven job), lit by the boss if you work for one, or stone cold
+func _light_for_service() -> void:
+	var G := Game
+	var L: Dictionary = G.s.get("oven_lit", {})
+	var minutes := -1.0
+	if Story.role() == "pizzaiolo": minutes = 150.0                  # Marco lit it at dawn
+	elif int(L.get("day", -1)) == G.s.day:
+		minutes = max(0.0, float(G.s.clock) - float(L.at))
+		# keeping it going all morning burns a log every half hour; if the wood ran out it went low
+		var want: float = floor(minutes / 30.0)
+		if want > 0.0:
+			var got: float = Stock.take("wood", want).got
+			if got < want: minutes *= 0.5 + 0.5 * got / want
+	oven.start_day(minutes, float(L.get("g", 2.0)))
+	if minutes < 0.0 and not training:
+		r.notes.append("The wood oven was never lit this morning, so you opened with a cold oven.")
+		Kit.main.toast("The oven is stone cold: nobody lit it this morning. Throw logs on and give it time to heat.", true)
 
 func add_log() -> void:
 	var lg := Stock.take("wood", 1.0)
@@ -1894,6 +1909,8 @@ func _refresh() -> void:
 		if st == "BURNING" or st == "OVERDONE": flag = "  BURNING!"
 		elif st == "READY" and flag == "": flag = "  READY"
 		elif st == "TURN" and flag == "": flag = "  TURN"
+	# a wood fire you tend yourself: say so when it is burning down (an oven tender feeds it for you)
+	if flag == "" and oven.def.feeds and not c.fornaio and oven.power_soon() < 0.95 and Stock.have("wood") >= 1.0: flag = "  FEED THE FIRE"
 	var acts := actionables().size()
 	tab_btns.front.text = "Front" + (" (%d)" % acts if acts > 0 else "")
 	tab_btns.bench.text = "Bench"
@@ -2132,10 +2149,14 @@ func _side_oven() -> void:
 	if c.fornaio: info.add_child(Kit.label("Your oven tender is loading, turning and pulling for you.", 15, Kit.BASIL, true))
 	if oven.def.feeds:
 		_info(func():
-			var f := oven.fire
-			var word := "dying" if f < 0.6 else ("low" if f < 0.85 else ("just right" if f <= 1.15 else "fierce"))
-			if Equip.has("ir_thermo"): return ["Fire: %s · floor %d °C (infrared)" % [word, 180 + 250 * f], Kit.BASIL if f >= 0.85 and f <= 1.15 else Kit.CHEESE]
-			return ["Fire: looks %s (no infrared thermometer)" % ("low" if f < 0.85 else ("about right" if f <= 1.2 else "fierce")), Kit.MUTED], 19)
+			var word := oven.fire_word()
+			var good: bool = word == "just right" and oven.dome >= 420.0
+			var ct := oven.catching()
+			return ["Fire: %s · %d burning log%s%s" % [word, oven.logs.size(), "" if oven.logs.size() == 1 else "s", (" (%d catching)" % ct) if ct > 0 else ""], Kit.BASIL if good else Kit.CHEESE], 19)
+		_info(func():
+			if not Equip.has("ir_thermo"): return ["No infrared thermometer: you are judging the heat by eye (KitBox sells them)", Kit.MUTED]
+			var rg: Array = oven.deck_range()
+			return ["Infrared: dome %d °C · deck %d °C (by the mouth) to %d °C (by the fire)" % [oven.dome, rg[0], rg[1]], Kit.BASIL if oven.dome >= 420.0 and rg[0] >= 360.0 else Kit.CHEESE], 16)
 		if not fp_mode:                         # in 3D the logs are stacked beside the oven mouth
 			var lb := Kit.button("", add_log, "primary", 18)
 			palette.add_child(lb)

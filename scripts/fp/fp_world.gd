@@ -37,8 +37,9 @@ const OV_XM := 1.04
 const OV_Y := 0.80
 const SHELF3D := [Vector2(130, 307), Vector2(270, 307)]
 ## which jobs' labels show at which station (the rest stay hidden so the view is not cluttered)
-const JOBS_AT := {"front": ["open", "checklist", "clean_foh"], "bench": ["dough_trays", "boxes", "clean_foh"], "board": ["boxes", "dough_trays"], "oven": ["boxes", "dough_trays"],
+const JOBS_AT := {"front": ["open", "checklist", "clean_foh"], "bench": ["dough_trays", "boxes", "clean_foh"], "board": ["boxes", "dough_trays"], "oven": [],
 	"prep": ["prep", "wash", "dough", "clean_boh"], "stores": ["stores", "temp_fridge", "temp_freezer", "dry", "traps", "crates", "clean_boh"]}
+## (the oven's own label shows at the oven station: see _sync_jobs)
 const SNAP := 18.0                     # let go of a free look within this many degrees of a station and you settle on it
 
 var svc: ServiceScreen                 # the day's trading, or null between services
@@ -348,12 +349,23 @@ func _oven() -> void:
 	if Game.tier("oven").type == "wood":       # the logs, stacked beside the mouth
 		var logs := _prop("logs", Vector3(1.19, 0.6, 0.745), _mk_logs)
 		_tappable(logs, Vector3(0.2, 0.3, 0.26), Vector3(0, 0.15, 0), {"kind": "log"})
-		job_labels.logs = _small_label("Logs", Vector3(0, 0.38, 0), logs)
-	if svc == null:                         # between services: the oven door, closed
-		_box(Vector3(0.025, 0.66, 0.82), Vector3(1.025, 1.1, 0.2), Color("2f2d2b"), self, 0.5, 0.3)
-		var hb := _cyl(0.014, 0.4, Vector3(0.995, 1.25, 0.2), Color("c3c9cc"), self, 0.3)
+		job_labels.logs = _small_label("Logs", Vector3(-0.2, 0.22, 0), logs)        # in front of the oven, above the landing, clear of the side card
+		job_labels.logs.no_depth_test = true          # the oven's arch would clip it; it only shows at the oven (_sync_jobs)
+	if svc == null:
+		# between services: the door closes a cold oven; a wood oven lit this morning stands open with its fire going
+		oven_door = Node3D.new()
+		add_child(oven_door)
+		_box(Vector3(0.025, 0.66, 0.82), Vector3(1.025, 1.1, 0.2), Color("2f2d2b"), oven_door, 0.5, 0.3)
+		var hb := _cyl(0.014, 0.4, Vector3(0.995, 1.25, 0.2), Color("c3c9cc"), oven_door, 0.3)
 		hb.rotation_degrees.x = 90
-		_tappable(self, Vector3(0.1, 0.8, 1.2), Vector3(1.1, 1.1, 0.2), {"kind": "job", "job": "oven"})
+		var spot := Node3D.new()
+		spot.position = Vector3(1.0, 1.1, 0.2)
+		add_child(spot)
+		_job("oven", spot, Vector3(0.12, 0.7, 0.9), Vector3.ZERO, Vector3(-0.04, 0.26, 0))     # its label across the arch
+		if Data.OVENS[kind].feeds:
+			fire_oven = Oven.new(Game.tier("oven"))
+			fire_oven.start_day(120.0)
+			_oven_inside(kind, fire_oven)
 		return
 	# in service: the deck itself is the surface you work on, lying flat inside the oven, seen through the mouth
 	ctrls.oven.draw3d = true
@@ -365,7 +377,7 @@ func _oven() -> void:
 	s.position = _deck3d(Vector2(200, 160), OV_Y + 0.002)
 	add_child(s)
 	surfaces.oven = s
-	_oven_inside(kind)
+	_oven_inside(kind, svc.oven)
 
 ## a point on the oven's deck map, in the room
 func _deck3d(p: Vector2, y: float = OV_Y) -> Vector3:
@@ -374,11 +386,17 @@ func _deck3d(p: Vector2, y: float = OV_Y) -> Vector3:
 var oven_nodes := {}                   # "p<pizza id>" / "s<ticket id>" -> the pizza in or at the oven, in 3D
 var oven_labels := {}
 var oven_light: OmniLight3D
-var flames := []                       # [{node, base, ph}]
-var peel: Node3D
+var flames := []                       # [{node, base, ph, w, h}]
+var log_nodes := []                    # the logs burning on the fire bed
+var embers: MeshInstance3D
+var peel: Node3D                       # the launching peel, under a pizza you are sliding in or out
+var turner: Node3D                     # the turning peel
+var grip_at = null                     # where your right hand holds the peel's handle (or null)
+var oven_door: Node3D
+var fire_oven: Oven                    # between services: the wood oven's fire as it is this morning
 
-## the light of the fire or the elements inside, the flames, and the peel you slide pizzas with
-func _oven_inside(kind: String) -> void:
+## the light of the fire or the elements inside, the flames, the logs and coals, and the peels
+func _oven_inside(kind: String, ov: Oven) -> void:
 	oven_light = OmniLight3D.new()
 	oven_light.position = Vector3(1.38, 1.15, 0.2)
 	oven_light.omni_range = 0.62
@@ -392,8 +410,8 @@ func _oven_inside(kind: String) -> void:
 		fm.albedo_color = Color(1.0, 0.55, 0.15)
 		var fm2: StandardMaterial3D = fm.duplicate()
 		fm2.albedo_color = Color(1.0, 0.85, 0.35)
-		var at := _deck3d(svc.oven.fire_pos)
-		for i in 7:
+		var at := _deck3d(ov.fire_pos)
+		for i in 9:
 			var mi := MeshInstance3D.new()
 			var sm := SphereMesh.new()
 			sm.radius = 1.0
@@ -403,29 +421,59 @@ func _oven_inside(kind: String) -> void:
 			mi.mesh = sm
 			mi.material_override = fm if i % 2 == 0 else fm2
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			var off := Vector3(randf_range(-0.05, 0.05), 0, randf_range(-0.06, 0.06)) if i > 0 else Vector3.ZERO
+			var off := Vector3(randf_range(-0.06, 0.06), 0, randf_range(-0.07, 0.07)) if i > 0 else Vector3.ZERO
 			mi.position = at + off
 			add_child(mi)
 			flames.append({"node": mi, "base": at + off, "ph": randf() * TAU, "w": 0.035 if i == 0 else randf_range(0.018, 0.03), "h": 0.13 if i == 0 else randf_range(0.06, 0.11)})
-	# the peel under a pizza you are sliding: a round aluminium blade and a long wooden handle back toward you
-	peel = Node3D.new()
-	var blade := MeshInstance3D.new()
-	var bm := CylinderMesh.new()
-	bm.top_radius = 1.0; bm.bottom_radius = 1.0; bm.height = 0.004; bm.radial_segments = 28
-	blade.mesh = bm
-	blade.material_override = _mat(Color("d5d9db"), 0.3, 0.3)
-	peel.add_child(blade)
-	var handle := _cyl(0.013, 0.7, Vector3.ZERO, Color("b98a55"), peel)
-	handle.rotation_degrees.z = 90
-	peel.set_meta("blade", blade)
-	peel.set_meta("handle", handle)
-	peel.visible = false
-	add_child(peel)
+		if kind == "wood":
+			# the coals glowing in the fire bed, and a pool of logs to burn on them
+			embers = MeshInstance3D.new()
+			var em := CylinderMesh.new()
+			em.top_radius = 0.12; em.bottom_radius = 0.12; em.height = 0.004; em.radial_segments = 24
+			embers.mesh = em
+			var emm := StandardMaterial3D.new()
+			emm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			emm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+			emm.albedo_color = Color(1.0, 0.35, 0.08)
+			embers.material_override = emm
+			embers.position = at + Vector3(0, 0.02, 0)
+			add_child(embers)
+			for k in 6:
+				var lg := MeshInstance3D.new()
+				var cm := CylinderMesh.new()
+				cm.top_radius = 0.026; cm.bottom_radius = 0.03; cm.height = 0.22; cm.radial_segments = 9
+				lg.mesh = cm
+				var lm := StandardMaterial3D.new()
+				lm.albedo_color = Color("6b4a2b")
+				lm.roughness = 0.9
+				lg.material_override = lm
+				lg.visible = false
+				add_child(lg)
+				log_nodes.append(lg)
+	# the peels: the launching peel under a pizza you slide, the turning peel at the edge you turn
+	peel = _peel_model("peel", 0.165)
+	turner = _peel_model("peel.turning", 0.1)
+
+## a peel model (or a stand-in): its blade centred on the node, the handle back toward you along -X
+func _peel_model(key: String, blade_r: float) -> Node3D:
+	var n := Node3D.new()
+	var m := Art.model("fp." + key)
+	if m != null:
+		n.add_child(m)
+		_shade(m)
+	else:
+		_cyl(blade_r, 0.004, Vector3(0, 0.002, 0), Color("d5d9db"), n, 0.3)
+		var h := _cyl(0.013, 0.9, Vector3(-blade_r - 0.45, 0.02, 0), Color("b98a55"), n)
+		h.rotation_degrees.z = 90
+	n.visible = false
+	add_child(n)
+	return n
 
 func _oven_pizza(key: String, u: float) -> Pizza3D:
 	if not oven_nodes.has(key):
 		var p := Pizza3D.new()
 		p.unit = u
+		p.yaw_offset = -PI / 2.0          # the deck map's x runs along the room's z
 		add_child(p)
 		oven_nodes[key] = p
 	return oven_nodes[key]
@@ -455,21 +503,27 @@ func _oven_label(key: String, at: Vector3, text: String, col: Color) -> void:
 	lb.modulate = col
 	lb.visible = text != ""
 
-## everything in and at the oven, each frame: the pizzas on the deck and the landing, their states, the peel, the fire
+## everything in and at the oven, each frame: the pizzas on the deck and the landing, their states, the peels in your
+## hand, the fire
 func _sync_oven() -> void:
 	var ov: Oven = svc.oven
 	var ovv: OvenView = ctrls.oven
 	var u: float = OV_S * ov.prad / 106.0
+	var r_m: float = ov.prad * OV_S
 	var dg = ovv.drag
 	var seen := {}
 	peel.visible = false
+	turner.visible = false
+	grip_at = null
+	var ir: bool = Equip.has("ir_thermo") and ov.def.feeds
 	for o in ov.items:
-		var at := _deck3d(ov.pos[o.slot])
+		var at := _deck3d(o.at)
 		if o.owner == "me":
 			var key := "p%d" % o.pz.id
 			seen[key] = true
 			var n := _oven_pizza(key, u)
-			if dg != null and dg.pz == o.pz and dg.mode == "move": at = _deck3d(dg.pos, OV_Y + 0.025)
+			var moving: bool = dg != null and dg.pz == o.pz and dg.mode == "move"
+			if moving: at = _deck3d(dg.pos, OV_Y + 0.025)
 			n.position = at
 			n.show_pizza(o.pz)
 			var st: String = "your fornaio has it" if o.auto else ov.status(o)
@@ -477,12 +531,18 @@ func _sync_oven() -> void:
 			if st == "READY": col = Kit.BASIL
 			elif st == "TURN": col = Kit.CHEESE
 			elif st == "BURNING" or st == "OVERDONE": col = Kit.TOMATO
-			_oven_label(key, at, "" if st == "baking" else st, col)
-			if dg != null and dg.pz == o.pz: _peel_at(at, ov.prad * OV_S, dg.mode == "turn")
+			var txt := "" if st == "baking" else st
+			if moving and ir: txt = "%d °C here" % ov.deck_at(dg.pos)
+			_oven_label(key, at, txt, col)
+			if moving: _hold(peel, at, r_m * 1.15 / 0.165, 0.0)
+			elif dg != null and dg.pz == o.pz and dg.mode == "turn":
+				# the turning peel under the edge you are dragging round
+				var edge := _deck3d(dg.pos, OV_Y + 0.004)
+				_hold(turner, edge, 0.8, 0.0)
 		else:
 			var key := "s%d" % o.tk.id
 			seen[key] = true
-			_staff_pizza(key, ov.prad * OV_S * 0.92, o.p).position = at
+			_staff_pizza(key, r_m * 0.92, o.p).position = at
 			_oven_label(key, at, str(o.tk.owner), Color(1, 1, 1, 0.8))
 	for i in ov.shelf.size():
 		var pz: Pizza = ov.shelf[i]
@@ -490,12 +550,14 @@ func _sync_oven() -> void:
 		seen[key] = true
 		var n := _oven_pizza(key, u)
 		var at := _deck3d(SHELF3D[min(i, SHELF3D.size() - 1)], 0.79)
+		var txt := ""
 		if dg != null and dg.pz == pz and dg.mode == "move":
 			at = _deck3d(dg.pos, OV_Y + 0.025)
-			_peel_at(at, ov.prad * OV_S, false)
+			_hold(peel, at, r_m * 1.15 / 0.165, 0.0)
+			if ir and dg.pos.y < OvenView.MOUTH_Y: txt = "%d °C here" % ov.deck_at(dg.pos)
 		n.position = at
 		n.show_pizza(pz)
-		_oven_label(key, at, "", Color.WHITE)
+		_oven_label(key, at, txt, Color.WHITE)
 	for key in oven_nodes.keys():
 		if not seen.has(key):
 			oven_nodes[key].queue_free()
@@ -503,24 +565,78 @@ func _sync_oven() -> void:
 			if oven_labels.has(key):
 				oven_labels[key].queue_free()
 				oven_labels.erase(key)
-	# the fire: flames that flicker and grow with how well it is fed
-	var lv: float = ov.level() if ov.def.feeds else 1.0
+	_sync_fire(ov)
+
+## a peel in your hand: blade at `at` (scaled), the handle back toward you, your right hand round its end
+func _hold(pl: Node3D, at: Vector3, s: float, yaw: float) -> void:
+	pl.visible = true
+	pl.position = at - Vector3(0, 0.005 * s, 0)
+	pl.scale = Vector3.ONE * s
+	pl.rotation.y = yaw
+	# your hand holds the handle as far back as it can while still in sight (a peel's handle is longer than the view)
+	var vh: float = get_viewport().get_visible_rect().size.y
+	var lx := -0.4
+	var x := -0.45
+	while x >= -1.05:
+		var w: Vector3 = pl.global_transform * Vector3(x, 0.03, 0.0)
+		if cam.is_position_behind(w) or cam.unproject_position(w).y > vh * 0.8: break
+		lx = x
+		x -= 0.05
+	grip_at = pl.global_transform * Vector3(lx, 0.03, 0.0)
+
+## the fire: the logs on it burning down (charring, shrinking), the coals glowing, flames as big as the fire is
+func _sync_fire(ov: Oven) -> void:
+	var fl: float = ov.flame() if ov.def.feeds else (1.0 if ov.def.fire > 0.0 else 0.0)
+	var at := _deck3d(ov.fire_pos)
+	for i in log_nodes.size():
+		var n: MeshInstance3D = log_nodes[i]
+		if i >= ov.logs.size():
+			n.visible = false
+			continue
+		var l: Dictionary = ov.logs[i]
+		n.visible = true
+		# laid along the left wall on the coals, side by side, the next ones on top (as a pizzaiolo stacks them)
+		var lay := i % 3
+		n.position = at + Vector3(0.02 * sin(i * 2.1), 0.032 + 0.048 * (i / 3) + 0.006 * lay, 0.056 * (lay - 1) + 0.028 * (i / 3))
+		n.rotation = Vector3(0, 0.12 * sin(i * 2.7), PI / 2.0)
+		n.scale = Vector3.ONE * (0.6 + 0.4 * clamp(l.m, 0.0, 1.0))
+		var lm: StandardMaterial3D = n.material_override
+		var burnt: float = clamp(1.0 - l.m, 0.0, 1.0)
+		lm.albedo_color = Color("6b4a2b").lerp(Color("231912"), burnt)
+		lm.emission_enabled = true
+		lm.emission = Color(1.0, 0.35, 0.08)
+		lm.emission_energy_multiplier = 0.6 * clamp(l.age / 12.0, 0.0, 1.0) * burnt
+	if embers != null:
+		var em: StandardMaterial3D = embers.material_override
+		em.albedo_color = Color(1.0, 0.35, 0.08) * clamp(0.2 + 0.8 * (ov.coals if ov.def.feeds else 1.0), 0.0, 1.0)
 	for f in flames:
 		var k: float = 0.75 + 0.25 * sin(time * 9.0 + f.ph) + 0.12 * sin(time * 23.0 + f.ph * 2.0)
-		var h: float = f.h * lv * k
-		f.node.scale = Vector3(f.w * (0.8 + 0.4 * lv), h, f.w * (0.8 + 0.4 * lv))
-		f.node.position = f.base + Vector3(0.006 * sin(time * 7.0 + f.ph), OV_Y + h * 0.7 - f.base.y, 0)
+		var h: float = f.h * clamp(fl, 0.0, 2.0) * k
+		var wd: float = f.w * (0.7 + 0.35 * clamp(fl, 0.0, 2.0))
+		f.node.visible = h > 0.004
+		f.node.scale = Vector3(wd, max(h, 0.001), wd)
+		f.node.position = f.base + Vector3(0.006 * sin(time * 7.0 + f.ph), OV_Y + 0.03 + h * 0.7 - f.base.y, 0)
 	if oven_light != null:
 		var flick: float = 1.0 + (0.12 * sin(time * 11.0) + 0.08 * sin(time * 27.0) if not flames.is_empty() else 0.0)
-		oven_light.light_energy = 1.4 * lv * flick
+		var heat: float = clamp((ov.dome - 100.0) / 380.0, 0.0, 1.3) if ov.def.feeds else 1.0
+		oven_light.light_energy = (0.3 + 1.2 * heat) * flick
 
-func _peel_at(at: Vector3, r: float, turning: bool) -> void:
-	peel.visible = true
-	peel.position = at - Vector3(0, 0.006, 0)
-	var blade: MeshInstance3D = peel.get_meta("blade")
-	blade.scale = Vector3(r * (0.75 if turning else 1.12), 1, r * (0.75 if turning else 1.12))
-	var handle: MeshInstance3D = peel.get_meta("handle")
-	handle.position = Vector3(-r * 1.12 - 0.35, 0.004, 0)
+## between services: a wood oven lit this morning stands open with its fire going; a cold one is shut
+func _sync_closed_oven() -> void:
+	if fire_oven == null: return
+	var L: Dictionary = Game.s.get("oven_lit", {})
+	var lit: bool = int(L.get("day", -1)) == Game.s.day and Game.s.phase == "morning"
+	if Story.role() == "pizzaiolo" and Game.s.phase == "morning": lit = true
+	oven_door.visible = not lit
+	oven_light.visible = lit
+	for f in flames: f.node.visible = lit
+	for n in log_nodes: n.visible = false
+	if embers != null: embers.visible = lit
+	if not lit: return
+	if fire_oven.logs.size() < 2: fire_oven.add_log(2.0)
+	fire_oven.step(get_process_delta_time(), 1.0)
+	fire_oven.dome = Oven.warm_dome(float(Game.s.clock) - float(L.get("at", Game.s.clock - 120)))
+	_sync_fire(fire_oven)
 
 func _mk_oven(r: Node3D, kind: String) -> void:
 	var col := Color("4a4a4a") if kind == "electric" or kind == "gas" else Color("8a4b32")
@@ -794,7 +910,21 @@ func _sync_jobs() -> void:
 	elif morning: L.open.text = "OPEN AT\n%s" % Data.hhmm(max(Day.now(), Day.open_time()))
 	else: L.open.text = "LOCK UP"
 	L.open.modulate = Color("f4c64f") if svc == null else Kit.BASIL
-	if L.has("logs"): L.logs.text = "Logs (%d) · tap to feed the fire" % int(Stock.have("wood")) if svc != null else "Logs (%d)" % int(Stock.have("wood"))
+	if L.has("oven"):
+		var wood: bool = Data.OVENS[G.tier("oven").type].feeds
+		var lt: Dictionary = G.s.get("oven_lit", {})
+		var lit_today: bool = int(lt.get("day", -1)) == G.s.day
+		if not wood: L.oven.text = ""
+		elif Story.role() == "pizzaiolo": L.oven.text = "%s lit the oven" % Story.BOSS if morning else ""
+		elif not morning: L.oven.text = ""
+		elif lit_today:
+			var dm := Oven.warm_dome(float(G.s.clock) - float(lt.at))
+			L.oven.text = "Oven about %d °C%s" % [dm, " · ready" if dm >= 430.0 else " · heating"]
+			L.oven.modulate = _ok_col(dm >= 430.0, true)
+		else:
+			L.oven.text = "Oven cold · tap to light it"
+			L.oven.modulate = Kit.TOMATO
+	if L.has("logs"): L.logs.text = "Logs (%d) · tap to feed" % int(Stock.have("wood")) if svc != null else "Logs (%d)" % int(Stock.have("wood"))
 	if L.has("pass"):
 		var on_pass: int = svc.tickets.filter(func(tk): return tk.state == "pass").size() if svc != null else 0
 		L.pass.text = ("Pass · tap to send it out" if svc != null and svc.board.size() > 0 else "Pass") + ((" · %d ready" % on_pass) if on_pass > 0 else "")
@@ -802,7 +932,10 @@ func _sync_jobs() -> void:
 	var here: Array = JOBS_AT.get(cur_view(), [])
 	for j in L:
 		if j in ["open", "pass", "bin", "sheeter", "logs"]:
-			L[j].visible = svc != null or j == "open"
+			L[j].visible = (svc != null or j == "open") and (j != "logs" or cur_view() == "oven")
+			continue
+		if j == "oven":
+			L[j].visible = svc == null and cur_view() == "oven" and L[j].text != ""
 			continue
 		if svc != null: L[j].visible = j == "crates" and G.s.dock.size() > 0       # during service only a delivery needs you
 		else: L[j].visible = here.has(j) and (j != "crates" or G.s.dock.size() > 0)
@@ -893,6 +1026,7 @@ func _process(dt: float) -> void:
 	if job_t <= 0.0:
 		job_t = 0.4
 		_sync_jobs()
+	if svc == null: _sync_closed_oven()
 	if svc == null: return
 	for st in ["bench", "board", "oven"]:
 		surfaces[st].control.queue_redraw()
@@ -1300,12 +1434,13 @@ func _sync_hands(dt: float) -> void:
 	# the right hand takes the shape of what it is doing
 	var want := "open"
 	if tool != "": want = "grip" if Data.ING[tool].kind == "sauce" else "pinch"
-	elif svc != null and ctrls.has("oven") and ctrls.oven.get("drag") != null: want = "grip"
+	elif grip_at != null: want = "grip"
 	_pose(hands[0], want)
 	for i in hands.size():
 		var h: Dictionary = hands[i]
 		var goal: Vector3 = h.rest
 		if h.target != null: goal = cam.to_local(h.target) + Vector3(0.02 * (1 if i == 0 else -1), 0.02, 0.05)
+		if i == 0 and grip_at != null: goal = cam.to_local(grip_at) + Vector3(0.0, 0.035, 0.07)      # round the peel's handle
 		h.node.position = h.node.position.lerp(goal, 1.0 - exp(-dt * 14.0))
 
 func _pose(h: Dictionary, want: String) -> void:

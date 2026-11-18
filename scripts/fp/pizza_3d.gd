@@ -27,6 +27,7 @@ const CHAR := Color("2f1d12")
 var pz: Pizza = null
 var unit := 0.6 / 320.0
 var steam_on := false
+var yaw_offset := 0.0           # in the oven the deck map's x runs along the room's z: -90 degrees
 var _sig := ""
 var _since := 1.0
 var _mi: MeshInstance3D
@@ -109,7 +110,7 @@ func show_pizza(p) -> void:
 	if p != pz:
 		pz = p
 		_sig = ""
-	rotation.y = -pz.turn
+	rotation.y = yaw_offset - pz.turn
 	_steam.emitting = steam_on and pz.stage == "board"
 	# the bake is drawn by the shader from these, every frame, with no rebuilding (a full oven stays cheap)
 	var baked: bool = pz.stage == "oven" or pz.stage == "board"

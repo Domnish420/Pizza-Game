@@ -70,6 +70,7 @@ for k in keys:
         targets = [o for o in bpy.context.scene.objects if o.type == "MESH"]
         occ = _occluders(k) if k in ("room.van", "room.kitchen") else []
         lib.bake_ao(targets, **_bake_opts(k, targets))
+        if getattr(fn, "after", None): fn.after(**kw)      # e.g. soot painted inside an oven, over its baked shadows
         for o in occ: bpy.data.objects.remove(o)
         lib.export(k)
     except Exception:

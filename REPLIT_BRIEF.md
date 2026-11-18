@@ -134,6 +134,25 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
     shader uniform, so a full oven costs no mesh rebuilds). Pizzas waiting sit on the landing shelf out front; the
     one you are moving rides on a peel; READY / TURN / BURNING float over each pizza; live flames and a flickering
     light grow with how well a wood fire is fed. Between services a door closes the mouth.
+  - **The wood oven is simulated, and you hold real peels.** Inside the dome is a low firebrick vault over a round
+    floor (clean over the fire, sooty toward the mouth), with the fire against the left wall. `oven.gd` runs the fire:
+    each log catches (about 12 s on hot coals, 30 s on a cold hearth), flares, burns down over about 70 s and leaves
+    coals; the dome heats toward what the fire gives, slowly (it holds its heat for minutes when the fire dies); the
+    deck is a 20 x 13 grid of temperatures, hottest by the fire and over the coals, cooler toward the mouth, and it
+    cools under every pizza and recovers after. Each pizza bakes from where it sits: its underside from the deck under
+    it, each edge from the dome plus the flame's radiant heat, strongest on the edge squarely facing the fire and
+    falling off with distance. So pizzas by the fire bake in about 8 s but char on that side unless turned; by the
+    mouth they take about 12 s and colour evenly. You put a pizza anywhere on the floor (not on the fire, not on
+    another pizza, not in the wall): it rides in on the launching peel (`fp.peel`), with your hand on the handle and a
+    green or red ring where it will land; dragging its edge brings in the turning peel (`fp.peel.turning`). A faint
+    heat haze lies over the deck, and with an infrared thermometer you read "410 °C here" wherever you hover, and the
+    dome and deck on the side card.
+  - **Lighting the oven is a morning job.** Tap the closed oven ("Oven cold · tap to light it"): three logs and ten
+    minutes, then it climbs to about 450 °C over two hours (the label shows how hot it is now), and it burns two
+    logs an hour from your stock until you open. Light it late and service starts with a cool oven; never light it and
+    you start cold and must build the fire with customers waiting. In service the Oven button says FEED THE FIRE when
+    it is burning down (it counts a log that is still catching, so you do not pile them on), and an oven tender
+    feeds it for you.
   - Keep the touch mapping: either keep the quad as an invisible hit plane (`FPSurface.to_px`), or raycast onto the new
     mesh and convert to the same bench coordinates.
 - **No step buttons.** The owner wants the pizza free: "Don't need the base is ready button, get rid of the buttons.
@@ -214,8 +233,9 @@ blistered rim, melted and browned cheese, charring on the side that faced the fl
 
 `scripts/oven_view.gd` shows the deck and handles dragging pizzas in, spinning them by the edge and dragging them out.
 `scripts/oven.gd` has the heat model (types and numbers are in `data/upgrades.json` under `ovens`).
-Wanted: an oven front for each type, the fire (feeding a log could be dragging a log in), a peel to load and turn
-pizzas, heat shimmer, and a clear "done" moment.
+Wanted (2D layout): an oven front for each type, the fire (feeding a log could be dragging a log in), a peel to load
+and turn pizzas, heat shimmer, and a clear "done" moment. In 3D these exist (section 0): the hollow ovens, the peels,
+burning logs, the heat haze.
 
 ### 4. Front of house
 

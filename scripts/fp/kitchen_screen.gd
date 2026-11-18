@@ -260,10 +260,34 @@ func job(name: String, act: Dictionary) -> void:
 			if Story.role() == "pizzaiolo": Kit.main.toast("%s looks after the stores" % Story.BOSS)
 			else: open_phone("stores")
 		"checklist": open_phone("jobs")
-		"oven": open_phone("boh") if Story.role() != "pizzaiolo" else Kit.main.toast("%s's oven. Keep it clean." % Story.BOSS)
+		"oven": _oven_job()
 		"ladle": Kit.main.toast("Ladles hang here ready for service")
 
-## a quick job: the clock moves on, and anything that turned up meanwhile is reported
+## the oven: a wood oven is lit in the morning, about two hours before opening, and is then kept going; other ovens
+## open the back-of-house page
+func _oven_job() -> void:
+	var G := Game
+	if not Data.OVENS[G.tier("oven").type].feeds:
+		if Story.role() == "pizzaiolo": Kit.main.toast("%s's oven. Keep it clean." % Story.BOSS)
+		else: open_phone("boh")
+		return
+	if Story.role() == "pizzaiolo":
+		Kit.main.toast("%s lit the oven at dawn. You will feed it during service." % Story.BOSS)
+		return
+	var L: Dictionary = G.s.get("oven_lit", {})
+	if G.s.phase != "morning":
+		Kit.main.toast("The fire is dying down for the night")
+		return
+	if int(L.get("day", -1)) == G.s.day:
+		var m := float(G.s.clock) - float(L.at)
+		Kit.main.toast("The oven is at about %d °C (lit at %s). It wants 450 °C by opening: about two hours from lighting." % [Oven.warm_dome(m), Data.hhmm(int(L.at))])
+		return
+	if Stock.have("wood") < 3.0:
+		Kit.main.toast("You need at least 3 logs to light it, and you have %d. Order firewood." % int(Stock.have("wood")), true)
+		return
+	var lg := Stock.take("wood", 3.0)
+	_spend(10, "You lay kindling and three logs in the oven and light them. It takes about two hours to come up to heat; it is kept fed until you open.", func():
+		G.s.oven_lit = {"day": G.s.day, "at": G.s.clock, "g": lg.g})
 func _spend(minutes: float, done_text: String, fn: Callable) -> void:
 	if fn.is_valid(): fn.call()
 	var notes := Day.spend(minutes)

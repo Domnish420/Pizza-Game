@@ -291,6 +291,7 @@ TEXTURES = {
     "asphalt": (128, lambda n: tex_asphalt(n, 21)),
     "slabs": (256, lambda n: tex_tiles(n, 2, 2, "#a8a39a", "#5e5a54", 0.05, 22, gw=0.004, jitter=0.12)),
     "brick": (256, lambda n: tex_tiles(n, 4, 12, "#9c4a34", "#cfc6b8", 0.10, 23, offset_rows=True, gw=0.006, jitter=0.15)),
+    "firebrick": (256, lambda n: tex_tiles(n, 4, 8, "#e0c49a", "#9a8a78", 0.10, 33, offset_rows=True, gw=0.007, jitter=0.12)),
     "brick_yellow": (256, lambda n: tex_tiles(n, 4, 12, "#c9a46a", "#e6dfd2", 0.08, 24, offset_rows=True, gw=0.006, jitter=0.15)),
     "kraft": (128, lambda n: tex_kraft(n, 25)),
     "plaster": (128, lambda n: tex_noise(n, 26, "#e9e2d4", 0.04)),
@@ -650,6 +651,23 @@ def bake_ao(objs, dist=0.35, samples=32, tint=(0.56, 0.47, 0.44), strength=1.0, 
     # a small part shut inside another can be black; everything black means the bake failed (see the denoiser note)
     if peak <= 0.0:
         raise RuntimeError("ambient occlusion bake came out black")
+
+
+def paint_vertices(ob, fn):
+    """set an object's vertex colours from where its vertices are, in place of the baked shadows: fn((x, y, z)) gives
+    (r, g, b) for a point in the model's space (the soot inside an oven's dome)"""
+    if ob is None or ob.type != "MESH": return
+    me = ob.data
+    for a in list(me.color_attributes): me.color_attributes.remove(a)
+    attr = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
+    me.color_attributes.active_color = attr
+    me.color_attributes.render_color_index = me.color_attributes.active_color_index
+    mw = ob.matrix_world
+    cols = []
+    for lp in me.loops:
+        r, g, b = fn(mw @ me.vertices[lp.vertex_index].co)
+        cols += [r, g, b, 1.0]
+    attr.data.foreach_set("color", cols)
 
 
 def join(objs, name):
