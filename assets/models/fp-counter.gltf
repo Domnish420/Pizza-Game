@@ -23,7 +23,6 @@
 	],
 	"materials":[
 		{
-			"doubleSided":true,
 			"name":"steel",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -37,7 +36,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"steel_dark",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -51,7 +49,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"red",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -65,7 +62,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"black",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -79,7 +75,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"emissiveFactor":[
 				1,
 				0.0423114113509655,
@@ -103,7 +98,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"marble",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -114,7 +108,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"rail_cold",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -129,7 +122,6 @@
 		},
 		{
 			"alphaMode":"BLEND",
-			"doubleSided":true,
 			"name":"glass",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -143,7 +135,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"chrome",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -157,7 +148,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"alu",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[

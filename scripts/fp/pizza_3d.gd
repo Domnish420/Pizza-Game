@@ -42,9 +42,12 @@ var _grid_for := -1
 var _gn := Vector2i.ZERO          # the size of the cell grid
 var _layer_img: Image
 var _layer_tex: ImageTexture
+var _tsig := ""
+var _zero_bake := PackedFloat32Array()
 
 func _ready() -> void:
 	scale = Vector3.ONE * unit
+	_zero_bake.resize(Pizza.NSEC)
 	_mat = ShaderMaterial.new()
 	_mat.shader = load("res://shaders/pizza.gdshader")
 	_mi = MeshInstance3D.new()
@@ -108,12 +111,22 @@ func show_pizza(p) -> void:
 		_sig = ""
 	rotation.y = -pz.turn
 	_steam.emitting = steam_on and pz.stage == "board"
+	# the bake is drawn by the shader from these, every frame, with no rebuilding (a full oven stays cheap)
+	var baked: bool = pz.stage == "oven" or pz.stage == "board"
+	var avg := pz.bake_avg()
+	_mat.set_shader_parameter("bake", PackedFloat32Array(pz.bake) if baked else _zero_bake)
+	_mat.set_shader_parameter("mid_b", avg * 0.75 if baked else 0.0)
+	_mat.set_shader_parameter("melt", clamp((avg - 0.3) / 0.4, 0.0, 1.0) if baked else 0.0)
 	var s := _signature()
-	if s != _sig and (_since > 0.035 or _sig == ""):
-		_sig = s
+	var t := "%s|%d|%d|%d" % [s, pz.tops.size(), pz.cuts.size(), int(avg * 8.0) if baked else -1]
+	if (s != _sig or t != _tsig) and (_since > 0.035 or _sig == ""):
 		_since = 0.0
-		_build()
+		if s != _sig: _build()
+		else: _build_toppings(_thick(), baked, avg * 0.75 if baked else 0.0, baked and avg > 0.5)
+		_sig = s
+		_tsig = t
 
+## what the mesh is built from: the dough's shape, the sauce and cheese, and whether the cheese has melted
 func _signature() -> String:
 	var b := pz.base
 	var s := 0.0
@@ -122,9 +135,8 @@ func _signature() -> String:
 	for k in pz.sauce_amt: sa += pz.sauce_amt[k]
 	var ca := 0.0
 	for k in pz.cheese_amt: ca += pz.cheese_amt[k]
-	var bk := 0.0
-	for x in pz.bake: bk += x
-	return "%d|%.1f|%.2f|%.1f|%.1f|%d|%d|%.2f|%s|%s%s" % [pz.id, s, b.rot, sa, ca, pz.tops.size(), pz.cuts.size(), bk, pz.stage, pz.sauce, pz.cheese]
+	var melted: bool = (pz.stage == "oven" or pz.stage == "board") and pz.bake_avg() > 0.5
+	return "%d|%.1f|%.2f|%.1f|%.1f|%s|%s%s" % [pz.id, s, b.rot, sa, ca, melted, pz.sauce, pz.cheese]
 
 ## a soft round puff for the steam
 func _wisp() -> ImageTexture:
@@ -210,8 +222,6 @@ func _build() -> void:
 	_paint_layers()
 	_mat.set_shader_parameter("sauce_col", Color(Data.ING[pz.sauce].col) if pz.sauce != "" else Color.WHITE)
 	_mat.set_shader_parameter("cheese_col", Color(Data.ING[pz.cheese].col).lerp(Color("fff8e6"), 0.55) if pz.cheese != "" else Color.WHITE)
-	_mat.set_shader_parameter("melt", melt)
-	_mat.set_shader_parameter("mid_b", mid_b)
 	_mat.set_shader_parameter("seed", float(pz.id % 97) * 0.37)
 	_mat.set_shader_parameter("max_amt", Pizza.MAX_AMT)
 	var h0 := _thick()
@@ -228,7 +238,6 @@ func _build() -> void:
 		var h_pk: float = h0 + puff
 		var h_in: float = h0 + puff * (1.0 - clamp(r_in / max(w * 0.5, 0.001), 0.0, 1.0))
 		var dir := Vector2.from_angle(a)
-		var crust_b: float = _bake_at(a) if baked else 0.0
 		for j in rings:
 			var p: Vector2
 			var h: float
@@ -238,7 +247,7 @@ func _build() -> void:
 			if j < IN_RINGS.size():
 				p = dir * r_in * IN_RINGS[j]
 				h = h_in
-				col = _brown(DOUGH, mid_b, GOLDEN_MID)
+				col = DOUGH
 				# a little height where sauce and cheese are laid thick (the colour is drawn by the shader)
 				var sa := _amt(pz.sauce_amt, p) if pz.sauce != "" else 0.0
 				var ca := _amt(pz.cheese_amt, p) if pz.cheese != "" else 0.0
@@ -249,10 +258,9 @@ func _build() -> void:
 				if s <= peak_s and peak_s > 0.0: h = h_in + (h_pk - h_in) * sin(PI * 0.5 * s / peak_s)
 				else: h = h_pk * pow(cos(PI * 0.5 * (s - peak_s) / max(1.0 - peak_s, 0.001)), 0.6)
 				h = max(h, 0.0)
-				var top: float = sin(PI * clamp(s, 0.0, 1.0))
-				col = _brown(DOUGH_RIM, crust_b * (0.9 + 0.12 * top), GOLDEN)
+				col = DOUGH_RIM
 				inner = 0.0
-				cb = crust_b * (0.6 + 0.45 * top)
+				cb = sin(PI * clamp(s, 0.0, 1.0))              # how much this is the top of the crust
 			st.set_color(col)
 			st.set_uv(_uv(p))
 			st.set_uv2(Vector2(inner, cb))

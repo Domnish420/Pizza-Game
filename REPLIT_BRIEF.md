@@ -126,8 +126,14 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
     by sector from `Pizza.bake` with leopard spots when pushed; cuts are grooves; it steams on the board; a pan pizza
     sits in its pan. The bench and board quads are now see-through overlays drawn on top (`FPSurface.overlay()`,
     `Bench.draw3d`), so the size guides and your fingertips still show and touches map exactly as before.
-  - Next: the oven. `OvenView` still draws the deck as a flat top-down map on the oven mouth. Making it 3D means a
-    hollow oven with a visible deck, a horizontal touch surface inside it, and `Pizza3D` per deck spot.
+  - **The oven is 3D too.** Every oven model is hollow: you look through the mouth into a chamber (soot-dark brick or
+    steel) with a stone deck and its heat source: glowing elements (electric), a row of blue burners (gas), a fire bed
+    with charred logs (wood), a turning hearth (rotary). `OvenView`'s 400 x 320 deck map now lies flat on the deck as
+    an overlay (`draw3d`, 0.00235 m a unit, its mouth line at the oven mouth), so sliding, turning and pulling work
+    exactly as before, and `FPWorld._sync_oven` puts a `Pizza3D` on each deck spot (it browns live: the bake is a
+    shader uniform, so a full oven costs no mesh rebuilds). Pizzas waiting sit on the landing shelf out front; the
+    one you are moving rides on a peel; READY / TURN / BURNING float over each pizza; live flames and a flickering
+    light grow with how well a wood fire is fed. Between services a door closes the mouth.
   - Keep the touch mapping: either keep the quad as an invisible hit plane (`FPSurface.to_px`), or raycast onto the new
     mesh and convert to the same bench coordinates.
 - **No step buttons.** The owner wants the pizza free: "Don't need the base is ready button, get rid of the buttons.

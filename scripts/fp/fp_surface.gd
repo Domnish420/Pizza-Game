@@ -47,13 +47,14 @@ func setup(st: String, ctrl: Control, px: Vector2i, size_m: Vector2, touch: bool
 	body.set_meta("act", {"kind": "surface", "surface": self})
 	add_child(body)
 
-## see-through: only what the control draws shows, always on top of what is behind it in the room (the 3D pizza)
-func overlay() -> void:
+## see-through: only what the control draws shows, on top of what is behind it in the room (the 3D pizza). With
+## on_top false it stays in the room (hidden by what stands in front of it): the oven deck, seen through the mouth.
+func overlay(on_top: bool = true) -> void:
 	vp.transparent_bg = true
 	var m: StandardMaterial3D = material_override
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.no_depth_test = true
-	m.render_priority = 2
+	m.no_depth_test = on_top
+	m.render_priority = 2 if on_top else 1
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 
 ## the control fills the texture exactly (its own anchors would size it to the window)

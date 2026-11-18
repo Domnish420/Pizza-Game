@@ -21,7 +21,6 @@
 	"materials":[
 		{
 			"alphaMode":"BLEND",
-			"doubleSided":true,
 			"name":"sanitiser",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -35,7 +34,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"white_plastic",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -49,7 +47,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"nozzle",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -63,7 +60,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"spray_label",
 			"pbrMetallicRoughness":{
 				"metallicFactor":0,

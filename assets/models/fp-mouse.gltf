@@ -20,7 +20,6 @@
 	],
 	"materials":[
 		{
-			"doubleSided":true,
 			"name":"fur",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -34,7 +33,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"pink",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -48,7 +46,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"black",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[

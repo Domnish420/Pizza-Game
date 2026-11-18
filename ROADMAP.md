@@ -86,7 +86,8 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
       (REPLIT_BRIEF.md, "The art style"); a Retro (PS2) look as an option on the phone
 - [x] The pizza in 3D on the bench and the board, built live from its data: dough ball to stretched base with a
       puffy rim, glossy sauce, cheese shreds that melt and blister, toppings, browning with leopard spots, cuts, steam
-- [ ] The pizza in 3D in the oven: a hollow oven with a visible deck, sliding and turning real pizzas
+- [x] The pizza in 3D in the oven: hollow ovens with a visible deck and their heat source, the deck map laid on
+      it, real pizzas browning as they bake, a peel, live flames, READY / TURN labels
 - [ ] Hand-made models to replace the generated ones, rigged hands and customers with animations
 - [x] The morning and evening in the same 3D kitchen: every job a prop you tap (deliveries, prep, wash-up, counter,
       dough, cleaning, traps, boxes, temperatures, stores, checklist, open / lock up); management on a phone

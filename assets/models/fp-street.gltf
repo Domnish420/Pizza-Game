@@ -23,7 +23,6 @@
 	],
 	"materials":[
 		{
-			"doubleSided":true,
 			"name":"slabs",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -34,7 +33,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"kerb",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -45,7 +43,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"asphalt",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -56,7 +53,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"line_white",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -70,7 +66,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"line_yellow",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -84,7 +79,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"brick",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -95,7 +89,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"frame",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -109,7 +102,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shopfront_0",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -123,7 +115,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"sign_text",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -137,7 +128,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"emissiveFactor":[
 				0.5,
 				0.3119801878929138,
@@ -156,7 +146,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shop_door",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -170,7 +159,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"awning_0",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -184,7 +172,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"win_glass",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -198,7 +185,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"pot_clay",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -212,7 +198,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"render_cream",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -226,7 +211,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shopfront_1",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -240,7 +224,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"planter",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -254,7 +237,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"flowers_1",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -268,7 +250,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"brick_y",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -279,7 +260,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shopfront_2",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -293,7 +273,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"awning_2",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -307,7 +286,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"flowers_2",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -321,7 +299,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"render_blue",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -335,7 +312,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shopfront_3",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -349,7 +325,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"flowers_0",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -363,7 +338,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shopfront_4",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -377,7 +351,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"awning_4",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -391,7 +364,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"render_sage",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -405,7 +377,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shopfront_5",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -419,7 +390,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"render_tan",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -433,7 +403,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shopfront_6",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -447,7 +416,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"awning_6",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -461,7 +429,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"car",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -475,7 +442,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"car_glass",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -489,7 +455,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"tyre",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -503,7 +468,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"chrome",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -517,7 +481,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"car_light_-1",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -531,7 +494,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"car_light_1",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -545,7 +507,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"post",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -559,7 +520,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"emissiveFactor":[
 				1,
 				0.6653872728347778,
@@ -583,7 +543,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"oak",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -594,7 +553,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"bin_green",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -608,7 +566,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"bark",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -622,7 +579,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"leaves",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[

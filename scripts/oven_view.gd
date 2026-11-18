@@ -13,6 +13,9 @@ const MOUTH_Y := 250.0     # anything dragged below this line has left the oven
 var svc: ServiceScreen
 var font: Font
 var drag = null            # {pz, o (deck item or null), mode "move"/"turn", pos, start, last_ang}
+var draw3d := false        # in the 3D kitchen this lies flat on the oven's deck and the world draws the pizzas, fire and
+                           # oven in 3D (FPWorld): here we only draw the empty spots and take the touches
+var shelf_pos: Array = Oven.SHELF_POS   # where pizzas wait on the landing (in 3D, further out on the landing shelf)
 
 func _init(service: ServiceScreen) -> void:
 	svc = service
@@ -48,7 +51,7 @@ func _gui_input(e: InputEvent) -> void:
 func _down(p: Vector2) -> void:
 	var ov: Oven = svc.oven
 	for i in ov.shelf.size():
-		if p.distance_to(Oven.SHELF_POS[i]) < 40.0:
+		if p.distance_to(shelf_pos[i]) < 40.0:
 			drag = {"pz": ov.shelf[i], "o": null, "mode": "move", "pos": p, "start": p}
 			return
 	var best = null
@@ -107,6 +110,12 @@ func _draw() -> void:
 	var off := _off()
 	var ov: Oven = svc.oven
 	draw_set_transform(off, 0, Vector2(k, k))
+	if draw3d:
+		# only the empty spots, faintly, so you can see where a pizza will go
+		for i in ov.slots:
+			if ov.item_in(i) == null: draw_arc(ov.pos[i], ov.prad, 0, TAU, 40, Color(1, 0.85, 0.6, 0.35), 2.0)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		return
 	var bg = Art.tex("oven." + ov.kind)
 	if bg != null:
 		draw_texture_rect(bg, Rect2(0, 0, W, H), false)
@@ -160,7 +169,7 @@ func _draw() -> void:
 	_text(Vector2(200, 268), "SHELF" if ov.shelf.size() > 0 or drag != null else "Pizzas you send to the oven wait here", 11, Color(1, 1, 1, 0.55))
 	for i in ov.shelf.size():
 		if drag != null and drag.pz == ov.shelf[i] and drag.mode == "move": continue
-		PizzaDraw.draw(self, ov.shelf[i], off + Oven.SHELF_POS[i] * k, k * 0.26)
+		PizzaDraw.draw(self, ov.shelf[i], off + shelf_pos[i] * k, k * 0.26)
 		draw_set_transform(off, 0, Vector2(k, k))
 	if drag != null and drag.mode == "move":
 		PizzaDraw.draw(self, drag.pz, off + drag.pos * k, k * ov.prad / 106.0)

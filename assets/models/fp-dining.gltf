@@ -23,7 +23,6 @@
 	],
 	"materials":[
 		{
-			"doubleSided":true,
 			"name":"planks",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -34,7 +33,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"ceiling",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -48,7 +46,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"plaster",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -59,7 +56,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"wainscot",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -73,7 +69,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"walnut",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -84,7 +79,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"window_frame",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -98,7 +92,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"emissiveFactor":[
 				0.618016774971835,
 				0.7549190798092127,
@@ -117,7 +110,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"chrome",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -131,7 +123,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"canvas_#3c6bc8",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -145,7 +136,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"canvas_#3f9a6b",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -159,7 +149,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"canvas_#c86b3c",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -173,7 +162,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"canvas_#2b3a4a",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -187,7 +175,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"canvas_#d9b23f",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -201,7 +188,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"canvas_#b53a4a",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -215,7 +201,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"black",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -229,7 +214,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shade",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -243,7 +227,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"brass",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -257,7 +240,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"emissiveFactor":[
 				1,
 				0.6938717365264893,
@@ -281,7 +263,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"leather",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -295,7 +276,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"terracotta",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -309,7 +289,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"plant",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -323,7 +302,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"bottle_#2f5a2f",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -337,7 +315,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"bottle_#5a2f1f",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -351,7 +328,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"bottle_#2f3f5a",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -365,7 +341,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"bottle_#7a6a2f",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[

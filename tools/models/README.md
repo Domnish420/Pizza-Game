@@ -56,6 +56,11 @@ The look is the art style in `REPLIT_BRIEF.md`. The toolkit enforces most of it:
 a model turns `ROUND` off, materials are capped at a painted-metal look with no bump maps, the palette and shared
 materials are in `common.py`, and every model gets its shadows baked in (below).
 
+**Single-sided.** Every material is exported single-sided (`use_backface_culling`, so glTF `doubleSided` is off), as
+the game and the preview both cull back faces. That is what lets an oven's chamber be an inside-out box: seen from
+within through the mouth, invisible from outside. Inside-out on purpose must be its own part named `chamber`
+(`keep` on the builder), which the FLIP check accepts.
+
 **Painted-in shadows.** After a model is built, `build.py` bakes ambient occlusion into its vertex colours with
 Cycles (`lib.bake_ao`): big faces are cut finer first so the shading has somewhere to live, a floor is put under the
 model so its base darkens where it stands, and the result is tinted warm. The two rooms are baked with the counters,

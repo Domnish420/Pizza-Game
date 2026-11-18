@@ -20,7 +20,6 @@
 	],
 	"materials":[
 		{
-			"doubleSided":true,
 			"name":"bin_teal",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -34,7 +33,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"black",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -48,7 +46,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"flap",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[

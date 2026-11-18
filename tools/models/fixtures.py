@@ -131,13 +131,30 @@ def _around_mouth(m, x0, x1, z0, z1, y0, y1, name="facade"):
     box((xs, MY1 - MY0, z1 - MZ1), (xc, 1.1, (MZ1 + z1) / 2), m, name=name)
 
 
-def _mouth_frame(m, x=1.04, w=0.05, dark_x=1.052):
+def _mouth_frame(m, x=1.04, w=0.05, dark_x=None):
     box((0.03, w, MZ1 - MZ0 + 2 * w), (x, MY1 + w / 2, 0.2), m, bevel=0.006, name="mouth_top")
     box((0.03, w, MZ1 - MZ0 + 2 * w), (x, MY0 - w / 2, 0.2), m, bevel=0.006, name="mouth_bottom")
     box((0.03, MY1 - MY0, w), (x, 1.1, MZ0 - w / 2), m, bevel=0.006, name="mouth_l")
     box((0.03, MY1 - MY0, w), (x, 1.1, MZ1 + w / 2), m, bevel=0.006, name="mouth_r")
-    # behind the mouth: the dark of the oven (a closed door between services)
-    box((0.01, MY1 - MY0, MZ1 - MZ0), (dark_x, 1.1, 0.2), mat("oven_dark", "#1a1412", rough=0.6, emit="#3a1a0c", emit_k=0.6), name="mouth_dark")
+
+
+# ---------------------------------------------------------------- inside the oven
+# The deck you work on in service is a flat plane at YD, from the mouth (x 1.04) back to x 1.6 and across z -0.27..0.67
+# (FPWorld maps the oven's 400 x 320 deck map onto it, 0.00235 m a unit). Pizzas waiting to go in sit on the landing
+# shelf in front of the mouth (x 0.8..1.02). Each oven is hollow: a chamber lined in soot-dark brick or steel, seen
+# through the mouth, with a stone deck, and its heat source (elements, burners, the fire bed).
+
+YD = 0.80
+
+
+def _chamber(x0, x1, z0, z1, y1, soot, deck_m, bevel):
+    """the inside of the oven: an inside-out lining (seen from within, invisible from outside) and the stone deck"""
+    box((x1 - x0, y1 - (YD - 0.01), z1 - z0), ((x0 + x1) / 2, (YD - 0.01 + y1) / 2, (z0 + z1) / 2), soot, bevel=bevel, seg=4, flip=True, name="chamber")
+    box((x1 - x0, 0.02, z1 - z0), ((x0 + x1) / 2, YD - 0.01, (z0 + z1) / 2), deck_m, bevel=0, name="deck")
+
+
+def _deck_stone():
+    return mat("deck_stone", "#dcc49c", rough=0.85, tex="stone", uvs=0.5)
 
 
 def _metal_stand():
@@ -202,16 +219,37 @@ def deck_oven(kind):
     body_m = steel() if not gas else mat("enamel", CHARCOAL, rough=0.4)
     trim = steel_dark() if not gas else mat("brass", "#c9973a", rough=0.35, metal=0.3)
     front_m = mat("front", "#d9dee1" if not gas else "#2b2f31", rough=0.4, metal=0.2)
-    box((0.56, 1.0, 1.08), (1.34, 1.1, 0.28), body_m, name="body")
+    # the cabinet, hollow: bottom, top, back and sides round the baking chamber (x 1.06..1.58, z -0.24..0.64)
+    box((0.56, 0.18, 1.08), (1.34, 0.69, 0.28), body_m, name="body_bottom")
+    box((0.56, 0.15, 1.08), (1.34, 1.525, 0.28), body_m, name="body_top")
+    box((0.04, 0.67, 1.08), (1.6, 1.115, 0.28), body_m, bevel=0, name="body_back")
+    box((0.52, 0.67, 0.02), (1.32, 1.115, -0.25), body_m, bevel=0, name="body_side")
+    box((0.52, 0.67, 0.18), (1.32, 1.115, 0.73), body_m, bevel=0, name="body_side")
     _around_mouth(front_m, 1.04, 1.06, -0.26, 0.82, 0.6, 1.6)
-    _mouth_frame(trim, x=1.035, w=0.045, dark_x=1.05)
+    _mouth_frame(trim, x=1.035, w=0.045)
+    _chamber(1.06, 1.58, -0.24, 0.64, 1.45, mat("oven_steel_in", "#3b3836", rough=0.7), _deck_stone(), 0.03)
+    if not gas:
+        # heating elements glowing under the ceiling
+        glow = mat("element", "#ff7a3a", rough=0.5, emit="#ff5a1a", emit_k=2.2)
+        for x in (1.14, 1.32, 1.5):
+            tube([(x, 1.415, -0.21), (x, 1.415, 0.61)], 0.008, glow, name="element")
+            for z in (-0.2, 0.6):
+                box((0.02, 0.035, 0.012), (x, 1.432, z), steel_dark(), bevel=0, name="element_clip")
+    else:
+        # the burners along the back of the deck
+        box((0.03, 0.02, 0.84), (1.555, YD + 0.01, 0.2), black(), bevel=0, name="burner")
+        flame_in = mat("gas_flame_in", "#4aa8ff", rough=0.4, emit="#3a9cff", emit_k=3.5)
+        for i in range(12):
+            cyl(0.011, 0.04, (1.555, YD + 0.04, -0.17 + i * 0.068), flame_in, seg=8, r2=0.002, name="burner_flame")
+    # the fold-down landing shelf where pizzas wait to go in
+    box((0.24, 0.02, 0.8), (0.92, 0.775, 0.2), steel(), bevel=0.006, name="landing")
+    for z in (-0.15, 0.55):
+        tube([(1.04, 0.66, z), (0.83, 0.765, z)], 0.008, steel_dark(), name="landing_bracket")
     # a red (or brass) band across the top, the handle bar, the badge
     box((0.585, 0.08, 1.1), (1.335, 1.56, 0.28), mat("top_band", TOMATO, rough=0.45) if not gas else trim, name="top_band")
     _handle_bar(0.985, 1.475, -0.12, 0.52, chrome() if not gas else trim)
     text("FORNO", (1.0405, 1.56, 0.12), white() if not gas else black(), size=0.055, depth=0.004, rot=(0, -90, 0), name="brand")
     _controls(black() if not gas else steel(), 3 if not gas else 2, display=not gas)
-    # a stone deck lip under the mouth
-    box((0.07, 0.03, 0.84), (1.01, MY0 - 0.06, 0.2), mat("deck_stone", "#d6c6a8", rough=0.8), name="deck_lip")
     # louvres on the side you see from the counter, vents on top
     for i in range(6):
         box((0.3, 0.014, 0.012), (1.34, 0.85 + i * 0.07, -0.266), black(), name="louvre")
@@ -287,17 +325,39 @@ def dome_oven(kind):
         box((0.6, 0.03, 1.1), (1.31, 0.615, 0.27), steel(), name="stand_cap")
     # the hearth: the deck's level behind the facade, and the shelf in front of the mouth
     yb = 0.6 if wood else 0.63
-    box((0.55, MY0 - yb, 0.89), (1.335, (yb + MY0) / 2, 0.165), stone_m if not wood else base_m, bevel=0, name="hearth")
-    box((0.12, 0.05, 0.98), (XF - 0.04, MY0 - 0.025, 0.2), stone_m, name="hearth_shelf")
+    box((0.55, YD - 0.02 - yb, 0.89), (1.335, (yb + YD - 0.02) / 2, 0.165), stone_m if not wood else base_m, bevel=0, name="hearth")
+    box((0.24, 0.05, 0.98), (XF - 0.12, MY0 - 0.025, 0.2), stone_m, name="hearth_shelf")      # the landing (x 0.78..1.02)
     for z in (-0.18, 0.58):
-        slab([(0.06, 0.0), (0.06, 0.1), (0.0, 0.1)], 0.04, (XF - 0.06, MY0 - 0.15, z - 0.02), stone_m, name="corbel")
+        slab([(0.2, 0.0), (0.2, 0.15), (0.0, 0.15)], 0.05, (XF - 0.2, MY0 - 0.2, z - 0.025), stone_m, name="corbel")
+    # inside: a soot-dark vault over the stone deck (x 1.06..1.6, z -0.26..0.63: clear of the logs at the side)
+    _chamber(1.06, 1.6, -0.26, 0.63, 1.4, mat("soot", "#3a2b24", rough=0.9) if wood else mat("oven_steel_in", "#3b3836", rough=0.7), _deck_stone(), 0.16)
+    if wood:
+        # the fire bed on the left: embers in their ash, charred logs across them (the flames are the game's)
+        cyl(0.13, 0.008, (1.33, YD + 0.004, -0.135), mat("ash", "#8a8580", rough=0.95), seg=20, name="ash")
+        blobs([("ellipsoid", (1.33, YD + 0.012, -0.135), 0.1, (1.0, 0.22, 0.9))], mat("embers", "#ff6a1a", rough=0.6, emit="#ff4a0a", emit_k=2.2), res=0.012, name="embers", tris=200)
+        char = mat("charred", "#2a1d16", rough=0.95)
+        for (ang, dy) in ((20, 0.03), (-35, 0.045), (80, 0.06)):
+            cyl(0.028, 0.24, (1.33, YD + dy, -0.135), char, axis="x", seg=10, rot=(0, ang, 0), name="charred_log")
+    else:
+        # the gas burner on the left, and the turning hearth itself
+        box((0.22, 0.025, 0.06), (1.33, YD + 0.0125, -0.135), steel_dark(), bevel=0, name="burner")
+        cyl(0.24, 0.004, (1.324, YD + 0.002, 0.296), mat("turntable", "#cdb48a", rough=0.85), seg=40, name="turntable")
+        cyl(0.03, 0.01, (1.324, YD + 0.005, 0.296), steel_dark(), seg=16, name="hub")
     # the mosaic front, its stone arch, the iron mouth frame
     _arch_facade(face_m, XF, 0.06, z0, z1, MY1, yb)
     _voussoirs(stone_m, key_m, XF, MY1, 0.2, 0.4, 0.47)
-    _mouth_frame(mat("iron", "#3a332e", rough=0.5, metal=0.3), x=XF - 0.008, w=0.03, dark_x=XF + 0.065)
-    # the dome behind it, peeking out at the sides
+    _mouth_frame(mat("iron", "#3a332e", rough=0.5, metal=0.3), x=XF - 0.008, w=0.03)
+    # the entrance tunnel behind the mouth: side walls and a roof back to x 1.19, so the dome can open into it
+    tun = base_m if wood else steel()
+    for (za, zb) in ((z0, MZ0), (MZ1, z1)):
+        box((0.13, MY1 + 0.09 - YD, zb - za), (1.125, (YD + MY1 + 0.09) / 2, (za + zb) / 2), tun, bevel=0, name="tunnel_wall")
+    box((0.13, 0.09, z1 - z0), (1.125, MY1 + 0.045, (z0 + z1) / 2), tun, bevel=0, name="tunnel_roof")
+    # the dome: whole round the back and sides; over the tunnel only its top (the front below that opens into the vault)
     prof = [(math.cos(math.pi / 2 * i / 12), math.sin(math.pi / 2 * i / 12)) for i in range(13)] + [(0.0, 0.0)]
-    lathe(prof, (1.34, MY0, 0.2), dome_m, seg=32, scale=(0.27, 1.06, 0.47), name="dome")
+    lathe(prof, (1.34, MY0, 0.2), dome_m, seg=30, scale=(0.27, 1.06, 0.47), a0=326, arc=248, name="dome")
+    t0 = math.asin(0.66)
+    top = [(math.cos(t0 + (math.pi / 2 - t0) * i / 6), math.sin(t0 + (math.pi / 2 - t0) * i / 6)) for i in range(7)]
+    lathe(top, (1.34, MY0, 0.2), dome_m, seg=12, scale=(0.27, 1.06, 0.47), a0=214, arc=112, name="dome_front")
     # the chimney, through the hood
     _flue(1.3, 0.2, 1.72, 0.08)
     cyl(0.1, 0.04, (1.3, 1.73, 0.2), stone_m, seg=18, name="flue_base")
@@ -305,6 +365,11 @@ def dome_oven(kind):
         # the rotary's switch and lamp on the wall under the mouth
         cyl(0.03, 0.03, (0.985, 0.68, 0.48), red(), axis="x", seg=16, bevel=0.01, name="knob")
         sphere(0.011, (0.995, 0.68, 0.4), mat("lamp_green", "#3cff6a", emit="#3cff6a", emit_k=2.5), seg=10, rings=6, name="power")
+
+
+# the inside-out chamber stays its own part, so the checks can tell it is meant to be inside out
+deck_oven.keep = ("chamber",)
+dome_oven.keep = ("chamber",)
 
 
 @model("logs")

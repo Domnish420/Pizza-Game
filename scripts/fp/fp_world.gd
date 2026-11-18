@@ -22,13 +22,20 @@ extends Node3D
 const EYE := 1.62
 const LOOK := 0.11                     # degrees of head turn per pixel of drag
 ## each station: where you lean to (from where you stand), what you look at, and how wide the view is there
-const STATION_LEAN := {"front": Vector3(0, 0, 0), "bench": Vector3(0, -0.08, -0.14), "board": Vector3(0.5, -0.14, -0.26), "oven": Vector3(0.42, -0.3, 0.2), "prep": Vector3(-0.72, -0.18, -0.4), "stores": Vector3(0, -0.05, 0.15)}
-const STATION_AT := {"front": Vector3(0, 1.35, -3.0), "bench": Vector3(0, 0.92, -0.62), "board": Vector3(1.16, 0.94, -0.72), "oven": Vector3(1.04, 1.1, 0.2), "prep": Vector3(-1.6, 1.42, -0.42), "stores": Vector3(-0.1, 1.15, 1.3)}
-const STATION_FOV := {"front": 74.0, "bench": 70.0, "board": 64.0, "oven": 62.0, "prep": 60.0, "stores": 76.0}
+const STATION_LEAN := {"front": Vector3(0, 0, 0), "bench": Vector3(0, -0.08, -0.14), "board": Vector3(0.5, -0.14, -0.26), "oven": Vector3(0.4, -0.2, 0.2), "prep": Vector3(-0.72, -0.18, -0.4), "stores": Vector3(0, -0.05, 0.15)}
+const STATION_AT := {"front": Vector3(0, 1.35, -3.0), "bench": Vector3(0, 0.92, -0.62), "board": Vector3(1.16, 0.94, -0.72), "oven": Vector3(1.28, 0.8, 0.2), "prep": Vector3(-1.6, 1.42, -0.42), "stores": Vector3(-0.1, 1.15, 1.3)}
+const STATION_FOV := {"front": 74.0, "bench": 70.0, "board": 64.0, "oven": 64.0, "prep": 60.0, "stores": 76.0}
 var STATIONS := {}                     # station -> Vector2(yaw, pitch), worked out from the lean and the target
 ## between services the prep station is about the counter (tubs, sink, mixer), not the service tablet on the wall
-const CLOSED_AT := {"prep": Vector3(-1.38, 0.98, -0.5)}
-const CLOSED_LEAN := {"prep": Vector3(-0.55, -0.1, -0.3)}
+const CLOSED_AT := {"prep": Vector3(-1.38, 0.98, -0.5), "oven": Vector3(1.04, 1.05, 0.2)}
+const CLOSED_LEAN := {"prep": Vector3(-0.55, -0.1, -0.3), "oven": Vector3(0.42, -0.3, 0.2)}
+## the oven in service: its 400 x 320 deck map (OvenView) lies on the deck, 0.00235 m a unit, the map's mouth line
+## at the oven's mouth; pizzas waiting sit out on the landing shelf
+const OV_S := 0.00235
+const OV_Z0 := -0.27
+const OV_XM := 1.04
+const OV_Y := 0.80
+const SHELF3D := [Vector2(130, 307), Vector2(270, 307)]
 ## which jobs' labels show at which station (the rest stay hidden so the view is not cluttered)
 const JOBS_AT := {"front": ["open", "checklist", "clean_foh"], "bench": ["dough_trays", "boxes", "clean_foh"], "board": ["boxes", "dough_trays"], "oven": ["boxes", "dough_trays"],
 	"prep": ["prep", "wash", "dough", "clean_boh"], "stores": ["stores", "temp_fridge", "temp_freezer", "dry", "traps", "crates", "clean_boh"]}
@@ -343,15 +350,177 @@ func _oven() -> void:
 		_tappable(logs, Vector3(0.2, 0.3, 0.26), Vector3(0, 0.15, 0), {"kind": "log"})
 		job_labels.logs = _small_label("Logs", Vector3(0, 0.38, 0), logs)
 	if svc == null:                         # between services: the oven door, closed
-		_box(Vector3(0.02, 0.5, 0.7), Vector3(1.04, 1.1, 0.2), Color("2b2b2b"), self, 0.5, 0.6)
+		_box(Vector3(0.025, 0.66, 0.82), Vector3(1.025, 1.1, 0.2), Color("2f2d2b"), self, 0.5, 0.3)
+		var hb := _cyl(0.014, 0.4, Vector3(0.995, 1.25, 0.2), Color("c3c9cc"), self, 0.3)
+		hb.rotation_degrees.x = 90
 		_tappable(self, Vector3(0.1, 0.8, 1.2), Vector3(1.1, 1.1, 0.2), {"kind": "job", "job": "oven"})
 		return
+	# in service: the deck itself is the surface you work on, lying flat inside the oven, seen through the mouth
+	ctrls.oven.draw3d = true
+	ctrls.oven.shelf_pos = SHELF3D
 	var s := FPSurface.new()
-	s.setup("oven", ctrls.oven, Vector2i(800, 640), Vector2(0.78, 0.62), false)
-	s.position = Vector3(1.04, 1.1, 0.2)
-	s.rotation_degrees.y = -90
+	s.setup("oven", ctrls.oven, Vector2i(800, 640), Vector2(400.0 * OV_S, 320.0 * OV_S), false)
+	s.overlay(false)
+	s.basis = Basis(Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(0, 1, 0))     # the map's right is +z, its up is into the oven
+	s.position = _deck3d(Vector2(200, 160), OV_Y + 0.002)
 	add_child(s)
 	surfaces.oven = s
+	_oven_inside(kind)
+
+## a point on the oven's deck map, in the room
+func _deck3d(p: Vector2, y: float = OV_Y) -> Vector3:
+	return Vector3(OV_XM + (OvenView.MOUTH_Y - p.y) * OV_S, y, OV_Z0 + p.x * OV_S)
+
+var oven_nodes := {}                   # "p<pizza id>" / "s<ticket id>" -> the pizza in or at the oven, in 3D
+var oven_labels := {}
+var oven_light: OmniLight3D
+var flames := []                       # [{node, base, ph}]
+var peel: Node3D
+
+## the light of the fire or the elements inside, the flames, and the peel you slide pizzas with
+func _oven_inside(kind: String) -> void:
+	oven_light = OmniLight3D.new()
+	oven_light.position = Vector3(1.38, 1.15, 0.2)
+	oven_light.omni_range = 0.62
+	oven_light.light_color = {"electric": Color("ff9a5a"), "gas": Color("ffc08a"), "wood": Color("ff8a3a"), "rotary": Color("ff9a4a")}.get(kind, Color("ff9a5a"))
+	oven_light.light_energy = 1.4
+	add_child(oven_light)
+	if kind == "wood" or kind == "rotary":
+		var fm := StandardMaterial3D.new()
+		fm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		fm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		fm.albedo_color = Color(1.0, 0.55, 0.15)
+		var fm2: StandardMaterial3D = fm.duplicate()
+		fm2.albedo_color = Color(1.0, 0.85, 0.35)
+		var at := _deck3d(svc.oven.fire_pos)
+		for i in 7:
+			var mi := MeshInstance3D.new()
+			var sm := SphereMesh.new()
+			sm.radius = 1.0
+			sm.height = 2.0
+			sm.radial_segments = 10
+			sm.rings = 6
+			mi.mesh = sm
+			mi.material_override = fm if i % 2 == 0 else fm2
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var off := Vector3(randf_range(-0.05, 0.05), 0, randf_range(-0.06, 0.06)) if i > 0 else Vector3.ZERO
+			mi.position = at + off
+			add_child(mi)
+			flames.append({"node": mi, "base": at + off, "ph": randf() * TAU, "w": 0.035 if i == 0 else randf_range(0.018, 0.03), "h": 0.13 if i == 0 else randf_range(0.06, 0.11)})
+	# the peel under a pizza you are sliding: a round aluminium blade and a long wooden handle back toward you
+	peel = Node3D.new()
+	var blade := MeshInstance3D.new()
+	var bm := CylinderMesh.new()
+	bm.top_radius = 1.0; bm.bottom_radius = 1.0; bm.height = 0.004; bm.radial_segments = 28
+	blade.mesh = bm
+	blade.material_override = _mat(Color("d5d9db"), 0.3, 0.3)
+	peel.add_child(blade)
+	var handle := _cyl(0.013, 0.7, Vector3.ZERO, Color("b98a55"), peel)
+	handle.rotation_degrees.z = 90
+	peel.set_meta("blade", blade)
+	peel.set_meta("handle", handle)
+	peel.visible = false
+	add_child(peel)
+
+func _oven_pizza(key: String, u: float) -> Pizza3D:
+	if not oven_nodes.has(key):
+		var p := Pizza3D.new()
+		p.unit = u
+		add_child(p)
+		oven_nodes[key] = p
+	return oven_nodes[key]
+
+## a pizza one of your crew is baking: just a simple pizza, browning as it goes
+func _staff_pizza(key: String, r: float, p: float) -> Node3D:
+	if not oven_nodes.has(key):
+		var n := Node3D.new()
+		_cyl(r, 0.02, Vector3(0, 0.01, 0), Color("e3c48e"), n)
+		_cyl(r * 0.8, 0.022, Vector3(0, 0.012, 0), Color("c8321f"), n)
+		for k in 6: _cyl(r * 0.14, 0.024, Vector3(cos(k * 1.1) * r * 0.45, 0.013, sin(k * 1.1) * r * 0.45), Color("fbe7a0"), n)
+		add_child(n)
+		oven_nodes[key] = n
+	var node: Node3D = oven_nodes[key]
+	node.get_child(0).material_override = _mat(Color("e3c48e").lerp(Color("b5702e"), clamp(p, 0.0, 1.0)))
+	return node
+
+func _oven_label(key: String, at: Vector3, text: String, col: Color) -> void:
+	if not oven_labels.has(key):
+		var l := _label("", Vector3.ZERO, 34, Color.WHITE, null, true, 0.0009)
+		l.fixed_size = true
+		l.no_depth_test = true
+		oven_labels[key] = l
+	var lb: Label3D = oven_labels[key]
+	lb.position = at + Vector3(0, 0.13, 0)
+	lb.text = text
+	lb.modulate = col
+	lb.visible = text != ""
+
+## everything in and at the oven, each frame: the pizzas on the deck and the landing, their states, the peel, the fire
+func _sync_oven() -> void:
+	var ov: Oven = svc.oven
+	var ovv: OvenView = ctrls.oven
+	var u: float = OV_S * ov.prad / 106.0
+	var dg = ovv.drag
+	var seen := {}
+	peel.visible = false
+	for o in ov.items:
+		var at := _deck3d(ov.pos[o.slot])
+		if o.owner == "me":
+			var key := "p%d" % o.pz.id
+			seen[key] = true
+			var n := _oven_pizza(key, u)
+			if dg != null and dg.pz == o.pz and dg.mode == "move": at = _deck3d(dg.pos, OV_Y + 0.025)
+			n.position = at
+			n.show_pizza(o.pz)
+			var st: String = "your fornaio has it" if o.auto else ov.status(o)
+			var col := Color.WHITE
+			if st == "READY": col = Kit.BASIL
+			elif st == "TURN": col = Kit.CHEESE
+			elif st == "BURNING" or st == "OVERDONE": col = Kit.TOMATO
+			_oven_label(key, at, "" if st == "baking" else st, col)
+			if dg != null and dg.pz == o.pz: _peel_at(at, ov.prad * OV_S, dg.mode == "turn")
+		else:
+			var key := "s%d" % o.tk.id
+			seen[key] = true
+			_staff_pizza(key, ov.prad * OV_S * 0.92, o.p).position = at
+			_oven_label(key, at, str(o.tk.owner), Color(1, 1, 1, 0.8))
+	for i in ov.shelf.size():
+		var pz: Pizza = ov.shelf[i]
+		var key := "p%d" % pz.id
+		seen[key] = true
+		var n := _oven_pizza(key, u)
+		var at := _deck3d(SHELF3D[min(i, SHELF3D.size() - 1)], 0.79)
+		if dg != null and dg.pz == pz and dg.mode == "move":
+			at = _deck3d(dg.pos, OV_Y + 0.025)
+			_peel_at(at, ov.prad * OV_S, false)
+		n.position = at
+		n.show_pizza(pz)
+		_oven_label(key, at, "", Color.WHITE)
+	for key in oven_nodes.keys():
+		if not seen.has(key):
+			oven_nodes[key].queue_free()
+			oven_nodes.erase(key)
+			if oven_labels.has(key):
+				oven_labels[key].queue_free()
+				oven_labels.erase(key)
+	# the fire: flames that flicker and grow with how well it is fed
+	var lv: float = ov.level() if ov.def.feeds else 1.0
+	for f in flames:
+		var k: float = 0.75 + 0.25 * sin(time * 9.0 + f.ph) + 0.12 * sin(time * 23.0 + f.ph * 2.0)
+		var h: float = f.h * lv * k
+		f.node.scale = Vector3(f.w * (0.8 + 0.4 * lv), h, f.w * (0.8 + 0.4 * lv))
+		f.node.position = f.base + Vector3(0.006 * sin(time * 7.0 + f.ph), OV_Y + h * 0.7 - f.base.y, 0)
+	if oven_light != null:
+		var flick: float = 1.0 + (0.12 * sin(time * 11.0) + 0.08 * sin(time * 27.0) if not flames.is_empty() else 0.0)
+		oven_light.light_energy = 1.4 * lv * flick
+
+func _peel_at(at: Vector3, r: float, turning: bool) -> void:
+	peel.visible = true
+	peel.position = at - Vector3(0, 0.006, 0)
+	var blade: MeshInstance3D = peel.get_meta("blade")
+	blade.scale = Vector3(r * (0.75 if turning else 1.12), 1, r * (0.75 if turning else 1.12))
+	var handle: MeshInstance3D = peel.get_meta("handle")
+	handle.position = Vector3(-r * 1.12 - 0.35, 0.004, 0)
 
 func _mk_oven(r: Node3D, kind: String) -> void:
 	var col := Color("4a4a4a") if kind == "electric" or kind == "gas" else Color("8a4b32")
@@ -717,6 +886,7 @@ func _process(dt: float) -> void:
 		surfaces[st].control.queue_redraw()
 	if pizza3d.has("bench"): pizza3d.bench.show_pizza(svc.bench)
 	if pizza3d.has("board"): pizza3d.board.show_pizza(svc.board[0] if svc.board.size() > 0 else null)
+	if surfaces.has("oven") and ctrls.oven.draw3d: _sync_oven()
 	_sync_people(dt)
 	_sync_tables()
 	_sync_tickets()

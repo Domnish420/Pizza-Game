@@ -20,7 +20,6 @@
 	],
 	"materials":[
 		{
-			"doubleSided":true,
 			"name":"walnut",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -31,7 +30,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"cast_iron",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -45,7 +43,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shaker_0",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -59,7 +56,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shaker_1",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -74,7 +70,6 @@
 		},
 		{
 			"alphaMode":"BLEND",
-			"doubleSided":true,
 			"name":"oil_glass",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -88,7 +83,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"vase",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -102,7 +96,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"stem",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -116,7 +109,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"flower",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -130,7 +122,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"oak",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{

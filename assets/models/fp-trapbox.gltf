@@ -20,7 +20,6 @@
 	],
 	"materials":[
 		{
-			"doubleSided":true,
 			"name":"kraft",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -31,7 +30,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"trap_ink",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -45,7 +43,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"oak",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -56,7 +53,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"chrome",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[

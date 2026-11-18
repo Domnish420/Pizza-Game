@@ -52,7 +52,6 @@
 	],
 	"materials":[
 		{
-			"doubleSided":true,
 			"name":"steel",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -66,7 +65,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"steel_dark",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -80,7 +78,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"kraft",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
@@ -91,7 +88,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"flat_line",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -105,7 +101,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"box_ink",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[

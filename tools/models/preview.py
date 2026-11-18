@@ -96,7 +96,7 @@ def meshes():
 
 def islands():
     """every connected piece of every mesh, in world space: (lo[n,3], hi[n,3], closed[n], volume[n], tris[n])"""
-    los, his, cl, vols, ns = [], [], [], [], []
+    los, his, cl, vols, ns, nm = [], [], [], [], [], []
     bpy.context.view_layer.update()
     for ob in meshes():
         me = ob.data
@@ -143,14 +143,16 @@ def islands():
             _, cnt = np.unique(e, axis=0, return_counts=True)
             cl.append(bool((cnt == 2).all()))
             ns.append(len(g))
-    return np.array(los).reshape(-1, 3), np.array(his).reshape(-1, 3), np.array(cl), np.array(vols), np.array(ns)
+            nm.append(ob.name)
+    return np.array(los).reshape(-1, 3), np.array(his).reshape(-1, 3), np.array(cl), np.array(vols), np.array(ns), nm
 
 
 def check(key):
-    lo, hi, closed, vol, ntri = islands()
+    lo, hi, closed, vol, ntri, names = islands()
     n = len(lo)
     tol = 0.004
-    flipped = [(lo[i] + hi[i]) / 2 for i in range(n) if closed[i] and vol[i] < -1e-8]
+    # an oven's chamber is inside out on purpose (it is seen from within, through the mouth)
+    flipped = [(lo[i] + hi[i]) / 2 for i in range(n) if closed[i] and vol[i] < -1e-8 and not names[i].startswith("chamber")]
     # group the parts that touch, then see which groups reach the ground
     comp = -np.ones(n, dtype=int)
     k = 0

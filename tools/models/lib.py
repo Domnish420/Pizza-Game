@@ -81,6 +81,7 @@ def mat(name, col="#cccccc", rough=0.6, metal=0.0, tex=None, normal=None, uvs=1.
     normal = None
     m = bpy.data.materials.new(name)
     m.use_nodes = True
+    m.use_backface_culling = True           # single-sided in the game, as in the preview checks (glTF doubleSided off)
     nt = m.node_tree
     b = nt.nodes.get("Principled BSDF")
     b.inputs["Base Color"].default_value = _col(col)
@@ -369,8 +370,9 @@ def _finish_bm(bm, name, m, pos, rot, smooth, parent, uv=True, scale=None):
     return link(ob, parent)
 
 
-def box(size, pos, m, bevel=None, seg=2, rot=(0, 0, 0), name="box", parent=None):
-    """a box; edges are rounded (chunky, toy-like) unless bevel=0 or the model turned ROUND off"""
+def box(size, pos, m, bevel=None, seg=2, rot=(0, 0, 0), name="box", parent=None, flip=False):
+    """a box; edges are rounded (chunky, toy-like) unless bevel=0 or the model turned ROUND off. flip turns it inside
+    out: seen from within (a chamber you look into), and invisible from outside"""
     if bevel is None:
         thin = min(size)
         bevel = min(0.014, thin * 0.22) if ROUND[0] and thin >= 0.006 else 0.0
@@ -381,6 +383,7 @@ def box(size, pos, m, bevel=None, seg=2, rot=(0, 0, 0), name="box", parent=None)
     if bevel > 0:
         bmesh.ops.bevel(bm, geom=list(bm.edges), offset=min(bevel, min(size) * 0.45), segments=seg, profile=0.5,
                         affect="EDGES", clamp_overlap=True)
+    if flip: bmesh.ops.reverse_faces(bm, faces=bm.faces)
     return _finish_bm(bm, name, m, pos, rot, bevel > 0, parent)
 
 
@@ -408,8 +411,10 @@ def _apply(ob):
     ob.matrix_world = Matrix.Identity(4)
 
 
-def lathe(profile, pos, m, seg=24, name="lathe", parent=None, smooth=True, rot=(0, 0, 0), arc=360.0, scale=None):
-    """spin a profile of (radius, height) points round the Y axis: bowls, tubs, tins, buckets, bottles"""
+def lathe(profile, pos, m, seg=24, name="lathe", parent=None, smooth=True, rot=(0, 0, 0), arc=360.0, scale=None, a0=0.0, flip=False):
+    """spin a profile of (radius, height) points round the Y axis: bowls, tubs, tins, buckets, bottles.
+    arc/a0 (degrees) spin only part of the way round, starting at a0 (0 = toward +Z, 90 = +X, 270 = -X); flip turns the
+    faces inside out (the inside of an oven's dome, seen from within)"""
     bm = bmesh.new()
     rings = []
     full = abs(arc - 360.0) < 0.01
@@ -420,7 +425,7 @@ def lathe(profile, pos, m, seg=24, name="lathe", parent=None, smooth=True, rot=(
             ring = [bm.verts.new((0.0, y, 0.0))] * steps
         else:
             for i in range(steps):
-                a = math.radians(arc) * i / seg
+                a = math.radians(a0) + math.radians(arc) * i / seg
                 ring.append(bm.verts.new((math.sin(a) * r, y, math.cos(a) * r)))
         rings.append(ring)
     for j in range(len(rings) - 1):
@@ -438,6 +443,7 @@ def lathe(profile, pos, m, seg=24, name="lathe", parent=None, smooth=True, rot=(
                     pass
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    if flip: bmesh.ops.reverse_faces(bm, faces=bm.faces)
     return _finish_bm(bm, name, m, pos, rot, smooth, parent, scale=scale)
 
 

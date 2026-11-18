@@ -4,7 +4,8 @@ shader_type spatial;
 // and is drawn here per pixel: sauce that is glossy and darker where it is thick, cheese that is shreds when raw and
 // melted pools with golden blisters once baked, and leopard-spot char on the crust when the oven has pushed it.
 // UV is where a point falls on the layer map; UV2.x is 1 on the flat middle and 0 on the crust; UV2.y is how much
-// the crust there has baked (0 raw, 1 done, more is darker).
+// that point is the top of the crust. The bake is a uniform (12 sectors round the edge, 1 = done, as Pizza.bake), so
+// the pizza browns in the oven without its mesh being rebuilt.
 
 uniform sampler2D layers : filter_linear, repeat_disable;
 uniform vec3 sauce_col : source_color = vec3(0.8, 0.2, 0.1);
@@ -13,6 +14,7 @@ uniform float melt = 0.0;       // 0 raw cheese .. 1 fully melted
 uniform float mid_b = 0.0;      // how browned the middle is
 uniform float seed = 0.0;
 uniform float max_amt = 2.5;
+uniform float bake[12];
 
 varying vec2 pp;
 
@@ -31,10 +33,32 @@ float vnoise(vec2 p) {
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 
+// the browning of dough for a doneness value (in sRGB): golden by done, a little deeper just past it, then brown and black
+vec3 brown(vec3 c, float b, vec3 golden) {
+	if (b <= 0.0) return c;
+	if (b < 1.0) return mix(c, golden, b * 0.9);
+	vec3 g = mix(c, golden, 0.9);
+	if (b < 1.15) return g;
+	vec3 dark = vec3(0.431, 0.231, 0.102);
+	if (b < 1.45) return mix(g, dark, (b - 1.15) / 0.3);
+	return mix(dark, vec3(0.184, 0.114, 0.071), clamp((b - 1.45) / 0.35, 0.0, 1.0));
+}
+
+float bake_at(vec2 p) {
+	float f = fract(atan(p.y, p.x) / 6.2831853) * 12.0;
+	int i = int(floor(f)) % 12;
+	float k = f - floor(f);
+	return mix(bake[i], bake[(i + 1) % 12], k);
+}
+
 void fragment() {
-	vec3 col = pow(COLOR.rgb, vec3(2.2));
 	float inner = clamp(UV2.x, 0.0, 1.0);
-	float crust_b = UV2.y;
+	float top = UV2.y;
+	float edge_b = bake_at(pp);
+	float crust_b = edge_b * (0.6 + 0.45 * top);
+	vec3 raw = COLOR.rgb;
+	vec3 baked_col = mix(brown(raw, edge_b * (0.9 + 0.12 * top), vec3(0.812, 0.561, 0.247)), brown(raw, mid_b, vec3(0.886, 0.718, 0.4)), inner);
+	vec3 col = pow(baked_col, vec3(2.2));
 	vec4 L = texture(layers, UV);
 	float sa = L.r * max_amt * smoothstep(0.55, 0.95, inner);
 	float ca = L.g * max_amt * smoothstep(0.55, 0.95, inner);

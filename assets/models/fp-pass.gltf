@@ -23,7 +23,6 @@
 	],
 	"materials":[
 		{
-			"doubleSided":true,
 			"name":"steel_dark",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -37,7 +36,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"steel",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -51,7 +49,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"emissiveFactor":[
 				0.6000000238418579,
 				0.11677070724052996,
@@ -70,7 +67,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"chrome",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -84,7 +80,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"emissiveFactor":[
 				1,
 				0.06847816705703735,

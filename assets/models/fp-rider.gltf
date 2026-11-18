@@ -84,7 +84,6 @@
 	],
 	"materials":[
 		{
-			"doubleSided":true,
 			"name":"legs",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -98,7 +97,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"jacket",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -112,7 +110,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"skin",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -126,7 +123,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"eye_white",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -140,7 +136,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"pupil",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -154,7 +149,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"emissiveFactor":[
 				0.6000000238418579,
 				0.6000000238418579,
@@ -167,7 +161,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"mouth",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -181,7 +174,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"helmet",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -195,7 +187,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"visor_rim",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -209,7 +200,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"bag",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -223,7 +213,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"bag_text",
 			"pbrMetallicRoughness":{
 				"metallicFactor":0,
@@ -231,7 +220,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"black",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
@@ -245,7 +233,6 @@
 			}
 		},
 		{
-			"doubleSided":true,
 			"name":"shoes",
 			"pbrMetallicRoughness":{
 				"baseColorFactor":[
