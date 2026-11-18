@@ -88,6 +88,8 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
       puffy rim, glossy sauce, cheese shreds that melt and blister, toppings, browning with leopard spots, cuts, steam
 - [x] The pizza in 3D in the oven: hollow ovens with a visible deck and their heat source, the deck map laid on
       it, real pizzas browning as they bake, a peel, live flames, READY / TURN labels
+- [x] A title screen from the owner's painting: smoke, sparks, fairy lights, the oven's glow, a shine on the sign;
+      a chalkboard menu (Continue, New game, Settings, Quit)
 - [x] A real wood fire: lit in the morning two hours before opening, logs that catch, burn down and leave coals, a
       dome that heats and cools slowly, a deck hotter by the fire than by the mouth that cools under each pizza, every
       pizza baking from where it sits; launching and turning peels in your hand; a round firebrick dome

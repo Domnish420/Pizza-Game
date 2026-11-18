@@ -255,9 +255,16 @@ func _page_home() -> void:
 	nc[1].add_child(vh)
 	var reset := Kit.button("Start over", func(): Kit.main.confirm("Start over?", "This wipes your save and takes you back to the start.", "Wipe my save", func():
 		Game.new_game()
+		Game.s.fresh = true
 		Kit.main.show_start()), "ghost", 15)
 	reset.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	nc[1].add_child(reset)
+	var menu := Kit.button("Title screen", func():
+		Game.save_game()
+		Kit.main.show_start(), "ghost", 15)
+	var row := Kit.hbox(6)
+	row.add_child(menu)
+	row.add_child(reset)
+	nc[1].add_child(row)
 	g.add_child(nc[0])
 
 # ---------- Dough ----------

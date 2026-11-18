@@ -14,9 +14,18 @@ Every system is built and playable. All artwork is placeholder shapes: see `ART_
 
 The project is 1280x720, landscape, Compatibility renderer, so it exports to Android, iOS and the web.
 
+## The title screen
+
+The game opens on the owner's painting of the van (`assets/ui/title.jpg`), brought to life in code
+(`scripts/title_screen.gd`): smoke and sparks rise from the oven's chimney, the fairy lights twinkle, the oven
+flickers and lights the cobbles, a shine crosses the sign every few seconds, and the picture drifts slowly. Tap the
+sign for a puff from the chimney. The menu is a chalkboard: **Continue** (your saved day, with its day, place and
+cash), **New game** (the story or free play; it asks before replacing a save), **Settings** (the 3D kitchen, looking
+by turning the phone, the retro look) and **Quit** on a computer. The phone's home page has a Title screen button.
+
 ## Story or free play
 
-The game opens on a choice. **Story** starts you as a pizzaiolo at Bella Napoli: the boss sets your checklist, you
+**New game** offers two starts. **Story** starts you as a pizzaiolo at Bella Napoli: the boss sets your checklist, you
 prep, set up the counter and make pizzas, and each shift is reviewed and paid into your savings. Promotion to senior
 pizzaiolo hands you the back of house (temperature logs, deliveries, rotation, cleaning down, dough, ordering and the
 junior's prep list). Then your savings buy a van and you go it alone. **Free play** starts straight away in the van.
@@ -197,6 +206,7 @@ and invoices are paid when they fall due.
 | `scripts/oven.gd` | Oven heat, fire, deck spots |
 | `scripts/service.gd` | A day's trading: customers, tickets, staff, reviews, the day's accounts |
 | `scripts/front_scene.gd`, `bench.gd`, `oven_view.gd`, `pizza_draw.gd` | Drawing and touch input for each part of service |
+| `scripts/title_screen.gd` | The animated title screen and its chalkboard menu |
 | `scripts/hub.gd`, `jobs_page.gd`, `suppliers_page.gd`, `stores_page.gd`, `dough_game.gd` | The management screens |
 | `scripts/prep_task.gd`, `clean_task.gd`, `shelf_task.gd` | Prepping, cleaning and unpacking by hand |
 | `scripts/rail_view.gd` | The rail of gastro pans above the bench (2D layout) |

@@ -304,6 +304,12 @@ boards at the prep station, day-dots on the tubs. What each item does in the rul
 
 ### 6. Screens and UI
 
+The game opens on the title screen (`scripts/title_screen.gd`): the owner's painting of the van
+(`assets/ui/title.jpg`) with smoke, sparks, twinkling fairy lights, a flickering oven, a shine across the sign and a
+slow drift, and a chalkboard menu (Continue, New game: story or free play, Settings, Quit on a computer). Wanted:
+music and a little sound (the fire crackling, chalk on the board), and a few more paintings to rotate (morning,
+rain, the restaurant) at the same framing.
+
 All colours, buttons, panels and labels come from `scripts/kit.gd`. Turning that into a Godot `Theme` restyles
 every screen at once. The supplier catalogue, stores and recipe cards are data-heavy; keep them readable on a phone.
 

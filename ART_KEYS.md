@@ -7,6 +7,16 @@ placeholder shape. No code changes. Example: key `bg.van` loads `assets/bg-van.p
 Sizes are in game units: the front-of-house scene is 640 x 320, the bench and board are 320 x 320,
 the oven is 400 x 320. Supply images at 3x those sizes or larger.
 
+## The title screen (`scripts/title_screen.gd`)
+
+`assets/ui/title.jpg` is the painting the game opens on: a 16:9 picture (any size; 1920 x 1080 or larger looks
+sharpest), shown filling the screen with a little cropped off the edges as it drifts. The code animates on top of
+it at fixed spots in the picture, in its own pixels (constants at the top of `title_screen.gd`, for the current
+1024 x 572 picture): the chimney's opening `CHIMNEY` (smoke, sparks, glow), the oven's mouth `OVEN` (flicker), the
+eight fairy-light bulbs `BULBS`, the sign's four corners `SIGN` (the shine, and the tap target) and the pool of light
+on the cobbles `POOL`. The chalkboard menu sits over the left third, so keep that part of a new picture quiet. A new
+painting with the same framing only needs those coordinates moved.
+
 ## 3D models for the first-person world (`scripts/fp/fp_world.gd`)
 
 Every key below has a first-pass model, generated in Blender by the scripts in `tools/models/` (see
