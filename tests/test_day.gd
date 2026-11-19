@@ -130,6 +130,7 @@ func run() -> void:
 	var made_bad := false
 	var answered := 0
 	var phone_orders := {}
+	var topped_up := {}                         # tickets whose short pans the bot has already refilled once
 	while is_instance_valid(svc) and not svc.done and guard < 30000:
 		guard += 1
 		if not svc.busy.is_empty():
@@ -166,11 +167,13 @@ func run() -> void:
 		if svc.t > 30 and not rang:
 			rang = true
 			svc.phones.append({"n": 1, "until": svc.t + 10.0})
-		# short on the rail: refill from the tubs, prep more, or 86 it
+		# short on the rail: refill from the tubs, prep more, or 86 it, once a ticket; then make it with what is there
+		# (a pan that covers a standard portion does not refill on a tap, so "extra cheese" can stay short: a player
+		# just carries on and taps the pan again when it runs dry)
 		if svc.bench == null and svc.busy.is_empty():
 			var refilled := false
 			for tk in svc.tickets:
-				if tk.state == "new" and tk.owner == "" and svc.sellable(tk.rec):
+				if tk.state == "new" and tk.owner == "" and svc.sellable(tk.rec) and not topped_up.has(tk.id):
 					var sh: Array = G.line_short(tk.rec)
 					if sh.size() > 0:
 						var id: String = sh[0]
@@ -178,11 +181,14 @@ func run() -> void:
 						elif svc.batch_raw(id) > 10.0: svc.prep_now(id, svc.batch_raw(id))
 						else: svc.eighty6[tk.rec.id] = true
 						refilled = true
+					topped_up[tk.id] = true
 					break
-			if refilled: continue
+			if refilled:
+				await process_frame
+				continue
 		if svc.bench == null and svc.oven.shelf.size() < 2:
 			for tk in svc.tickets:
-				if tk.state == "new" and tk.owner == "" and svc.sellable(tk.rec) and G.line_short(tk.rec).is_empty():
+				if tk.state == "new" and tk.owner == "" and svc.sellable(tk.rec) and (G.line_short(tk.rec).is_empty() or topped_up.has(tk.id)):
 					svc.claim(tk)
 					break
 			if svc.bench != null:

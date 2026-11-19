@@ -238,6 +238,47 @@ def sign():
         cyl(0.008, 0.012, (x, 0.115, 0.002), chrome(), axis="z", seg=8, name="eyelet")
 
 
+@model("timeclock")
+def timeclock():
+    """the clock you clock in and out on: a chunky staff clock on the wall above the pass (or the hatch), facing +Z,
+    its back on the wall at z 0 and its dial's centre at the origin. The game turns the hands to the time of day:
+    the parts named hand_h and hand_m each turn about their own origin (the dial's centre) and point to 12 at rest"""
+    R = 0.13
+    rim = mat("clock_rim", TOMATO, rough=0.42)
+    face = mat("clock_face", "#fbf8ef", rough=0.6)
+    ink = mat("clock_ink", CHARCOAL, rough=0.55)
+    cyl(R, 0.045, (0, 0, 0.0225), rim, axis="z", seg=40, bevel=0.014, name="rim")
+    cyl(R - 0.016, 0.006, (0, 0, 0.046), face, axis="z", seg=40, name="dial")
+    torus(R - 0.012, 0.006, (0, 0, 0.047), chrome(), seg=40, rseg=8, rot=(90, 0, 0), name="bezel")
+    # hour marks (long at 12, 3, 6, 9), little minute dots, and the four numbers
+    for i in range(12):
+        a = math.radians(i * 30)
+        L = 0.02 if i % 3 == 0 else 0.012
+        r0 = R - 0.03 - L / 2
+        box((0.007 if i % 3 == 0 else 0.005, L, 0.003), (math.sin(a) * r0, math.cos(a) * r0, 0.0505), ink, bevel=0,
+            rot=(0, 0, -i * 30), name="tick")
+    for i in range(60):
+        if i % 5 == 0: continue
+        a = math.radians(i * 6)
+        box((0.0026, 0.0026, 0.002), (math.sin(a) * (R - 0.032), math.cos(a) * (R - 0.032), 0.05), ink, bevel=0, name="dot")
+    for s, (x, y) in (("12", (0, 0.062)), ("3", (0.066, 0)), ("6", (0, -0.064)), ("9", (-0.066, 0))):
+        text(s, (x, y, 0.0505), ink, size=0.03, depth=0.002, name="numeral")
+    text("CLOCK IN", (0, -0.033, 0.0505), mat("clock_word", TOMATO, rough=0.6), size=0.012, depth=0.0015, name="word")
+    # the hands, each round its own pivot at the dial's centre, pointing to 12 (the game turns them)
+    for nm, length, width, z in (("hand_h", 0.044, 0.012, 0.0535), ("hand_m", 0.078, 0.008, 0.0565)):
+        root = empty(nm, (0, 0, z))
+        blade = box((width, length, 0.0025), (0, length / 2 - 0.004, z), ink, bevel=0.0012, name=nm + "_blade")
+        tip = cyl(width * 0.9, 0.0025, (0, length - 0.004, z), ink, axis="z", seg=12, name=nm + "_tip")
+        tail = box((width * 0.8, 0.018, 0.0025), (0, -0.011, z), ink, bevel=0.0012, name=nm + "_tail")
+        j = join([blade, tip, tail], nm + "_mesh")
+        j.data.transform(Matrix.Translation(-root.location))
+        j.parent = root
+    cyl(0.009, 0.008, (0, 0, 0.059), rim, axis="z", seg=16, bevel=0.002, name="pin")
+
+
+timeclock.keep = ("hand_h_mesh", "hand_m_mesh")
+
+
 @model("crates")
 def crates():
     """today's delivery by the back door: a taped box, a crate of tomatoes and a sack of flour"""

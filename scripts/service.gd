@@ -162,10 +162,13 @@ func _build_ui() -> void:
 	fp_mode = Game.s.get("view3d", true)
 	var top := Kit.hbox(12)
 	add_child(top)
-	# the clock is the control: tap it to close up early (at closing time the day ends by itself)
-	top_lbl.time = Kit.button("", _ask_close, "ghost", 20)
+	# the time. In 3D you clock out early on the clock above the pass; the 2D layout has no room, so its time is the
+	# button (at closing time the day ends by itself)
+	if fp_mode: top_lbl.time = Kit.label("", 20, Kit.INK)
+	else:
+		top_lbl.time = Kit.button("", _ask_close, "ghost", 20)
+		top_lbl.time.tooltip_text = "Tap the clock to close up early"
 	top_lbl.time.custom_minimum_size.x = 120
-	top_lbl.time.tooltip_text = "Tap the clock to close up early"
 	top.add_child(top_lbl.time)
 	clock = Kit.bar(0, Kit.CHEESE, 12)
 	clock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -453,7 +456,7 @@ func set_view(v: String) -> void:
 	if v == "board": tool = ""
 	dirty = true
 
-## the clock tapped: close up early?
+## the clock tapped (the one above the pass, or the 2D layout's): close up early?
 func _ask_close() -> void:
 	if done: return
 	Kit.main.confirm("Close early?", "Anyone still waiting leaves unserved, and anything half-made goes in the bin.", "Close up", func(): finish(false))

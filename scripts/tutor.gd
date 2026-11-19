@@ -215,6 +215,7 @@ func _point() -> void:
 	var at: String = steps[i].get("at", "") if i < steps.size() else ""
 	hl.visible = false
 	if w != null: w.set_highlight(null)
+	if at == "" or at.begins_with("hud:") or w == null: _keep_clear(null, null)
 	if at == "": return
 	if at.begins_with("hud:"):
 		var c: Control = _hud(at.substr(4))
@@ -225,7 +226,22 @@ func _point() -> void:
 			hl.modulate.a = 0.6 + 0.4 * sin(Time.get_ticks_msec() / 150.0)
 			hl.visible = true
 		return
-	if w != null: w.set_highlight(w.node_for(at))
+	if w != null:
+		var node = w.node_for(at)
+		w.set_highlight(node)
+		_keep_clear(w, node)
+
+## the panel never covers what Marco points at: when that is behind it at the top of the screen (the clock above the
+## pass), the panel drops to the bottom, above the station buttons
+func _keep_clear(w, node) -> void:
+	var low := false
+	if w != null and node is Node3D and is_instance_valid(node) and w.cam != null and not w.cam.is_position_behind(node.global_position):
+		var vp: Viewport = w.get_viewport()
+		var p: Vector2 = w.cam.unproject_position(node.global_position)
+		var host = vp.get_parent()
+		if host is Control: p = host.get_global_rect().position + p * host.size / Vector2(vp.size)
+		low = Rect2(panel.global_position.x, 62.0, panel.size.x, panel.size.y).grow(50.0).has_point(p)
+	panel.position.y = (get_viewport().get_visible_rect().size.y - 84.0 - panel.size.y) if low else 62.0
 
 func _hud(what: String) -> Control:
 	var k = _kitchen()
@@ -277,7 +293,7 @@ func _day1() -> Array:
 		{"say": "Morning! I'm %s, and this is %s. Drag your finger across the screen to look around the kitchen." % [Story.BOSS, Story.EMPLOYER],
 			"setup": func(): mark.yaw = _world().yaw,
 			"done": func(): return abs(angle_difference(deg_to_rad(_world().yaw), deg_to_rad(mark.yaw))) > deg_to_rad(30.0) or _view() != "front"},
-		{"say": "%s has done the prep and set up the counter. Today you do one job: you stretch the bases, and I do the rest. When you are ready, tap the sign above the pass (or the clock, top left) to open." % Story.JUNIOR, "at": "job:open",
+		{"say": "%s has done the prep and set up the counter. Today you do one job: you stretch the bases, and I do the rest. When you are ready, clock in: tap the clock above the pass and we open." % Story.JUNIOR, "at": "job:open",
 			"done": func(): return _svc() != null},
 		{"say": "Tickets hang on the rail above the counter. Here is your first: tap it to start it. The dough ball goes on the marble.", "at": "ticket",
 			"setup": func(): _svc().training_order("margherita"),

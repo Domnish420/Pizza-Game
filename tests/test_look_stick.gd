@@ -1,6 +1,6 @@
 extends "res://tests/bot.gd"
-## The look stick turns your head and settles on a station when you let go, a tap looks back at your station, and
-## the clock opens the van in the morning and asks before closing early in service.
+## The look stick turns your head and settles on a station when you let go, stays put when you let go away from the
+## stations, and a tap looks back at your station.
 
 func push(stk: Control, v: Vector2, secs: float) -> void:
 	var e := click()
@@ -43,7 +43,6 @@ func run() -> void:
 	var k = m.screen()
 	var w = k.world
 	var stk: Control = k.find_children("*", "LookStick", true, false)[0]
-	check(k.act_btn.text.ends_with("open at 11:30"), "in the morning the clock says when you open", k.act_btn.text)
 	var yaw0: float = w.yaw
 
 	await push(stk, Vector2(1, 0), 0.4)
@@ -73,25 +72,3 @@ func run() -> void:
 	release(stk)
 	await frames(40)
 	check(w.cur_view() == "oven" and on_station(w), "a tap looks back at your station", [w.cur_view(), int(w.yaw)])
-
-	# the clock is the control
-	k.act_btn.pressed.emit()
-	await frames(5)
-	check(m.modal_root.visible, "tapping the clock in the morning asks to open (the prep is not done)")
-	await shot("open-ask")
-	m.close_modal()
-	await frames(3)
-	k._go_open()
-	await frames(5)
-	m.close_modal()
-	await frames(5)
-	var svc = m.screen()
-	var in_service: bool = svc.get_script().get_global_name() == "ServiceScreen"
-	check(in_service and svc.top_lbl.time.text.contains(":"), "open: service runs and the clock shows the time",
-		svc.top_lbl.time.text if in_service else svc)
-	await shot("service")
-	svc.top_lbl.time.pressed.emit()
-	await frames(5)
-	check(m.modal_root.visible and press_modal("Cancel"), "tapping the clock in service asks before closing early")
-	await frames(3)
-	check(is_instance_valid(svc) and not svc.done, "cancel keeps the van open")

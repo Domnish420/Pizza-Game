@@ -38,7 +38,7 @@ SIZE = 512
 ROOMS = ("room.van", "room.kitchen", "dining")
 # hung on a wall, a door, a rail or the ceiling of another model: may float in its own sheet
 MOUNTED = {"counter": "ticket rail on the wall", "counter.side": "ladle rail and peel on the wall",
-           "prep": "tablet, shelf and jars on the wall", "thermometer": "on the fridge door", "clipboard": "on the wall",
+           "prep": "tablet, shelf and jars on the wall", "thermometer": "on the fridge door", "clipboard": "on the wall", "timeclock": "on the wall above the pass",
            "sign": "hangs in the hatch", "boxes": "wall shelf", "ticket": "clipped to the ticket rail",
            "ladle.*": "hangs on the ladle rail", "hand.*": "held by the camera", "oven_door.*": "shuts the oven's mouth"}
 
@@ -381,7 +381,8 @@ def scene(name):
                  ("freezer", (1.3, 0, 1.08)), ("drystore", (0.42, 0, 1.08)), ("mop", (-1.28, 0, 0.25)),
                  ("spray", (0.62, 0.92, -0.52)), ("trapbox", (-1.3, 0, 1.12)), ("boxes", (1.32, 1.8, -1.0)),
                  ("bowl" if van else "mixer", (-1.38, 0.92, -1.0)), ("dough_trays", (1.47, 0.92, -0.38)),
-                 ("clipboard", (-0.98, 1.55, -1.08)), ("sign", (0.58, 1.66, -1.06))]:
+                 ("clipboard", (-0.98, 1.55, -1.08)), ("sign", (0.58, 1.66, -1.06)),
+                 ("timeclock", (0.0, 2.11, -1.087))]:
         if k == "freezer" and van: continue
         load(k, p)
     n = 6

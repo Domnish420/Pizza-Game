@@ -21,7 +21,8 @@ warnings at exit are ignored). A failure prints the checks that failed and the e
 | `wood_oven` | The wood oven's physics: the fire, the dome, the deck, pizzas baking faster by the fire and charring unless turned, feeding it, lighting it in the morning | 5 s |
 | `traps` | Pest control on the floor plan: traps by the entry points catch more, droppings, laying a trap on the plan | 5 s |
 | `boxes` | Folding pizza boxes by hand, in order | 5 s |
-| `look_stick` | The look stick (turn, settle on a station, stay put elsewhere, tap to recentre) and the clock as the open / close control | 30 s |
+| `look_stick` | The look stick: turn, settle on a station, stay put elsewhere, tap to recentre | 25 s |
+| `clock` | The clock above the hatch: its hands keep time; tapped like a finger, it clocks you in (opens), asks before clocking out early in service, and clocks you out at night (locks up); the on-screen time is only a readout | 20 s |
 | `senior_training` | The senior's training day: every back-of-house job moves Marco's guide on, and it finishes | 1 min |
 | `day` | A whole day in the van in 3D: the morning jobs, a full service shaped by touch, the phone, a complaint, the evening, dough, locking up, the next delivery | 1-2 min |
 | `day_2d` | The same day in the classic 2D layout | 1-2 min |

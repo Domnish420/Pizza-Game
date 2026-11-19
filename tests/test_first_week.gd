@@ -47,6 +47,7 @@ func run_day(n: int) -> void:
 		check(T.kind == "" and G.s.story.get("guided_1", false), "day 1: the guide is over")
 		svc.set_view("bench")
 	var guard := 0
+	var topped_up := {}                         # tickets whose short pans the bot has already refilled once
 	while is_instance_valid(svc) and not svc.done and guard < 6000:
 		guard += 1
 		if not svc.busy.is_empty():
@@ -55,18 +56,20 @@ func run_day(n: int) -> void:
 		if svc.phones.size() > 0:                # answer the phone when it rings
 			svc.answer_phone()
 			continue
-		# a pan running out on the rail: refill it from the tubs, or prep more
+		# a pan running out on the rail: refill it from the tubs, or prep more (once a ticket; then make it with what is
+		# there, as a player would: see test_day.gd)
 		if svc.bench == null:
 			for t in svc.tickets:
-				if t.state == "new" and t.owner == "" and svc.sellable(t.rec):
+				if t.state == "new" and t.owner == "" and svc.sellable(t.rec) and not topped_up.has(t.id):
 					var sh: Array = G.line_short(t.rec)
 					if sh.size() > 0:
 						if S.refill_source(sh[0]) > 0.5: svc.rail_tap(S.rail_slot(sh[0]))
 						elif svc.batch_raw(sh[0]) > 10.0: svc.prep_now(sh[0], svc.batch_raw(sh[0]))
+					topped_up[t.id] = true
 					break
 		if svc.bench == null:
 			for t in svc.tickets:
-				if t.state == "new" and t.owner == "" and svc.sellable(t.rec) and G.line_short(t.rec).is_empty() and t.rec.get("make", "pizza") == "pizza":
+				if t.state == "new" and t.owner == "" and svc.sellable(t.rec) and (G.line_short(t.rec).is_empty() or topped_up.has(t.id)) and t.rec.get("make", "pizza") == "pizza":
 					svc.claim(t)
 					break
 		if svc.bench != null:

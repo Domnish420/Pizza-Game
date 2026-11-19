@@ -84,12 +84,14 @@ and every job is something in the room: the crates at the back door (put the del
 counter (prep), the sink (wash up), the pans on the rail (set up the counter), the mixer (make dough), the proving
 trays, the mop and the spray (clean), the box of traps (pest control on the floor plan), the pizza boxes on the shelf
 (fold them), the fridge thermometer (the temperature log), the fridge and dry store (stores and vents), the clipboard
-(the checklist) and the sign at the hatch (open up in the morning, lock up and go home at night). Labels over them say
-how each stands. Ordering, KitBox, the menu, staff and premises are on your phone (the Phone button).
+(the checklist) and the clock above the hatch (clock in to open, clock out to lock up and go home). Labels over them
+say how each stands; the sign at the hatch tells the customers whether you are open. Ordering, KitBox, the menu, staff and premises are on your phone (the Phone button).
 
-**The clock runs the day.** It sits top left: between services it says what tapping it does ("07:00 · open at
-11:30", then "21:15 · lock up" at night) and tapping it does that; in service, tap it to close up early (at closing
-time the day ends by itself). There are no separate open or close buttons.
+**You clock in and out on the clock.** Every scene has a clock on the wall above the hatch (above the pass in a
+restaurant), and its hands show the time. Tap it in the morning to clock in and open ("Clock in · open at 11:30"
+beside it), during service to clock out early (it asks first; at closing time the day ends by itself), and at night to
+clock out, lock up and go home. There are no open or close buttons: the time on the screen and on the phone is only a
+readout. (The classic 2D layout, kept for testing, has no room to look round, so there its time is the button.)
 
 **Looking around.** A thumb stick in the bottom-left corner turns your head (push further to turn faster); let go
 near a station and you settle on it, tap it to look back at your station. It never touches the work, so looking and

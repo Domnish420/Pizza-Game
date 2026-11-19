@@ -48,6 +48,10 @@ var view_closed := "front"             # where you are looking between services
 var ctrls: Dictionary
 var job_labels := {}                   # job -> Label3D saying how that job stands
 var job_nodes := {}                    # job -> Node3D (things that change with the state)
+## the clock above the pass (the hatch in the van): you clock in and out on it; the game turns its hands
+const CLOCK_AT := Vector3(0.0, 2.11, -1.087)
+var clock_hands := []                  # [hour hand, minute hand], each turning about the dial's centre
+var sign_text: Label3D                 # what the sign at the hatch tells the customers (OPEN, OPEN AT 11:30, CLOSED)
 var job_t := 0.0
 var dine := false
 var retro := false                     # the Retro look: lighting per polygon corner, as 2000s consoles did
@@ -822,12 +826,12 @@ func _back_of_house() -> void:
 	var cb := _prop("clipboard", Vector3(-0.98, 1.55, -1.08), _mk_clipboard)
 	_job("checklist", cb, Vector3(0.26, 0.34, 0.06), Vector3.ZERO, Vector3(0, 0.27, 0.05))
 	var sign := _prop("sign", Vector3(0.58, 1.66, -1.06), _mk_sign)
-	_job("open", sign, Vector3(0.4, 0.24, 0.06), Vector3.ZERO, Vector3(0, 0.0, 0.04))
-	job_labels.open.billboard = BaseMaterial3D.BILLBOARD_DISABLED
-	job_labels.open.fixed_size = false
-	job_labels.open.font_size = 44
-	job_labels.open.pixel_size = 0.0016
-	job_labels.open.outline_size = 0
+	sign_text = _label("", Vector3(0, 0.0, 0.04), 44, Color("f4c64f"), sign, false, 0.0016)
+	# the clock above the pass: tap it to clock in (open up), to clock out early in service, and to clock out at night
+	var clk := _prop("timeclock", CLOCK_AT, _mk_clock)
+	_job("open", clk, Vector3(0.3, 0.3, 0.1), Vector3(0, 0, 0.04), Vector3(0.17, 0, 0.06))
+	job_labels.open.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT       # beside the clock, clear of the marker under it
+	clock_hands = [clk.find_child("hand_h", true, false), clk.find_child("hand_m", true, false)]
 
 func _mk_fridge(r: Node3D) -> void:
 	_box(Vector3(0.66, 1.86, 0.66), Vector3(0, 0.93, 0), Color("eef1f2"), r, 0.3, 0.2)
@@ -886,6 +890,18 @@ func _mk_clipboard(r: Node3D) -> void:
 	_box(Vector3(0.24, 0.32, 0.015), Vector3.ZERO, Color("8a6a40"), r)
 	_box(Vector3(0.21, 0.27, 0.005), Vector3(0, -0.01, 0.01), Color("fbf8ef"), r)
 
+func _mk_clock(r: Node3D) -> void:
+	var dial := _cyl(0.13, 0.04, Vector3(0, 0, 0.02), Color("e0533a"), r)
+	dial.rotation_degrees.x = 90
+	var face := _cyl(0.115, 0.01, Vector3(0, 0, 0.045), Color("fbf8ef"), r)
+	face.rotation_degrees.x = 90
+	for h in [["hand_h", 0.045, 0.012], ["hand_m", 0.075, 0.008]]:
+		var n := Node3D.new()
+		n.name = h[0]
+		n.position = Vector3(0, 0, 0.055)
+		r.add_child(n)
+		_box(Vector3(h[2], h[1], 0.003), Vector3(0, h[1] / 2.0, 0), Color("33383b"), n)
+
 func _mk_sign(r: Node3D) -> void:
 	_box(Vector3(0.4, 0.22, 0.02), Vector3.ZERO, Color("1b2a1f"), r)
 
@@ -940,11 +956,19 @@ func _sync_jobs() -> void:
 	var done := items.filter(func(x): return x.done).size()
 	L.checklist.text = "%s checklist %d/%d" % ["Opening" if morning else "Closing", done, items.size()]
 	L.checklist.modulate = _ok_col(done == items.size(), true)
-	if svc != null: L.open.text = "OPEN"
-	elif G.s.hygiene.get("closed_day", -1) == G.s.day: L.open.text = "CLOSED\ntoday"
-	elif morning: L.open.text = "OPEN AT\n%s" % Data.hhmm(max(Day.now(), Day.open_time()))
-	else: L.open.text = "LOCK UP"
-	L.open.modulate = Color("f4c64f") if svc == null else Kit.BASIL
+	var closed_today: bool = G.s.hygiene.get("closed_day", -1) == G.s.day
+	var late: bool = morning and Day.now() > Day.open_time()
+	if svc != null: L.open.text = ""
+	elif closed_today and morning: L.open.text = "Closed today"
+	elif late: L.open.text = "Clock in · open now"
+	elif morning: L.open.text = "Clock in · %s %s" % ["service at" if Story.employed() else "open at", Data.hhmm(Day.open_time())]
+	else: L.open.text = "Clock out · %s" % ("go home" if Story.employed() else "lock up")
+	L.open.modulate = Kit.CHEESE
+	if sign_text != null:
+		if svc != null: sign_text.text = "OPEN"
+		elif closed_today or not morning: sign_text.text = "CLOSED" + ("\ntoday" if closed_today and morning else "")
+		else: sign_text.text = "OPEN AT\n%s" % Data.hhmm(max(Day.now(), Day.open_time()))
+		sign_text.modulate = Kit.BASIL if svc != null else Color("f4c64f")
 	if L.has("oven"):
 		var wood: bool = Data.OVENS[G.tier("oven").type].feeds
 		var lt: Dictionary = G.s.get("oven_lit", {})
@@ -968,7 +992,7 @@ func _sync_jobs() -> void:
 	for j in L:
 		if j in ["open", "pass", "bin", "sheeter", "logs"]:
 			match j:
-				"open": L[j].visible = true
+				"open": L[j].visible = svc == null          # the clock's label; in service the clock just keeps time
 				"logs": L[j].visible = svc != null and cur_view() == "oven"
 				"pass": L[j].visible = svc != null and (svc.board.size() > 0 or svc.tickets.any(func(tk): return tk.state == "pass"))
 				"bin": L[j].visible = svc != null and cur_view() in ["bench", "board"] and (svc.bench != null or svc.board.size() > 0)
@@ -1045,6 +1069,10 @@ func _look_at(v: String, snap: bool = false) -> void:
 # ---------- every frame ----------
 func _process(dt: float) -> void:
 	time += dt
+	if clock_hands.size() == 2 and clock_hands[0] != null and clock_hands[1] != null:
+		var mins: float = svc.minute() if svc != null else Day.now()
+		clock_hands[0].rotation.z = -TAU * fmod(mins, 720.0) / 720.0
+		clock_hands[1].rotation.z = -TAU * fmod(mins, 60.0) / 60.0
 	if cur_view() != last_view: _look_at(cur_view())
 	var g := Input.get_gyroscope()
 	if g.length() > 0.02 and Game.s.get("gyro", true):
@@ -1524,8 +1552,9 @@ func _sync_marker() -> void:
 	if marker_on == null or not is_instance_valid(marker_on):
 		marker.visible = false
 		return
-	# tickets hang high on the rail, so their marker points up from underneath (above would be off the top of the view)
-	var under: bool = marker_on.get_parent() == ticket_root
+	# tickets hang high on the rail and the clock is high on the wall, so their marker points up from underneath
+	# (above would be off the top of the view, or through the ceiling)
+	var under: bool = marker_on.get_parent() == ticket_root or marker_on.global_position.y > 1.9
 	var top := -0.36 if under else (0.32 if marker_on is FPSurface else 0.45)
 	marker.global_position = marker_on.global_position + Vector3(0, top + sin(time * 5.0) * 0.03, 0)
 	marker.rotation = Vector3(PI if under else 0.0, time * 2.0, 0.0)
@@ -1661,6 +1690,9 @@ func _hand(index: int, at) -> void:
 	hands[i].target = at
 
 func _tap(act: Dictionary) -> void:
+	if act.get("job", "") == "open" and svc != null:
+		svc._ask_close()                  # the clock in service: clock out early?
+		return
 	if act.kind == "job" or svc == null:
 		if kitchen != null: kitchen.job(act.get("job", act.kind), act)
 		elif act.get("job", "") == "crates": svc.set_view("prep")

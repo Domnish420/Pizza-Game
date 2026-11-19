@@ -121,8 +121,11 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
 - **The hands** (`hand.right`, `hand.left`): just hands, no forearms (the owner found the arms got in the way of the
   pizza). The right hand follows your first finger on a surface and the left your second (two-finger stretching uses
   both). Poses: open, pinch, grip; driven by which tool is in use (`svc.tool`, `svc.view`).
-- **The HUD is deliberately sparse**: the clock is the open / close / lock-up control (top left), the recipe card is
-  short unless you ask for More, and labels in the room show only when they matter. Keep it that way.
+- **The clock on the wall** (`fp.timeclock`, above the hatch or the pass, in every scene): you clock in on it to open,
+  clock out early in service, and clock out at night to lock up. Its hands show the game's time. The owner wants a
+  clock in each scene for this, rather than buttons on the screen.
+- **The HUD is deliberately sparse**: the time is a readout (no open or close buttons), the recipe card is short
+  unless you ask for More, and labels in the room show only when they matter. Keep it that way.
 - **The surfaces**: the marble bench, the cutting board, the oven mouth and the prep tablet each show the game's 2D
   control (Bench, OvenView, the prep list) rendered onto a flat quad, with touches projected through. Every mechanic
   already works in 3D this way.

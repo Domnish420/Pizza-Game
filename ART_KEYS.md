@@ -67,7 +67,8 @@ their own origin (base at y = 0). If no model exists for a key, the game builds 
 | `fp.boxes` | A wall shelf of pizza boxes, at (1.32, 1.8, -1.0). The two stacks are nodes named `flat` and `folded`, each with its origin at its base: the game scales them up and down with stock |
 | `fp.mixer`, `fp.bowl` | The dough mixer (any mixer upgrade) or the mixing bowl, on the prep counter at (-1.38, 0.92, -1.0), front toward +X |
 | `fp.dough_trays` | Stacked see-through proving trays with dough balls in each, a clear lid on top, at (1.47, 0.92, -0.38) |
-| `fp.clipboard`, `fp.sign` | The checklist clipboard and the OPEN / LOCK UP sign at the hatch (the text is drawn by code 4 cm in front of the sign) |
+| `fp.clipboard`, `fp.sign` | The checklist clipboard and the sign at the hatch that tells the customers OPEN / OPEN AT 11:30 / CLOSED (the text is drawn by code 4 cm in front of the sign) |
+| `fp.timeclock` | The clock you clock in and out on, on the wall above the hatch (the pass in a restaurant) at 0, 2.11, -1.087, facing +Z, its back on the wall at z 0 and the dial's centre at the origin, about 26 cm across. The game turns the parts named `hand_h` and `hand_m` about their own origins (the dial's centre; they point to 12 at rest), so keep those names and pivots |
 
 ## Front of house, classic 2D layout (`scripts/front_scene.gd`)
 

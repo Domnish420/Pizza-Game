@@ -16,7 +16,7 @@ extends Control
 ##   the fridge thermometer           write the temperature in the log
 ##   the fridge, the dry store        the Stores page: stock, vents, rotation
 ##   the clipboard                    the checklist (the Jobs page)
-##   the sign at the hatch            open for service in the morning; lock up and go home in the evening
+##   the clock above the pass         clock in to open for service; clock out to lock up and go home
 ##   the oven                         the Kitchen page (ovens and equipment)
 ##
 ## Everything else (ordering, KitBox, the menu, staff, premises) is on your phone: the Phone button opens the same
@@ -30,7 +30,7 @@ var hub: Hub
 var phone: Control
 var top_l: Label
 var cash_l: Label
-var act_btn: Button
+var clock_l: Label                # the time, and when you open (you clock in on the clock above the pass)
 var phone_btn: Button
 var list_box: VBoxContainer
 var list_panel: PanelContainer
@@ -59,12 +59,12 @@ func _build() -> void:
 	var col := Kit.vbox(4)
 	col.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(col)
-	# the strip along the top: the clock (tap it to open, or to lock up at night), where and when, your money, the phone
+	# the strip along the top: the time, where and when, your money, the phone (you open and lock up on the clock
+	# above the pass, in the room)
 	var top := Kit.hbox(10)
 	col.add_child(top)
-	act_btn = Kit.button("", func(): job("open", {}), "danger", 20)
-	act_btn.tooltip_text = "Tap the clock to open (or, at night, to lock up)"
-	top.add_child(act_btn)
+	clock_l = Kit.label("", 19, Kit.CHEESE)
+	top.add_child(clock_l)
 	top_l = Kit.label("", 17, Kit.MUTED)
 	top_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_l.clip_text = true
@@ -167,12 +167,12 @@ func _refresh() -> void:
 	var late: bool = morning and Day.now() > Day.open_time()
 	top_l.text = "%s  ·  %s  ·  Level %d" % [Story.EMPLOYER if Story.employed() else G.venue().name, "%s day %d" % [Data.DAY_SHORT[G.weekday()], G.s.day], G.s.level]
 	cash_l.text = ("Savings " + Kit.money(G.s.story.savings)) if Story.employed() else Kit.money(G.s.cash)
-	# the clock: the time now, and what tapping it does
+	# the time now, and what is next
 	var now := Data.hhmm(Day.now())
-	if G.s.hygiene.get("closed_day", -1) == G.s.day and morning: act_btn.text = "%s  ·  closed today" % now
-	elif morning and late: act_btn.text = "%s  ·  open now" % now
-	elif morning: act_btn.text = "%s  ·  %s %s" % [now, "service at" if Story.employed() else "open at", Data.hhmm(Day.open_time())]
-	else: act_btn.text = "%s  ·  %s" % [now, "clock off" if Story.employed() else "lock up"]
+	if G.s.hygiene.get("closed_day", -1) == G.s.day and morning: clock_l.text = "%s  ·  closed today" % now
+	elif morning and late: clock_l.text = "%s  ·  open now" % now
+	elif morning: clock_l.text = "%s  ·  %s %s" % [now, "service at" if Story.employed() else "open at", Data.hhmm(Day.open_time())]
+	else: clock_l.text = "%s  ·  %s" % [now, "clock off" if Story.employed() else "lock up"]
 	for k in tab_btns:
 		var on: bool = world.cur_view() == k
 		tab_btns[k].add_theme_stylebox_override("normal", Kit.box(Kit.PANEL2 if on else Kit.PANEL, 10, 8))

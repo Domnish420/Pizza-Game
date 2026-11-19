@@ -14,18 +14,6 @@ def _canopy():
         box((0.52, 0.004, 0.012), (1.36, 1.908, -0.2 + i * 0.24), steel_dark(), name="filter_bar")
 
 
-def _clock(pos):
-    face = mat("clock_face", "#fbfaf6", rough=0.6)
-    cyl(0.16, 0.03, pos, black(), axis="z", seg=32, bevel=0.008, name="clock_rim")
-    cyl(0.145, 0.006, (pos[0], pos[1], pos[2] - 0.016), face, axis="z", seg=32, name="clock_face")
-    for i in range(12):
-        a = i * math.pi / 6
-        L = 0.03 if i % 3 == 0 else 0.016
-        box((0.008, L, 0.003), (pos[0] + math.sin(a) * 0.12, pos[1] + math.cos(a) * 0.12, pos[2] - 0.02), black(), rot=(0, 0, -math.degrees(a)), name="tick")
-    box((0.01, 0.08, 0.003), (pos[0] + 0.02, pos[1] + 0.03, pos[2] - 0.023), black(), rot=(0, 0, -35), name="hand_h")
-    box((0.006, 0.11, 0.003), (pos[0] - 0.03, pos[1] + 0.04, pos[2] - 0.025), black(), rot=(0, 0, 40), name="hand_m")
-
-
 def _extinguisher(pos):
     x, y, z = pos
     cyl(0.07, 0.42, (x, y + 0.21, z), red(), seg=20, bevel=0.03, name="ext")
@@ -122,8 +110,8 @@ def room(dine):
     band = mat("band", TOMATO if not dine else BASIL, rough=0.45)
     for (sx, sz, cx, cz) in [(3.24, 0.012, 0, 1.274), (0.012, 2.4, 1.614, 0.08), (0.012, 1.48, -1.614, -0.4), (0.012, 0.15, -1.614, 1.22)]:
         box((sx, 0.07, sz), (cx, 1.06, cz), band, bevel=0, name="band")
-    # on the back wall: a clock, the fuse box, a paper towel dispenser, a fire extinguisher
-    _clock((-0.16, 1.98, 1.28))
+    # on the back wall: the fuse box, a paper towel dispenser, a fire extinguisher (the clock is its own model,
+    # fp.timeclock, above the pass: you tap it to clock in and out)
     box((0.3, 0.36, 0.1), (-1.25, 1.92, 1.25), mat("fusebox", "#e6e6e2", rough=0.5), bevel=0.01, name="fusebox")
     box((0.26, 0.3, 0.12), (-0.16, 1.45, 1.22), white(), bevel=0.02, name="towels")
     box((0.18, 0.02, 0.01), (-0.16, 1.32, 1.16), mat("towel_paper", "#fbfbf8", rough=0.9), name="towel_end")
