@@ -501,7 +501,7 @@ func spawn_party() -> int:
 	elif type == "take" and randf() < 0.15:
 		phones.append({"n": n, "until": t + 10.0})
 		r.calls += 1
-		Art.sfx("ding")
+		Art.sfx("ring")
 		dirty = true
 		return n
 	if type == "deliv":
@@ -1286,7 +1286,7 @@ func step(dt: float) -> void:
 	if Day.next_arrival() >= 0 and Day.next_arrival() <= now:
 		for nt in Day.arrivals(now): r.notes.append(nt)
 		Kit.main.toast("A delivery is at the back door")
-		Art.sfx("ding")
+		Art.sfx("knock")
 		dirty = true
 	_crew_step(dt)
 	# the inspector
@@ -1314,7 +1314,7 @@ func step(dt: float) -> void:
 		while app_acc >= 1.0:
 			app_acc -= 1.0
 			tablet.append({"n": [1, 1, 2, 2, 3].pick_random(), "until": t + float(Data.APP.accept_secs)})
-			Art.sfx("ding")
+			Art.sfx("app")
 			dirty = true
 	for o in tablet.duplicate():
 		if t > o.until:
@@ -1658,7 +1658,7 @@ func claim(tk: Dictionary) -> void:
 		if lo > 0: ladle_oz = lo
 	tool = ""
 	set_view("bench")
-	Art.sfx("tap")
+	Art.sfx("ticket", true)
 
 func _first_tool(pz: Pizza) -> String:
 	for id in [pz.rec.sauce, pz.rec.cheese] + pz.rec.tops:
@@ -1699,7 +1699,7 @@ func _carry_to_oven(say: bool) -> Pizza:
 	bench = null
 	tool = ""
 	dirty = true
-	Art.sfx("tap")
+	Art.sfx("peel", true)
 	return pz
 
 # ---------- Marco's part of your pizzas (the first days of the story) ----------
@@ -1774,9 +1774,11 @@ func apply_tool(p: Vector2, prev) -> void:
 	var it: Dictionary = Data.ING[tool]
 	if it.kind == "top":
 		if pz.add_top(tool, p, on_board) == "out": _ran_out()
+		else: Art.sfx("sprinkle", true, 0.12)
 		return
 	var g0: float = pz.grams.get(tool, 0.0)
 	_apply_spread(pz, it, p, prev)
+	if it.kind != "sauce" and pz.grams.get(tool, 0.0) > g0: Art.sfx("sprinkle", true, 0.25)      # cheese scattered on
 	if on_board: pz.late[tool] = pz.late.get(tool, 0.0) + pz.grams.get(tool, 0.0) - g0      # sauce or cheese after the oven
 
 ## sauce from the ladle or cheese by hand, spread where your finger goes
@@ -1787,7 +1789,7 @@ func _apply_spread(pz: Pizza, it: Dictionary, p: Vector2, prev) -> void:
 			pz.drop_sauce(ladle_ing, ladle_g, p)
 			ladle_g = 0.0
 			dirty = true
-			Art.sfx("tap")
+			Art.sfx("plop", true)
 			return
 		if prev == null:
 			if pz.sauce == "": Kit.main.toast("Pick a ladle and scoop the sauce first")
@@ -1840,7 +1842,7 @@ func scoop() -> void:
 	ladle_ing = id
 	tool = id
 	dirty = true
-	Art.sfx("tap")
+	Art.sfx("scoop", true)
 	if got < want * 0.95: Kit.main.toast("The pan only had %s left. Refill it." % Data.oz_text(got), true)
 
 ## you lift your finger off the bench
@@ -1875,7 +1877,7 @@ func cut(a: Vector2, b: Vector2) -> void:
 		if pz.cuts.is_empty(): Kit.main.toast("No pizza wheel: cutting with a knife leaves ragged slices")
 	if dd < pz.base.R * 0.35 and pz.cuts.size() < 4:
 		pz.cuts.append({"a": a, "b": b, "d": dd})
-		Art.sfx("tap")
+		Art.sfx("cut", true)
 	elif dd >= pz.base.R * 0.35:
 		Kit.main.toast("Cut through the middle", true)
 
@@ -1888,7 +1890,7 @@ func oven_load(pz: Pizza, slot: int, at: Vector2 = Vector2.INF) -> void:
 	oven.load_pizza(pz, slot, false, at)
 	pz.tk.state = "oven"
 	dirty = true
-	Art.sfx("tap")
+	Art.sfx("peel", true)
 
 func oven_pull(o: Dictionary, by_marco: bool = false) -> void:
 	if not Equip.has("peel") and not o.auto:
@@ -1900,7 +1902,7 @@ func oven_pull(o: Dictionary, by_marco: bool = false) -> void:
 	board.append(o.pz)
 	if not by_marco and view == "oven" and oven.mine().is_empty() and oven.shelf.is_empty(): set_view("board")
 	dirty = true
-	Art.sfx("tap")
+	Art.sfx("peel", true)
 
 ## a wood oven at opening: lit this morning (the oven job), lit by the boss if you work for one, or stone cold
 func _light_for_service() -> void:
@@ -1922,7 +1924,9 @@ func _light_for_service() -> void:
 
 func add_log() -> void:
 	var lg := Stock.take("wood", 1.0)
-	if lg.got >= 1.0: oven.add_log(lg.g)
+	if lg.got >= 1.0:
+		oven.add_log(lg.g)
+		Art.sfx("log", true)
 	else: Kit.main.toast("No firewood left", true)
 
 func serve(by_marco: bool = false) -> void:
@@ -1945,6 +1949,7 @@ func serve(by_marco: bool = false) -> void:
 	a.mine = true
 	to_pass(pz.tk, a)
 	board.pop_front()
+	Art.sfx("bell")                         # the pass bell: it is going out
 	_show_result(pz, a)
 	if board.is_empty() and not by_marco:
 		set_view("bench" if bench != null else ("oven" if oven.mine().size() + oven.shelf.size() > 0 else "front"))
@@ -2244,7 +2249,14 @@ func _build_side() -> void:
 			var want_oz := int(round(pz.spec_of(pz.rec.sauce) / Data.OZ_G))
 			if pz.sauce == "" and Game.ladles(want_oz) == 0: return ["You have no %d oz ladle. Use a smaller one more than once, or order one from KitBox." % want_oz, Kit.TOMATO]
 			if pz.sauce == "": return ["%s %s of %s, drop it in the middle, then spread it out to the rim with the back of the ladle." % ["Tap the sauce pan to scoop" if fp_mode else "Scoop", Data.oz_text(pz.spec_of(pz.rec.sauce)), Data.ING[pz.rec.sauce].name.to_lower()], Kit.INK]
-			return ["Spread the sauce out evenly to the rim: drag the back of the ladle round in a spiral (%d%% covered)." % (pz.cov(pz.sauce_amt) * 100), Kit.MUTED], 15)
+			var cov: float = pz.cov(pz.sauce_amt)
+			if cov < 0.95: return ["Spread the sauce out evenly to the rim: drag the back of the ladle round in a spiral (%d%% covered)." % (cov * 100), Kit.MUTED]
+			# the sauce is done: say what is still to go on, then where it goes next
+			var left := []
+			for id in pz.rec.spec:
+				if id != pz.rec.sauce and not Data.ING[id].after and pz.grams.get(id, 0.0) < pz.spec_of(id) * 0.9: left.append(Data.ING[id].name.to_lower())
+			if left.size() > 0: return ["Sauce done. Now the %s: tap the pan, then put it on where your finger goes." % " and ".join(left.slice(0, 2)), Kit.INK]
+			return ["All on. Take it to the oven to bake.", Kit.BASIL], 15)
 
 func _side_oven() -> void:
 	info.add_child(Kit.label(oven.tier.n, 20))
@@ -2547,7 +2559,7 @@ func _build_prep() -> void:
 
 func _side_prep() -> void:
 	info.add_child(Kit.label("Prep and the rail", 21))
-	info.add_child(Kit.label("Every topping comes out of a pan on the counter rail. Empty pans are refilled from the tubs in the fridge; when the tubs run out, prep more (you are tied up while you do), let a prep cook or pizzaiolo do it, or 86 the pizzas that need it. Deliveries that arrive mid-shift wait at the back door.", 15, Kit.MUTED, true))
+	_detail(Kit.label("Every topping comes out of a pan on the counter rail. Empty pans are refilled from the tubs in the fridge; when the tubs run out, prep more (you are tied up while you do), let a prep cook or pizzaiolo do it, or 86 the pizzas that need it. Deliveries that arrive mid-shift wait at the back door.", 15, Kit.MUTED, true))
 	for w in crew:
 		_info(func(): return ["%s (%s): %s" % [w.s.name, Data.ROLES[w.s.role].name.to_lower(), {"": "keeping on top of things", "prep": "prepping", "refill": "refilling a pan", "delivery": "putting a delivery away", "wash": "washing tubs"}[w.job]], Kit.INK], 15)
 	for w in workers:

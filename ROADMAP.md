@@ -117,7 +117,9 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [ ] Dough that deforms properly for every stretching technique
 - [ ] Leopard-spotted crusts, a living fire
 - [ ] The counter, tubs and stores drawn as the real things
-- [ ] Sound, music, haptics
+- [x] Sound: a sound for every action and a background in the kitchen (hum, fire, the dining room), generated
+      by `tools/sfx/`
+- [ ] Music, haptics
 
 ## 6. Finishing
 

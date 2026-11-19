@@ -200,6 +200,7 @@ func _notification(what: int) -> void:
 func _process(dt: float) -> void:
 	t += dt
 	intro = min(1.0, intro + dt / 2.4)
+	Art.loop("fire", 0.22 * intro, dt)            # the van's oven, crackling softly
 	_layout()
 	# the fire breathes: the oven, the chimney and the pool of light on the cobbles together
 	var fl := 0.75 + 0.14 * sin(t * 7.3) + 0.08 * sin(t * 13.1 + 1.0) + 0.05 * sin(t * 23.0 + 2.0)
@@ -298,6 +299,7 @@ func show_page(p: String) -> void:
 			_chalk("Kitchen in 3D: " + ("on" if G.s.get("view3d", true) else "off"), func(): _toggle("view3d", true), "", false, 28)
 			_chalk("Look by turning the phone: " + ("on" if G.s.get("gyro", true) else "off"), func(): _toggle("gyro", true), "", false, 28)
 			_chalk("Retro look: " + ("on" if G.s.get("retro", false) else "off"), func(): _toggle("retro", false), "", false, 28)
+			_chalk("Sound: " + ("off" if G.s.get("mute", false) else "on"), func(): _toggle("mute", false), "", false, 28)
 			_chalk("Back", func(): show_page("main"), "", true)
 	# slide the board in from the left, the lines following one after another
 	board_slide = -40.0
@@ -372,6 +374,9 @@ func _press(b: ChalkButton) -> void:
 	tw.tween_property(b, "squash", 0.9, 0.06)
 	tw.tween_property(b, "squash", 1.0, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(b.cb)
+
+func _exit_tree() -> void:
+	Art.stop_loops()
 
 func _toggle(key: String, def: bool) -> void:
 	Game.s[key] = not Game.s.get(key, def)

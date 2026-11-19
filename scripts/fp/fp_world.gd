@@ -76,6 +76,7 @@ var pan_nodes := []                    # [{fill, ring, label, i, depth}]
 var pan_sig := ""
 var ladle_root: Node3D
 var ladle_sig := ""
+var ladle_lbls := []                    # the "2 oz" labels over the ladles
 var ticket_root: Node3D
 var ticket_sig := ""
 var ticket_bars := []                  # [{bar, tk}]
@@ -667,10 +668,11 @@ func _prep() -> void:
 		surfaces.prep = s
 	else:
 		# between services the tablet shows the day's prep list (in service it is the live prep surface)
-		prep_screen = _label("", Vector3(-1.597, 1.42, -0.42), 26, Color("f3efe4"), self, false, 0.001)
+		# (top-aligned, from just inside the top of what the morning prep view takes in, so no line is cut off)
+		prep_screen = _label("", Vector3(-1.597, 1.47, -0.42), 26, Color("f3efe4"), self, false, 0.001)
 		prep_screen.rotation_degrees.y = 90
 		prep_screen.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		prep_screen.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		prep_screen.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		prep_screen.width = 780
 		prep_screen.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		prep_screen.line_spacing = 2
@@ -824,6 +826,8 @@ func _back_of_house() -> void:
 	_job("dough_trays", trays, Vector3(0.36, 0.4, 0.5), Vector3(0, 0.15, 0), Vector3(0, 0.5, 0))
 	# the opening checklist on its clipboard, and the sign at the hatch
 	var cb := _prop("clipboard", Vector3(-0.98, 1.55, -1.08), _mk_clipboard)
+	if dine:            # a restaurant is open above the counters: the clipboard hangs from the pass's header on strings
+		for x in [-0.08, 0.08]: _string(cb, Vector3(x, 0.15, -0.004), Vector3(x * 0.7, 0.42, -0.004))
 	_job("checklist", cb, Vector3(0.26, 0.34, 0.06), Vector3.ZERO, Vector3(0, 0.27, 0.05))
 	var sign := _prop("sign", Vector3(0.58, 1.66, -1.06), _mk_sign)
 	sign_text = _label("", Vector3(0, 0.0, 0.04), 44, Color("f4c64f"), sign, false, 0.0016)
@@ -885,6 +889,12 @@ func _mk_mixer(r: Node3D, mixer: bool) -> void:
 func _mk_trays(r: Node3D) -> void:
 	for i in 3:
 		_box(Vector3(0.34, 0.07, 0.48), Vector3(0, 0.04 + i * 0.08, 0), Color(0.9, 0.92, 0.95, 0.9), r, 0.4)
+
+## a thin string between two points in a node's space (they share a depth): what things hang from
+func _string(parent: Node3D, a: Vector3, b: Vector3) -> void:
+	var d := b - a
+	var c := _cyl(0.0025, d.length(), (a + b) / 2.0, Color("cdbf9a"), parent)
+	c.rotation.z = -atan2(d.x, d.y)
 
 func _mk_clipboard(r: Node3D) -> void:
 	_box(Vector3(0.24, 0.32, 0.015), Vector3.ZERO, Color("8a6a40"), r)
@@ -1069,6 +1079,7 @@ func _look_at(v: String, snap: bool = false) -> void:
 # ---------- every frame ----------
 func _process(dt: float) -> void:
 	time += dt
+	_sound(dt)
 	if clock_hands.size() == 2 and clock_hands[0] != null and clock_hands[1] != null:
 		var mins: float = svc.minute() if svc != null else Day.now()
 		clock_hands[0].rotation.z = -TAU * fmod(mins, 720.0) / 720.0
@@ -1387,9 +1398,13 @@ func _sync_pans() -> void:
 			var fill := _box(Vector3(pw * 0.84, 0.05, 0.17), Vector3(0, 0.0, 0), Color(Data.ING[id].col) if id != "" else Color("777777"), root)
 			var ring := _box(Vector3(pw * 0.96, 0.005, 0.22), Vector3(0, 0.035, 0), Color(0.96, 0.78, 0.31), root)
 			var nm: String = "" if id == "" else Data.ING[id].name
-			var lb := _label(nm.left(12), Vector3(0, 0.05, 0.13), 26, Color.WHITE, root, false, min(0.0011, pw * 0.92 / (12.0 * 26.0 * 0.55)))
+			# on a long rail every other name sits a step further forward, so each can be two pans wide
+			var wide := 2.0 if per > 8 else 1.0
+			var step := 0.06 if wide > 1.0 and col % 2 == 1 else 0.0
+			var lb := _label(nm.left(14), Vector3(0, 0.05 - step * 0.4, 0.13 + step), 26, Color.WHITE, root, false, min(0.0011, pw * wide * 0.92 / (14.0 * 26.0 * 0.55)))
 			lb.rotation_degrees.x = -55
 			lb.outline_size = 6
+			lb.no_depth_test = true                 # (shown only at the counter: never hidden behind the bin)
 			_tappable(root, Vector3(pw * 0.95, 0.12, 0.24), Vector3.ZERO, {"kind": "pan", "i": i})
 			pan_nodes.append({"root": root, "fill": fill, "ring": ring, "i": i, "lbl": lb})
 	var at_bench := cur_view() == "bench"
@@ -1435,18 +1450,27 @@ func _mk_mouse(r: Node3D) -> void:
 	_box(Vector3(0.1, 0.05, 0.05), Vector3(0, 0.025, 0), Color("6d6a66"), r)
 
 func _sync_ladles() -> void:
+	# the sizes only matter while there is a pizza to sauce; then they are a constant size on screen, so they are never
+	# huge when the rail is right beside you (at the board) and never in the way otherwise
+	var want := svc != null and svc.bench != null
+	for l in ladle_lbls:
+		if is_instance_valid(l): l.visible = want
 	var sizes := Data.LADLES.filter(func(oz): return Game.ladles(oz) > 0)
 	var held: int = svc.ladle_oz if svc != null else 0
 	var sig := ",".join(sizes.map(func(x): return str(x))) + "/" + str(held)
 	if sig == ladle_sig: return
 	ladle_sig = sig
 	for c in ladle_root.get_children(): c.queue_free()
+	ladle_lbls = []
 	for i in sizes.size():
 		var oz: int = sizes[i]
 		var on: bool = oz == held
 		var root := _prop("ladle.%d" % oz, Vector3(0.9 + i * 0.11, 1.3, -1.02), _mk_ladle.bind(oz), ladle_root)
-		var ll := _label("%d oz" % oz, Vector3(0, 0.05, 0.01), 32, Color("f4c64f") if on else Color.WHITE, root, false, 0.0012)
+		var ll := _label("%d oz" % oz, Vector3(0, 0.05, 0.01), 26, Color("f4c64f") if on else Color.WHITE, root, false, 0.0009)
+		ll.fixed_size = true
 		ll.outline_size = 6
+		ll.visible = want
+		ladle_lbls.append(ll)
 		_tappable(root, Vector3(0.1, 0.36, 0.1), Vector3(0, -0.16, 0), {"kind": "ladle", "oz": oz})
 
 func _sync_tickets() -> void:
@@ -1667,6 +1691,26 @@ func _move(index: int, pos: Vector2, rel: Vector2) -> void:
 func settle_look() -> void:
 	_settle()
 
+## the background: the kitchen's hum; a wood fire crackling (louder when you are at the oven); the dining room's
+## murmur, with the customers in it (louder when you face them)
+func _sound(dt: float) -> void:
+	Art.loop("room", 0.16, dt)
+	var fire := 0.0
+	var ov: Oven = svc.oven if svc != null else fire_oven
+	if ov != null and ov.def.feeds and (svc != null or (oven_door != null and not oven_door.visible)):
+		fire = clamp(ov.power() / 1.3, 0.0, 1.0)
+	Art.loop("fire", fire * (0.85 if cur_view() == "oven" else 0.3), dt)
+	var crowd := 0.0
+	if svc != null:
+		var n := 0
+		for p in svc.parties:
+			if p.state != "leave" and p.get("pos", Vector2(-100, -100)).x > -50.0: n += int(p.n)
+		crowd = clamp(n / 14.0, 0.0, 1.0)
+	Art.loop("murmur", crowd * (0.6 if cur_view() == "front" else 0.3), dt)
+
+func _exit_tree() -> void:
+	Art.stop_loops()
+
 ## the look stick tapped: look back at the station you are at
 func recentre() -> void:
 	_look_at(cur_view())
@@ -1690,9 +1734,11 @@ func _hand(index: int, at) -> void:
 	hands[i].target = at
 
 func _tap(act: Dictionary) -> void:
-	if act.get("job", "") == "open" and svc != null:
-		svc._ask_close()                  # the clock in service: clock out early?
-		return
+	if act.get("job", "") == "open":
+		Art.sfx("punch")                  # the time card in the clock: ka-chunk
+		if svc != null:
+			svc._ask_close()              # the clock in service: clock out early?
+			return
 	if act.kind == "job" or svc == null:
 		if kitchen != null: kitchen.job(act.get("job", act.kind), act)
 		elif act.get("job", "") == "crates": svc.set_view("prep")

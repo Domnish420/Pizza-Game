@@ -198,6 +198,9 @@ func run() -> void:
 				if not shots.has("topped"):
 					shots.topped = true
 					await shot("d-topped")
+					var said: Array = svc.info.find_children("*", "Label", true, false).map(func(l): return l.text)
+					check(said.any(func(t): return t.begins_with("All on") or t.begins_with("Sauce done")),
+						"once the sauce is spread, the card moves on to what is next", said.filter(func(t): return t.length() < 90))
 				svc.next()
 		var ov = svc.oven_ui
 		if "FEED THE FIRE" in svc.tab_btns.oven.text: svc.add_log()

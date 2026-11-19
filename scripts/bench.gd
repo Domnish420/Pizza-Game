@@ -109,6 +109,7 @@ func _down(p: Vector2) -> void:
 		svc.apply_tool(p, null)
 	elif pz.base.method == "hand":
 		pz.base.press(p)
+		Art.sfx("slap", true, 0.18)            # a floury pat on the marble
 	elif pz.base.method == "roll":
 		pin_at = p
 
@@ -150,6 +151,7 @@ func _up(p: Vector2) -> void:
 func _two(index: int, prev: Vector2, p: Vector2) -> void:
 	var pz = _shaping(true)
 	if pz == null: return
+	Art.sfx("slap", true, 0.45)                # the dough slapping as it is stretched
 	var other = null
 	for i in touches:
 		if i != index: other = touches[i]

@@ -48,8 +48,12 @@ func run_day(n: int) -> void:
 		svc.set_view("bench")
 	var guard := 0
 	var topped_up := {}                         # tickets whose short pans the bot has already refilled once
+	var gave_up := 0
 	while is_instance_valid(svc) and not svc.done and guard < 6000:
 		guard += 1
+		if svc.r.gave_up > gave_up:             # say who gave up, and on what, so a failure explains itself
+			gave_up = svc.r.gave_up
+			note("someone gave up at %s; tickets now: %s" % [D.hhmm(svc.minute()), svc.tickets.map(func(t): return [t.rec.key, t.rec.get("make", "pizza"), t.state, t.owner, int(t.age), "GONE" if t.get("gone", false) else ""])])
 		if not svc.busy.is_empty():
 			await process_frame
 			continue
@@ -69,7 +73,7 @@ func run_day(n: int) -> void:
 					break
 		if svc.bench == null:
 			for t in svc.tickets:
-				if t.state == "new" and t.owner == "" and svc.sellable(t.rec) and (G.line_short(t.rec).is_empty() or topped_up.has(t.id)) and t.rec.get("make", "pizza") == "pizza":
+				if t.state == "new" and t.owner == "" and svc.sellable(t.rec) and (G.line_short(t.rec).is_empty() or topped_up.has(t.id)) and t.rec.get("make", "pizza") in ["pizza", "oven"]:          # pizzas, and the sides baked like them
 					svc.claim(t)
 					break
 		if svc.bench != null:
