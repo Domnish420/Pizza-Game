@@ -102,7 +102,7 @@ func value(id: String) -> float:
 
 ## throw an ingredient away (counts as waste)
 func bin(id: String) -> void:
-	for l in lots(id): log_waste(id, l.q, l.q * l.c)
+	for l in lots(id): log_waste(id, l.q, l.q * l.c, "binned by hand")
 	Game.s.stock[id] = []
 
 # ---------- rotation ----------
@@ -353,7 +353,7 @@ func close_rail() -> Array:
 			var size := 2 if pan.q / 1000.0 * line_vol(id) <= 2.0 else 4
 			if clean_tubs(size) == 0: size = 6 - size
 			if clean_tubs(size) == 0:
-				log_waste(id, pan.q, pan.q * pan.c)
+				log_waste(id, pan.q, pan.q * pan.c, "no clean tub")
 				notes.append("No clean tub for the %s left on the counter: binned." % Data.ING[id].name.to_lower())
 			else:
 				take("tub%d" % size, 1)
@@ -504,7 +504,7 @@ func put_away_each(entry: Dictionary, each: Array, now: float) -> Dictionary:
 		if chilled and waited > 30.0:
 			if waited > 180.0:
 				out.spoiled.append({"id": ln.ing, "q": ln.q})
-				log_waste(ln.ing, ln.q, ln.q * ln.c)
+				log_waste(ln.ing, ln.q, ln.q * ln.c, "left out too long")
 				continue
 			x -= (waited - 30.0) / 60.0 * (0.5 if it.store == "fridge" else 0.8)
 		var fits: float = min(ln.q, max(0.0, store_free(it.store)) / it.space)
@@ -512,7 +512,7 @@ func put_away_each(entry: Dictionary, each: Array, now: float) -> Dictionary:
 		add(ln.ing, fits, int(ln.g), ln.c, x, not rotate)
 		if ln.q - fits > ln.q * 0.005:
 			out.wasted.append({"id": ln.ing, "q": ln.q - fits})
-			log_waste(ln.ing, ln.q - fits, (ln.q - fits) * ln.c)
+			log_waste(ln.ing, ln.q - fits, (ln.q - fits) * ln.c, "no room in the stores")
 		out.minutes += 1.5 + _kg(ln.ing, ln.q) * (0.45 if rotate else 0.12)
 	out.minutes = ceil(out.minutes)
 	Game.s.dock.erase(entry)
@@ -615,7 +615,7 @@ func night() -> Dictionary:
 			if it.store != "fridge" or it.frost == "": continue
 			for l in lots(id).duplicate():
 				if it.frost == "bin":
-					log_waste(id, l.q, l.q * l.c)
+					log_waste(id, l.q, l.q * l.c, "frozen")
 					lots(id).erase(l)
 				else:
 					l.g = max(1, int(l.g) - 1)
@@ -624,7 +624,7 @@ func night() -> Dictionary:
 		for id in Game.s.prepped:
 			if Data.ING[id].frost == "bin":
 				for l in prepped_lots(id):
-					log_waste(id, l.q, l.q * l.c)
+					log_waste(id, l.q, l.q * l.c, "frozen")
 					wash_add(int(l.get("size", 4)))
 				Game.s.prepped[id] = []
 		if hit.size() > 0:
@@ -639,7 +639,7 @@ func night() -> Dictionary:
 			for l in lots(id).duplicate():
 				l.x -= lost
 				if hum > 76.0 and randf() < (hum - 76.0) * 0.04:
-					log_waste(id, l.q, l.q * l.c)
+					log_waste(id, l.q, l.q * l.c, "damp")
 					lots(id).erase(l)
 					mould.append("%s %s" % [Data.qty(id, l.q), it.name.to_lower()])
 		out.notes.append("The dry store was damp (%d%% humidity)." % hum + ((" Gone mouldy and binned: " + ", ".join(mould) + ".") if mould.size() > 0 else " Flour, onions and potatoes will not keep as long. Open the vents."))
@@ -649,7 +649,7 @@ func night() -> Dictionary:
 		for l in Game.s.stock[id]:
 			if l.x <= Game.s.day + 1:
 				out.binned.append({"id": id, "q": l.q, "cost": l.q * l.c})
-				log_waste(id, l.q, l.q * l.c)
+				log_waste(id, l.q, l.q * l.c, "out of date")
 			else:
 				keep.append(l)
 		Game.s.stock[id] = keep
@@ -658,7 +658,7 @@ func night() -> Dictionary:
 		for l in Game.s.prepped[id]:
 			if l.x <= Game.s.day + 1:
 				out.binned.append({"id": id, "q": l.q, "cost": l.q * l.c, "prepped": true})
-				log_waste(id, l.q, l.q * l.c)
+				log_waste(id, l.q, l.q * l.c, "out of date")
 				wash_add(int(l.get("size", 4)))
 			else:
 				keep.append(l)
@@ -666,7 +666,7 @@ func night() -> Dictionary:
 	for pan in rail():
 		if pan.ing != "" and pan.q > 0.5 and pan.x <= Game.s.day + 1:
 			out.binned.append({"id": pan.ing, "q": pan.q, "cost": pan.q * pan.c, "prepped": true})
-			log_waste(pan.ing, pan.q, pan.q * pan.c)
+			log_waste(pan.ing, pan.q, pan.q * pan.c, "out of date")
 			pan.q = 0.0
 	return out
 
@@ -678,7 +678,7 @@ func dough_night() -> int:
 		if l.n <= 0: continue
 		if dough_age(l, Game.s.day + 1) > dough_window(l)[1]:
 			lost += int(l.n)
-			log_waste("dough:" + l.style, l.n, l.n * float(l.get("c", 0.0)))
+			log_waste("dough:" + l.style, l.n, l.n * float(l.get("c", 0.0)), "overproofed dough")
 		else:
 			keep.append(l)
 	Game.s.dough = keep
@@ -694,10 +694,13 @@ func log_sale(use: Dictionary, spec: Dictionary, cost: float, spec_cost: float) 
 	b.cost_spec += spec_cost
 	b.sold += 1
 
-func log_waste(id: String, q: float, cost: float) -> void:
+## something went in the bin: what, how much, what it cost, and why (the waste log on the Stores page sorts by why)
+func log_waste(id: String, q: float, cost: float, why: String = "other") -> void:
 	var b: Dictionary = Game.s.book
 	b.waste[id] = b.waste.get(id, 0.0) + q
 	b.cost_waste += cost
+	if not b.has("why"): b.why = {}
+	b.why[why] = b.why.get(why, 0.0) + cost
 
 ## peelings, stalks and drained liquid from prep: not waste you could have avoided, but you paid for it
 func log_trim(id: String, q: float) -> void:
@@ -710,6 +713,8 @@ func log_binned(use: Dictionary, cost: float) -> void:
 	for id in use: b.waste[id] = b.waste.get(id, 0.0) + use[id]
 	b.cost_waste += cost
 	b.binned += 1
+	if not b.has("why"): b.why = {}
+	b.why["pizzas binned"] = b.why.get("pizzas binned", 0.0) + cost
 
 func label(id: String) -> String:
 	if id.begins_with("dough:"): return Data.DOUGHS[id.substr(6)].name + " dough"

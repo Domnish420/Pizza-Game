@@ -103,3 +103,22 @@ func run() -> void:
 		H.night()
 		H.reset_traps()
 	check(G.s.pests.level < lv, "with the place clean and traps down, the mice go", [lv, G.s.pests.level])
+
+	# the waste log knows why things were binned
+	var why: Dictionary = G.s.book.get("why", {})
+	check(why.has("frozen"), "food lost to a freezing fridge is logged as frozen", why)
+	check(G.s.books.size() > 0 and G.s.books[-1].has("why"), "each day's books keep why things were binned")
+	var log_card = load("res://scripts/stores_page.gd").waste_log()
+	var said: Array = log_card.find_children("*", "Label", true, false).map(func(l): return l.text)
+	check(said.any(func(t): return t.begins_with("Waste log")) and said.any(func(t): return t.find("frozen") >= 0), "the waste log shows the week, and why", said.filter(func(t): return t.length() > 30))
+	log_card.free()
+
+	# allergens, worked out from the ingredients and the dough
+	check(D.ALLERGENS.size() == 14, "the 14 allergens are listed", D.ALLERGENS.size())
+	var undeclared: Array = D.ING.keys().filter(func(i): return D.ING[i].cat not in ["supply"] and not D.ING[i].has("allergens") and i not in ["box", "wood", "traps", "tub2", "tub4", "sanitiser"])
+	check(undeclared.is_empty(), "every food says which allergens it has (even none)", undeclared)
+	check(D.allergens_of(D.REC.margherita) == ["gluten", "milk"], "a margherita: gluten (the dough) and milk (the mozzarella)", D.allergens_of(D.REC.margherita))
+	check(D.allergens_of({"base": "glutenfree", "spec": {"tomato": 60, "mozz": 100}}) == ["milk"], "on the gluten-free dough there is no gluten", D.allergens_of({"base": "glutenfree", "spec": {"tomato": 60, "mozz": 100}}))
+	check(D.allergens_of({"base": "neapolitan", "spec": {"tomato": 60, "seafood": 80}}) == ["gluten", "crustaceans", "fish", "molluscs"], "frutti di mare: gluten, crustaceans, fish and molluscs", D.allergens_of({"base": "neapolitan", "spec": {"seafood": 80}}))
+	var tira = D.EXTRAS.filter(func(x): return x.id == "tiramisu")[0]
+	check(D.allergens_of(tira) == ["gluten", "egg", "milk"], "tiramisu: gluten, eggs and milk", D.allergens_of(tira))

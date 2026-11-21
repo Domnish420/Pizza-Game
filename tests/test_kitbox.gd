@@ -51,6 +51,10 @@ func run() -> void:
 	for page in ["home", "jobs", "stores", "kit", "boh", "foh", "dough", "menu", "staff"]:
 		m.show_hub(page)
 		await shot("hub-" + page)
+		if page in ["menu", "stores"]:
+			var want: String = {"menu": "Allergen chart", "stores": "Waste log"}[page]
+			var labels: Array = m.find_children("*", "Label", true, false).map(func(l): return l.text)
+			check(labels.any(func(t): return t.begins_with(want)), "the %s page has the %s" % [page, want.to_lower()])
 	check(true, "the phone pages open")
 
 	# the story's pizzeria comes fully kitted

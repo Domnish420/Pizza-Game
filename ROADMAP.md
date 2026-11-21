@@ -68,7 +68,7 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 
 ## 3. Running a real kitchen
 
-- [ ] Allergen chart and waste log (the data is already tracked)
+- [x] Allergen chart (the 14 allergens, from the ingredients) and a waste log with the reasons, on the phone
 - [ ] Defrosting frozen stock the day before; freezer frost
 - [ ] Oven preheating, ash clearing, maintenance; fridges and mixers breaking down
 - [ ] Driving the van to its pitch and setting up

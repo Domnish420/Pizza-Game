@@ -14,7 +14,7 @@ func _ready() -> void:
 
 # ---------- save ----------
 func new_book() -> Dictionary:
-	return {"used": {}, "spec": {}, "waste": {}, "trim": {}, "cost_used": 0.0, "cost_spec": 0.0, "cost_waste": 0.0, "sold": 0, "binned": 0, "sales": 0.0}
+	return {"used": {}, "spec": {}, "waste": {}, "why": {}, "trim": {}, "cost_used": 0.0, "cost_spec": 0.0, "cost_waste": 0.0, "sold": 0, "binned": 0, "sales": 0.0}
 
 func new_game() -> void:
 	var upg := {}

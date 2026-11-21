@@ -192,7 +192,7 @@ func _spent_total() -> float:
 
 func _cancel() -> void:
 	if step < 9:      # walked away from a part-made batch: it is waste
-		for ing in spent: Stock.log_waste(ing, added[ing], spent[ing])
+		for ing in spent: Stock.log_waste(ing, added[ing], spent[ing], "dough mistakes")
 	Game.save_game()
 	Kit.main.close_modal()
 	Kit.main.show_hub("dough")
@@ -233,7 +233,7 @@ func _mix() -> void:
 	_build()
 
 func _result_ruined(why: String, pct: Dictionary, want: Dictionary) -> void:
-	for ing in spent: Stock.log_waste(ing, added[ing], spent[ing])
+	for ing in spent: Stock.log_waste(ing, added[ing], spent[ing], "dough mistakes")
 	step = 9
 	Kit.clear(self)
 	add_child(Kit.label("Unusable dough", 28, Kit.TOMATO))
@@ -283,7 +283,7 @@ func _finish() -> void:
 	var fitted := Stock.add_dough(style, balls, q, speed, grade, per_ball)
 	var mins: float = ceil(15.0 + 6.0 * kg / c.knead)
 	var notes := Day.spend(mins)
-	if fitted < balls: Stock.log_waste("dough:" + style, balls - fitted, (balls - fitted) * per_ball)
+	if fitted < balls: Stock.log_waste("dough:" + style, balls - fitted, (balls - fitted) * per_ball, "no room for the dough")
 	Game.save_game()
 	Art.sfx("up")
 	step = 9

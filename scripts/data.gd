@@ -23,6 +23,7 @@ var OVENS := {}        # oven type -> how it heats
 var ROLES := {}
 var NAMES := []
 var EXTRAS := []       # sides, desserts and drinks (data/extras.json)
+var ALLERGENS := []    # the 14 allergens a food business must declare: [{id, name, long}] (data/ingredients.json)
 var EXTRA := {}
 var EXTRA_CHANCE := {} # course -> party type -> chance each person orders one
 var APP := {}          # the delivery app (data/delivery_app.json)
@@ -43,6 +44,7 @@ func _init() -> void:
 	GRADES = d.grades
 	GRADE_LVL = d.grade_lvl
 	BULK_EXP = float(d.bulk_exponent)
+	ALLERGENS = d.get("allergens", [])
 	ING = d.items
 	for id in ING:
 		var it: Dictionary = ING[id]
@@ -162,3 +164,18 @@ func rate(id: String, per_unit: float) -> String:
 	if u == "g": return "$%.2f/kg" % (per_unit * 1000.0)
 	if u == "ml": return "$%.2f/l" % (per_unit * 1000.0)
 	return "$%.2f each" % per_unit
+
+## the allergens in a menu pizza, side, dessert or drink (ids, in the order of ALLERGENS): from every ingredient on its
+## recipe card and, if it is made on a dough, the dough's flour
+func allergens_of(rec: Dictionary) -> Array:
+	var ings := {}
+	for i in rec.get("spec", {}): ings[i] = true
+	var base: String = rec.get("base", "")
+	if base != "" and DOUGHS.has(base):
+		for part in DOUGHS[base].parts: ings[part.ing] = true
+	var has := {}
+	for i in ings:
+		if ING.has(i):
+			for a in ING[i].get("allergens", []): has[a] = true
+	return ALLERGENS.map(func(a): return a.id).filter(func(a): return has.has(a))
+

@@ -186,6 +186,11 @@ and invoices are paid when they fall due.
   An unchilled rail goes back into tubs every night.
 - **Recipe cards.** 48 pizzas, each with grams per ingredient on a named dough. The card shows the cost to make
   and the food-cost percentage. Everything you put on a pizza is weighed out of stock as you apply it.
+- **The waste log.** The Stores page keeps the last week: each day's food used, what was binned, its share (a
+  well-run kitchen keeps it under 3%) and the main reason (pizzas binned, out of date, overproofed dough, frozen in
+  the fridge, damp, mice, left out too long, no room, dough mistakes), then the week's total and where it went.
+- **The allergen chart.** The Menu page shows the 14 allergens UK law asks you to declare against everything you sell
+  tonight, worked out from each ingredient's allergens and the dough it is made on (the gluten-free dough has none).
 - **Stock control.** The Stores page has a par sheet (what today and tomorrow need against what you hold and have on
   order) and a usage report (what was used against what the recipe cards allow, and what was binned).
 - **Dough.** Six recipes in baker's percentages. Weigh every ingredient, knead, ball. Made the night before;

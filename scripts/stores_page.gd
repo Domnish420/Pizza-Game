@@ -143,6 +143,9 @@ func _ready() -> void:
 			sc[1].add_child(h)
 		add_child(sc[0])
 
+	# the waste log: the last week, what went in the bin, what it cost and why
+	add_child(waste_log())
+
 	# stock control
 	var books: Array = G.s.books.duplicate()
 	books.append(G.s.book)
@@ -175,3 +178,44 @@ func _ready() -> void:
 			_cell(kg, Stock.amount(id, b.waste[id]) if b.waste.get(id, 0.0) > 0 else "-", Kit.TOMATO)
 		kc[1].add_child(kg)
 		add_child(kc[0])
+
+## the last week's waste: each day's food used, what was binned and what share that is, and the main reason; then
+## the week's total and where most of it went. A well-run kitchen bins under 3% of the food it uses.
+static func waste_log() -> Control:
+	var G := Game
+	var days: Array = G.s.books.duplicate()
+	days.append(G.s.book)
+	days = days.slice(maxi(0, days.size() - 7))
+	var c = Kit.card("Waste log: the last %d day%s" % [days.size(), "" if days.size() == 1 else "s"])
+	var g := Kit.grid(5, 12)
+	for hd in ["Day", "Food used", "Binned", "Share", "Mostly"]:
+		var hl := Kit.label(hd, 14, Kit.MUTED)
+		hl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		g.add_child(hl)
+	var used := 0.0
+	var binned := 0.0
+	var whys := {}
+	for i in range(days.size() - 1, -1, -1):
+		var b: Dictionary = days[i]
+		var why: Dictionary = b.get("why", {})
+		for k in why: whys[k] = whys.get(k, 0.0) + why[k]
+		used += b.cost_used
+		binned += b.cost_waste
+		var share: float = b.cost_waste / maxf(b.cost_used + b.cost_waste, 0.01)
+		var top := ""
+		for k in why:
+			if top == "" or why[k] > why[top]: top = k
+		g.add_child(Kit.label("Today" if not b.has("day") else "Day %d" % b.day, 15, Kit.INK))
+		g.add_child(Kit.label(Kit.cents(b.cost_used), 15, Kit.INK))
+		g.add_child(Kit.label(Kit.cents(b.cost_waste) if b.cost_waste > 0.005 else "-", 15, Kit.TOMATO if b.cost_waste > 0.005 else Kit.MUTED))
+		g.add_child(Kit.label(("%d%%" % roundi(share * 100.0)) if b.cost_waste > 0.005 else "-", 15, Kit.TOMATO if share > 0.08 else (Kit.CHEESE if share > 0.03 else Kit.BASIL)))
+		g.add_child(Kit.label(top if top != "" else ("other" if b.cost_waste > 0.005 else ""), 15, Kit.MUTED))
+	c[1].add_child(g)
+	var share_all: float = binned / maxf(used + binned, 0.01)
+	var order := whys.keys()
+	order.sort_custom(func(a, b): return whys[a] > whys[b])
+	var said := "No waste this week. That is the money staying in the business." if binned <= 0.005 else \
+		"%s binned in all: %d%% of the food you paid for. Most of it: %s. A well-run kitchen keeps this under 3%%." % [Kit.cents(binned), roundi(share_all * 100.0), ", ".join(order.slice(0, 3).map(func(k): return "%s %s" % [k, Kit.cents(whys[k])]))]
+	c[1].add_child(Kit.label(said, 15, Kit.BASIL if binned <= 0.005 or share_all <= 0.03 else (Kit.CHEESE if share_all <= 0.08 else Kit.TOMATO), true))
+	return c[0]
+

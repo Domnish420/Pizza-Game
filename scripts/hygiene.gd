@@ -297,7 +297,7 @@ func night() -> Array:
 			var id: String = targets.pick_random()
 			var lost: float = Stock.have(id) * randf_range(0.15, 0.4)
 			var t := Stock.take(id, lost)
-			Stock.log_waste(id, t.got, t.cost)
+			Stock.log_waste(id, t.got, t.cost, "mice")
 			notes.append("Mice got into the %s in the dry store: %s chewed and binned." % [Data.ING[id].name.to_lower(), Data.qty(id, t.got)])
 	if P.level > 45.0:
 		dirty("boh", 15.0)

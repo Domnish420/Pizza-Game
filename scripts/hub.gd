@@ -422,6 +422,36 @@ func _extras_card() -> Control:
 	xc[1].add_child(xg)
 	return xc[0]
 
+## the allergen chart: every pizza on tonight's menu, and the sides, desserts and drinks you sell, against the
+## allergens in them (only the allergens that turn up, so it fits on a phone). Worked out from the ingredients.
+func _allergen_card(m: Dictionary) -> Control:
+	var rows := []
+	for id in m.items: rows.append(Data.REC[id])
+	for x in Game.extras_on(): rows.append(x)
+	var used := {}
+	for r in rows:
+		for a in Data.allergens_of(r): used[a] = true
+	var cols: Array = Data.ALLERGENS.filter(func(a): return used.has(a.id))
+	var c = Kit.card("Allergen chart")
+	c[1].add_child(Kit.label("What is in everything you sell. The law says customers must be able to ask, and a customer with an allergy is trusting you: make their order on the purple board, and keep the topping off." + ("" if Equip.allergen_kit() else " (You have no purple board and knife yet: KitBox sells them.)"), 15, Kit.MUTED, true))
+	var g := Kit.grid(cols.size() + 1, 6)
+	g.add_child(Kit.label("", 14))
+	for a in cols:
+		var hl := Kit.label(a.name, 14, Kit.MUTED)
+		hl.tooltip_text = a.long
+		g.add_child(hl)
+	for r in rows:
+		var has: Array = Data.allergens_of(r)
+		g.add_child(Kit.label(r.name, 15, Kit.INK))
+		for a in cols:
+			var on: bool = has.has(a.id)
+			var cell := Kit.label("●" if on else "·", 16, Kit.TOMATO if on else Kit.MUTED)
+			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			g.add_child(cell)
+	c[1].add_child(g)
+	if cols.is_empty(): c[1].add_child(Kit.label("Nothing you sell tonight contains any of the 14 allergens.", 15, Kit.BASIL, true))
+	return c[0]
+
 func _page_menu() -> void:
 	var G := Game
 	var m := G.menu_now()
@@ -438,6 +468,7 @@ func _page_menu() -> void:
 			h.add_child(Kit.button("Recipe card", recipe_card.bind(rr), "ghost", 15))
 			ec[1].add_child(h)
 		page.add_child(ec[0])
+		page.add_child(_allergen_card(m))
 		return
 	var cur = Kit.card("Now serving: " + m.name)
 	cur[1].add_child(Kit.label("%d day%s left on this menu. The percentage is food cost: what the recipe costs against what it sells for." % [G.cycle_left(), "" if G.cycle_left() == 1 else "s"], 15, Kit.CHEESE if G.cycle_left() <= 3 else Kit.MUTED, true))
@@ -460,6 +491,7 @@ func _page_menu() -> void:
 	g.add_child(pc[0])
 
 	page.add_child(_extras_card())
+	page.add_child(_allergen_card(m))
 
 	page.add_child(Kit.label("Next fortnight's menu" + ("  ·  booked: " + Data.MENU[G.s.next_menu].name if G.s.next_menu != "" else "  ·  nothing booked (House Classics)"), 21))
 	var og := Kit.grid(3)
