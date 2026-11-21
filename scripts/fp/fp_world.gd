@@ -1707,10 +1707,7 @@ func _sound(dt: float) -> void:
 			if p.state != "leave" and p.get("pos", Vector2(-100, -100)).x > -50.0: n += int(p.n)
 		crowd = clamp(n / 14.0, 0.0, 1.0)
 	Art.loop("murmur", crowd * (0.6 if cur_view() == "front" else 0.3), dt)
-
-func _exit_tree() -> void:
-	Art.stop_loops()
-
+	Art.loop("music", 0.0 if svc != null else 0.28, dt)        # quietly between services; in service, the room
 ## the look stick tapped: look back at the station you are at
 func recentre() -> void:
 	_look_at(cur_view())
@@ -1736,6 +1733,7 @@ func _hand(index: int, at) -> void:
 func _tap(act: Dictionary) -> void:
 	if act.get("job", "") == "open":
 		Art.sfx("punch")                  # the time card in the clock: ka-chunk
+		Art.buzz(40)
 		if svc != null:
 			svc._ask_close()              # the clock in service: clock out early?
 			return

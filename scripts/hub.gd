@@ -264,6 +264,8 @@ func _page_home() -> void:
 	vh.add_child(Kit.button("Look by turning the phone: " + ("on" if G.s.get("gyro", true) else "off"), func(): _act(func(): Game.s.gyro = not Game.s.get("gyro", true)), "ghost", 15))
 	vh.add_child(Kit.button("Retro look: " + ("on" if G.s.get("retro", false) else "off"), func(): _act(func(): Game.s.retro = not Game.s.get("retro", false)), "ghost", 15))
 	vh.add_child(Kit.button("Sound: " + ("off" if G.s.get("mute", false) else "on"), func(): _act(func(): Game.s.mute = not Game.s.get("mute", false)), "ghost", 15))
+	vh.add_child(Kit.button("Music: " + ("on" if G.s.get("music", true) else "off"), func(): _act(func(): Game.s.music = not Game.s.get("music", true)), "ghost", 15))
+	vh.add_child(Kit.button("Vibration: " + ("on" if G.s.get("vibrate", true) else "off"), func(): _act(func(): Game.s.vibrate = not Game.s.get("vibrate", true)), "ghost", 15))
 	nc[1].add_child(vh)
 	var reset := Kit.button("Start over", func(): Kit.main.confirm("Start over?", "This wipes your save and takes you back to the start.", "Wipe my save", func():
 		Game.new_game()

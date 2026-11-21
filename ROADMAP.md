@@ -119,7 +119,7 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [ ] The counter, tubs and stores drawn as the real things
 - [x] Sound: a sound for every action and a background in the kitchen (hum, fire, the dining room), generated
       by `tools/sfx/`
-- [ ] Music, haptics
+- [x] Music (a generated waltz for the title and between services) and haptics (ticks and buzzes on a phone)
 
 ## 6. Finishing
 

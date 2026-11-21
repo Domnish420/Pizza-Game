@@ -1,7 +1,9 @@
 extends "res://tests/bot.gd"
-## Sound: every sound the code asks for (Art.sfx / Art.loop) has a file that loads; the loops are long enough to
+## Sound and feel: every sound the code asks for (Art.sfx / Art.loop) has a file that loads; the loops are long enough to
 ## loop; the fire crackles by a lit wood oven and the room hums, and they stop when you leave the kitchen; muting
-## silences everything. (Made by tools/sfx/make_sfx.py.)
+## silences everything; the music plays on the title and between services, not in service; vibration follows its
+## setting; a pizza starting to burn is announced once. (Sounds are made by
+## tools/sfx/make_sfx.py.)
 
 var A
 
@@ -23,12 +25,11 @@ func run() -> void:
 		for hit in re.search_all(FileAccess.get_file_as_string(f)): asked[hit.get_string(2)] = hit.get_string(1)
 	var missing := []
 	for nm in asked:
-		var path: String = "res://assets/sfx/%s.wav" % nm
-		var st = load(path) if ResourceLoader.exists(path) else null
+		var st = A.sound_stream(nm)
 		if st == null or st.get_length() <= 0.0: missing.append(nm)
 	check(asked.size() >= 15 and missing.is_empty(), "every sound the game asks for exists (%d of them)" % asked.size(), missing)
 	var loops := asked.keys().filter(func(k): return asked[k] == "loop")
-	check(loops.all(func(k): return load("res://assets/sfx/%s.wav" % k).get_length() >= 3.0), "the background loops are long enough to loop", loops)
+	check(loops.all(func(k): return A.sound_stream(k).get_length() >= 3.0), "the background loops and the music are long enough to loop", loops)
 
 	# a lit wood oven in the morning: the fire crackles and the room hums; leaving the kitchen stops them
 	G.new_game()
@@ -44,9 +45,12 @@ func run() -> void:
 	var hum = A._loops.get("room", null)
 	check(fire != null and fire.playing and fire.volume_db > -30.0, "by the lit wood oven the fire crackles", fire.volume_db if fire != null else null)
 	check(hum != null and hum.playing, "the kitchen hums")
+	var music = A._loops.get("music", null)
+	check(music != null and music.playing, "the music plays quietly between services")
 	m.show_start()
-	await frames(10)
-	check(not hum.playing, "leaving the kitchen stops the hum")
+	await wait(1.5)
+	check(not hum.playing, "leaving the kitchen fades the hum away")
+	check(music.playing and music.volume_db > -12.0, "on the title screen the music carries on, a little louder", music.volume_db)
 
 	# muted: nothing plays
 	G.s.mute = true
@@ -57,3 +61,34 @@ func run() -> void:
 	A.sfx("bell")
 	bell = A._players.get("bell", null)
 	check(bell != null and bell.playing, "unmuted, it does")
+
+	# vibration: felt when it is on, not when it is off
+	var b0: int = A.buzzes
+	A.buzz(10)
+	check(A.buzzes == b0 + 1, "with Vibration on, a buzz is felt")
+	G.s.vibrate = false
+	A.buzz(10)
+	check(A.buzzes == b0 + 1, "with it off, it is not")
+	G.s.vibrate = true
+
+	# a pizza starting to burn is announced once, wherever you are looking
+	G.new_game()
+	m.show_hub("home")
+	await frames(5)
+	m.screen()._go_open()
+	await frames(5)
+	m.close_modal()
+	await frames(5)
+	var svc = m.screen()
+	svc.speed = 0
+	await wait(2.5)
+	check(not A._loops.music.playing, "in service the music fades out: the room is the soundtrack")
+	var pz = load("res://scripts/pizza.gd").new({"id": 90, "rec": D.REC.margherita, "gone": true, "state": "new"}, {"q": 80.0, "g": 3.0, "cost": 0.3})
+	svc.oven.load_pizza(pz, 0, false)
+	pz.bake.fill(1.6)
+	pz.floor = 1.6
+	svc.set_view("front")
+	var b1: int = A.buzzes
+	await frames(20)
+	var o = svc.oven.mine()[0] if svc.oven.mine().size() > 0 else {}
+	check(o.get("warned", false) and A.buzzes == b1 + 1, "a pizza starting to burn is announced once (a sound and a buzz)", [svc.oven.status(o) if not o.is_empty() else "-", A.buzzes - b1])

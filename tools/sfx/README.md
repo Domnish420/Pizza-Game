@@ -10,7 +10,8 @@ python3 tools/sfx/sheet.py /tmp/sfx.png  # a spectrogram and waveform of each; e
 
 The files land in `assets/sfx/<name>.wav` (mono, 16-bit, 22.05 kHz, about 1.3 MB in all). The game plays a one-shot
 with `Art.sfx(name, vary, gap)` (vary nudges the pitch each time; gap is the least time between two plays) and a
-background loop with `Art.loop(name, level)`, called every frame with how loud it should be. A hand-made `.wav` with
+background loop with `Art.loop(name, level)`, called every frame with how loud it should be (one nobody asks for
+fades out by itself). A hand-made `.wav` with
 the same name replaces a generated one. `tests/test_sound.gd` checks that every sound the code asks for exists.
 
 The style is a toy kitchen: soft, warm, short, never harsh, nothing louder than about -6 dB.
@@ -37,5 +38,19 @@ The style is a toy kitchen: soft, warm, short, never harsh, nothing louder than 
 | `fire` (loop) | A lit wood oven: louder at the oven, and softly on the title screen |
 | `murmur` (loop) | The customers in the dining room or at the hatch: louder when you face them |
 | `room` (loop) | The kitchen's extractor hum, always there in the kitchen |
+| `music` (loop, .ogg) | The title screen, and quietly between services: see below |
 
-Still to come: music, and haptics on a phone.
+## The music
+
+`make_music.py` writes `assets/sfx/music.ogg` (it needs ffmpeg with libvorbis): a gentle waltz in G on plucked
+strings, a mandolin playing the tune (with tremolo on the long notes) over a guitar's oom-pah-pah, 16 bars at 84 bpm,
+about 34 seconds. The strings are Karplus-Strong plucks, tuned to within a few cents; whatever rings past the end is
+folded back onto the start, so it loops without a seam. It plays on the title screen and quietly between services,
+and fades out when service starts (the room is the soundtrack then). The tune, the chords and the bass line are
+plain lists at the top of the script, so changing the music is editing those and running it again.
+
+## Haptics
+
+`Art.buzz(ms)` vibrates a phone (nothing on a computer) when Vibration is on in Settings: a light tick for each
+dough press, a ticket taken or a cut; a firmer one for the pass bell and the clock; a long buzz when a pizza starts
+to burn, a customer walks out or complains, or the phone rings. An Android build needs the VIBRATE permission.

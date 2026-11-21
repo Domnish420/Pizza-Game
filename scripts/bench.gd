@@ -110,6 +110,7 @@ func _down(p: Vector2) -> void:
 	elif pz.base.method == "hand":
 		pz.base.press(p)
 		Art.sfx("slap", true, 0.18)            # a floury pat on the marble
+		Art.buzz(8)
 	elif pz.base.method == "roll":
 		pin_at = p
 

@@ -502,6 +502,7 @@ func spawn_party() -> int:
 		phones.append({"n": n, "until": t + 10.0})
 		r.calls += 1
 		Art.sfx("ring")
+		Art.buzz(220)
 		dirty = true
 		return n
 	if type == "deliv":
@@ -837,6 +838,7 @@ func settle(p: Dictionary, walked: bool, by_player: bool = false, force: bool = 
 		set_pat(p, 45)
 		float_text(p.pos, "Not happy!", Kit.TOMATO)
 		Art.sfx("bad")
+		Art.buzz(90)
 		dirty = true
 		return false
 	if by_player and not walked and not force and p.type != "deliv" and randf() < 0.3 and not Kit.main.modal_root.visible:
@@ -1202,6 +1204,7 @@ func expire(p: Dictionary, why: String = "Gave up waiting") -> void:
 	leave(p)
 	if tb != null and p.got > 0: tb.dirty = true
 	Art.sfx("bad")
+	Art.buzz(90)
 	dirty = true
 
 func float_text(pos: Vector2, text: String, col: Color) -> void:
@@ -1659,6 +1662,7 @@ func claim(tk: Dictionary) -> void:
 	tool = ""
 	set_view("bench")
 	Art.sfx("ticket", true)
+	Art.buzz(12)
 
 func _first_tool(pz: Pizza) -> String:
 	for id in [pz.rec.sauce, pz.rec.cheese] + pz.rec.tops:
@@ -1878,6 +1882,7 @@ func cut(a: Vector2, b: Vector2) -> void:
 	if dd < pz.base.R * 0.35 and pz.cuts.size() < 4:
 		pz.cuts.append({"a": a, "b": b, "d": dd})
 		Art.sfx("cut", true)
+		Art.buzz(10)
 	elif dd >= pz.base.R * 0.35:
 		Kit.main.toast("Cut through the middle", true)
 
@@ -1950,6 +1955,7 @@ func serve(by_marco: bool = false) -> void:
 	to_pass(pz.tk, a)
 	board.pop_front()
 	Art.sfx("bell")                         # the pass bell: it is going out
+	Art.buzz(30)
 	_show_result(pz, a)
 	if board.is_empty() and not by_marco:
 		set_view("bench" if bench != null else ("oven" if oven.mine().size() + oven.shelf.size() > 0 else "front"))
@@ -2001,6 +2007,10 @@ func _refresh() -> void:
 	var flag := ""
 	for o in oven.mine():
 		var st := oven.status(o)
+		if (st == "BURNING" or st == "OVERDONE") and not o.get("warned", false):
+			o.warned = true                         # the moment it starts to burn: once, so you hear it from anywhere
+			Art.sfx("bad")
+			Art.buzz(150)
 		if st == "BURNING" or st == "OVERDONE": flag = "  BURNING!"
 		elif st == "READY" and flag == "": flag = "  READY"
 		elif st == "TURN" and flag == "": flag = "  TURN"
