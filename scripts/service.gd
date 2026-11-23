@@ -78,6 +78,7 @@ var palette: VBoxContainer
 var mini_panel: PanelContainer
 var mini_box: VBoxContainer
 var btn_row: HBoxContainer
+var put_btn: Button                   # "Put down the pepperoni": hands free in one tap (3D)
 var tab_btns := {}
 var top_lbl := {}
 var clock: ProgressBar
@@ -330,18 +331,8 @@ func _build_fp_body() -> void:
 	tl.add_child(tick_box)
 	tl.visible = false
 	stack.add_child(tl)
-	# looking around: the stick in the corner, and one button per station beside it
-	var stk := LookStick.new(fp.world)
-	stk.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	stk.offset_left = 10
-	stk.offset_top = -126
-	stk.offset_right = 126
-	stk.offset_bottom = -10
-	stack.add_child(stk)
+	# looking around: the stick in the corner, and one button per station beside it (see LookStick.lay_out)
 	var tabs := Kit.hbox(5)
-	tabs.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	tabs.offset_top = -54
-	tabs.offset_left = 136
 	for k in ["front", "bench", "oven", "board", "prep"]:
 		var b := Kit.button("", set_view.bind(k), "tab", 16)
 		b.custom_minimum_size = Vector2(84, 46)
@@ -350,12 +341,25 @@ func _build_fp_body() -> void:
 	var lb := Kit.button("List", func(): tl.visible = not tl.visible, "ghost", 15)
 	lb.custom_minimum_size = Vector2(56, 46)
 	tabs.add_child(lb)
-	stack.add_child(tabs)
+	var stk := LookStick.lay_out(stack, fp.world, tabs)
 	btn_row = Kit.hbox(8)
 	btn_row.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	btn_row.offset_top = -62
+	var lift: float = (stk.custom_minimum_size.x + 10.0) if Game.s.get("stick_right", false) else 0.0   # clear of a right-hand stick
+	btn_row.offset_top = -62 - lift
+	btn_row.offset_bottom = -8 - lift
 	btn_row.offset_left = -470
 	btn_row.offset_right = -8
+	btn_row.alignment = BoxContainer.ALIGNMENT_END
+	# holding a topping or the cheese: one tap puts it back, hands free (tapping its pan again does the same). Its own
+	# corner: in 3D the row above is hidden (the pass, the bin and the sheeter are in the room)
+	put_btn = Kit.button("", put_down, "primary", 18)
+	put_btn.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	put_btn.offset_left = -300
+	put_btn.offset_right = -10
+	put_btn.offset_top = -62 - lift
+	put_btn.offset_bottom = -10 - lift
+	put_btn.visible = false
+	stack.add_child(put_btn)
 	bin_btn = Kit.button("Bin", bin, "ghost", 20)
 	btn_row.add_child(bin_btn)
 	auto_btn = Kit.button("Sheeter", sheeter, "ghost", 20)
@@ -1880,11 +1884,23 @@ func cut(a: Vector2, b: Vector2) -> void:
 		dd = min(dd + pz.base.R * 0.12, pz.base.R * 0.34)      # a knife drags and tears the cheese
 		if pz.cuts.is_empty(): Kit.main.toast("No pizza wheel: cutting with a knife leaves ragged slices")
 	if dd < pz.base.R * 0.35 and pz.cuts.size() < 4:
+		if dd < pz.base.R * 0.12 and cutter != "knife":         # cut assist: near enough the middle goes through it
+			var u := (b - a).normalized()
+			a = -u * ln * 0.5
+			b = u * ln * 0.5
+			dd = 0.0
 		pz.cuts.append({"a": a, "b": b, "d": dd})
 		Art.sfx("cut", true)
 		Art.buzz(10)
 	elif dd >= pz.base.R * 0.35:
 		Kit.main.toast("Cut through the middle", true)
+
+## hands free: put down what you are holding (a topping, the cheese, an empty ladle)
+func put_down() -> void:
+	if tool == "" or (Data.ING[tool].kind == "sauce" and ladle_g > 0.0): return
+	tool = ""
+	Art.sfx("tap")
+	dirty = true
 
 # ---------- your oven ----------
 func oven_load(pz: Pizza, slot: int, at: Vector2 = Vector2.INF) -> void:
@@ -2026,6 +2042,14 @@ func _refresh() -> void:
 	for id in line_items():
 		if Stock.rail_have(id) < per_pizza(id) * 3.0: low += 1
 	tab_btns.prep.text = "Prep" + (" (%d low)" % low if low > 0 else "") + ("  DELIVERY" if Game.s.dock.size() > 0 else "")
+	# a station that needs you, while you are looking elsewhere, pulses: red for a pizza burning, gold for the rest
+	var need := {"oven": Kit.TOMATO if flag == "  BURNING!" else (Kit.CHEESE if flag != "" else Color.WHITE),
+		"board": Kit.CHEESE if board.size() > 0 else Color.WHITE, "front": Kit.CHEESE if acts > 0 else Color.WHITE,
+		"prep": Kit.CHEESE if Game.s.dock.size() > 0 else Color.WHITE}
+	var pulse := 0.5 + 0.5 * sin(Time.get_ticks_msec() / 160.0)
+	for k in tab_btns:
+		var col: Color = need.get(k, Color.WHITE)
+		tab_btns[k].modulate = Color.WHITE.lerp(col, 0.75 * pulse) if col != Color.WHITE and view != k else Color.WHITE
 	busy_wrap.visible = not busy.is_empty() and (view != "front" or fp_mode)
 	if not busy.is_empty():
 		busy_lbl.text = busy.label + "\n%d s left" % ceil(busy.left)
@@ -2174,6 +2198,9 @@ func _build_side() -> void:
 	btn_row.visible = not fp_mode and view != "oven" and view != "prep"        # in 3D: the pass, the bin and the sheeter are in the room
 	next_btn.visible = pz != null and view == "board"
 	bin_btn.visible = pz != null
+	if put_btn != null:
+		put_btn.visible = tool != "" and not (Data.ING[tool].kind == "sauce" and ladle_g > 0.0)
+		if put_btn.visible: put_btn.text = "Put down the %s" % ("ladle" if Data.ING[tool].kind == "sauce" else Data.ING[tool].name.to_lower())
 	auto_btn.visible = pz != null and view == "bench" and pz.base.method == "roll" and c.roll_auto > 0
 	mini_panel.visible = view != "oven" and oven.mine().size() + oven.shelf.size() > 0
 	if not helps.is_empty(): info.add_child(Kit.label(Story.today_short(), 15, Kit.CHEESE, true))

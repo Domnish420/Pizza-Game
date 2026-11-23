@@ -10,6 +10,7 @@ var toast_t := 0.0
 
 func _ready() -> void:
 	Kit.main = self
+	add_child(PerfOverlay.new())          # (shown when "Show performance" is on in Settings)
 	var bg := ColorRect.new()
 	bg.color = Kit.BG
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)

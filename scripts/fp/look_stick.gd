@@ -4,8 +4,8 @@ extends Control
 ## your head turns that way (further = faster), let go near a station and you settle on it, tap it to look back at
 ## the station you are at. It never touches the dough, so looking and working do not fight.
 
-const R := 54.0                # the base's radius
-const KNOB := 24.0
+var R := 54.0                  # the base's radius (larger with Bigger buttons, Settings > Controls)
+var KNOB := 24.0
 var world: FPWorld
 var held := -2                 # the touch (or -1 for the mouse) holding the stick; -2 = none
 var start := Vector2.ZERO
@@ -14,6 +14,9 @@ var moved := false
 
 func _init(w: FPWorld) -> void:
 	world = w
+	if Game.s.get("big_controls", false):
+		R = 70.0
+		KNOB = 31.0
 	custom_minimum_size = Vector2(R * 2 + 8, R * 2 + 8)
 	size = custom_minimum_size
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -77,3 +80,32 @@ func _draw() -> void:
 		draw_line(c + d * (R - 12.0), c + d * (R - 5.0), Color(0.97, 0.93, 0.85, 0.45), 2.0, true)
 	draw_circle(c + knob, KNOB, Color(0.97, 0.93, 0.85, 0.85 if on else 0.6))
 	draw_circle(c + knob, KNOB * 0.55, Color(0.95, 0.77, 0.31, 0.9 if on else 0.55))
+
+## the stick in a bottom corner (the left, or the right with "Look stick on the right" in Settings > Controls) and the
+## row of station buttons beside it, larger with "Bigger buttons". Both screens in the kitchen use this.
+static func lay_out(parent: Control, w: FPWorld, tabs: HBoxContainer) -> LookStick:
+	var big: bool = Game.s.get("big_controls", false)
+	var right: bool = Game.s.get("stick_right", false)
+	var stk := LookStick.new(w)
+	var side: float = stk.custom_minimum_size.x
+	stk.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT if right else Control.PRESET_BOTTOM_LEFT)
+	stk.offset_bottom = -10
+	stk.offset_top = -10 - side
+	if right:
+		stk.offset_right = -10
+		stk.offset_left = -10 - side
+	else:
+		stk.offset_left = 10
+		stk.offset_right = 10 + side
+	parent.add_child(stk)
+	var h := 60.0 if big else 46.0
+	tabs.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
+	tabs.offset_top = -h - 8.0
+	tabs.offset_left = 10.0 if right else 20.0 + side
+	for b in tabs.get_children():
+		if not b is Button: continue
+		b.custom_minimum_size = Vector2(b.custom_minimum_size.x * (1.2 if big else 1.0), h)
+		if big: b.add_theme_font_size_override("font_size", 19)
+	parent.add_child(tabs)
+	return stk
+

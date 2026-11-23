@@ -22,6 +22,7 @@ warnings at exit are ignored). A failure prints the checks that failed and the e
 | `traps` | Pest control on the floor plan: traps by the entry points catch more, droppings, laying a trap on the plan | 5 s |
 | `boxes` | Folding pizza boxes by hand, in order | 5 s |
 | `look_stick` | The look stick: turn, settle on a station, stay put elsewhere, tap to recentre | 25 s |
+| `controls` | Look speed and invert, the stick on the right with bigger buttons, the put-down button (on screen), cut assist, a burning pizza pulsing the Oven button, the performance overlay, Graphics: Low | 40 s |
 | `clock` | The clock above the hatch: its hands keep time; tapped like a finger, it clocks you in (opens), asks before clocking out early in service, and clocks you out at night (locks up); the on-screen time is only a readout | 20 s |
 | `sound` | Every sound the code asks for exists and loads; the fire crackles by a lit wood oven and the room hums, both fade when you leave the kitchen; the music plays on the title and between services, not in service; mute silences everything; vibration follows its setting; a pizza starting to burn is announced once | 20 s |
 | `senior_training` | The senior's training day: every back-of-house job moves Marco's guide on, and it finishes | 1 min |

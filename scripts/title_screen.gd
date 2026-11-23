@@ -294,15 +294,32 @@ func show_page(p: String) -> void:
 			_chalk("Story", func(): _new_game(true), "Start as a pizzaiolo at %s. Learn the job, get promoted, then go it alone with your own van." % Story.EMPLOYER)
 			_chalk("Free play", func(): _new_game(false), "Skip the job: your own pizza van from day one, doing everything yourself.")
 			_chalk("Back", func(): show_page("main"), "", true)
+		"controls":
+			_heading("Controls")
+			var G := Game
+			_chalk("Look speed: " + String(G.s.get("look_speed", "normal")).capitalize(), func():
+				Game.s.look_speed = {"slow": "normal", "normal": "fast", "fast": "slow"}[String(Game.s.get("look_speed", "normal"))]
+				Game.save_game()
+				show_page("controls"), "", false, 28)
+			_chalk("Invert up and down: " + ("on" if G.s.get("invert_look", false) else "off"), func(): _ctl_toggle("invert_look", false), "", false, 28)
+			_chalk("Look stick on the " + ("right" if G.s.get("stick_right", false) else "left"), func(): _ctl_toggle("stick_right", false), "", false, 28)
+			_chalk("Bigger buttons: " + ("on" if G.s.get("big_controls", false) else "off"), func(): _ctl_toggle("big_controls", false), "", false, 28)
+			_chalk("Look by turning the phone: " + ("on" if G.s.get("gyro", true) else "off"), func(): _ctl_toggle("gyro", true), "", false, 28)
+			_chalk("Back", func(): show_page("settings"), "", true)
 		"settings":
 			_heading("Settings")
 			var G := Game
 			_chalk("Kitchen in 3D: " + ("on" if G.s.get("view3d", true) else "off"), func(): _toggle("view3d", true), "", false, 28)
-			_chalk("Look by turning the phone: " + ("on" if G.s.get("gyro", true) else "off"), func(): _toggle("gyro", true), "", false, 28)
 			_chalk("Retro look: " + ("on" if G.s.get("retro", false) else "off"), func(): _toggle("retro", false), "", false, 28)
 			_chalk("Sound: " + ("off" if G.s.get("mute", false) else "on"), func(): _toggle("mute", false), "", false, 28)
 			_chalk("Music: " + ("on" if G.s.get("music", true) else "off"), func(): _toggle("music", true), "", false, 28)
 			_chalk("Vibration: " + ("on" if G.s.get("vibrate", true) else "off"), func(): _toggle("vibrate", true), "", false, 28)
+			_chalk("Graphics: " + String(G.s.get("quality", "high")).capitalize(), func():
+				Game.s.quality = {"high": "medium", "medium": "low", "low": "high"}[String(Game.s.get("quality", "high"))]
+				Game.save_game()
+				show_page("settings"), "", false, 28)
+			_chalk("Show performance: " + ("on" if G.s.get("perf", false) else "off"), func(): _toggle("perf", false), "", false, 28)
+			_chalk("Controls...", func(): show_page("controls"), "", false, 28)
 			_chalk("Back", func(): show_page("main"), "", true)
 	# slide the board in from the left, the lines following one after another
 	board_slide = -40.0
@@ -377,6 +394,11 @@ func _press(b: ChalkButton) -> void:
 	tw.tween_property(b, "squash", 0.9, 0.06)
 	tw.tween_property(b, "squash", 1.0, 0.12).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tw.tween_callback(b.cb)
+
+func _ctl_toggle(key: String, def: bool) -> void:
+	Game.s[key] = not Game.s.get(key, def)
+	Game.save_game()
+	show_page("controls")
 
 func _toggle(key: String, def: bool) -> void:
 	Game.s[key] = not Game.s.get(key, def)

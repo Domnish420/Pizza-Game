@@ -81,17 +81,7 @@ func _build() -> void:
 	stack.add_child(fp)
 	world = fp.world
 	# where to look: the stick in the corner, and one button per station beside it
-	var stk := LookStick.new(world)
-	stk.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	stk.offset_left = 10
-	stk.offset_top = -126
-	stk.offset_right = 126
-	stk.offset_bottom = -10
-	stack.add_child(stk)
 	var tabs := Kit.hbox(5)
-	tabs.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT)
-	tabs.offset_top = -54
-	tabs.offset_left = 136
 	for k in [["front", "Hatch" if Game.calc_tables() == 0 else "Pass"], ["bench", "Counter"], ["oven", "Oven"], ["prep", "Prep"], ["stores", "Stores"]]:
 		var b := Kit.button(k[1], world.goto.bind(k[0]), "tab", 16)
 		b.custom_minimum_size = Vector2(88, 46)
@@ -100,7 +90,7 @@ func _build() -> void:
 	var cl := Kit.button("Checklist", func(): list_panel.visible = not list_panel.visible, "ghost", 15)
 	cl.custom_minimum_size = Vector2(92, 46)
 	tabs.add_child(cl)
-	stack.add_child(tabs)
+	LookStick.lay_out(stack, world, tabs)
 	# what is still to do today, in the corner
 	list_panel = Kit.panel(Color(0.1, 0.14, 0.11, 0.82), 10)
 	list_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)

@@ -798,6 +798,72 @@ def _tidy(ob):
     bm.free()
 
 
+def _plain(m):
+    """a material that is only a colour: no texture, no glow, not see-through"""
+    if m is None or not m.use_nodes: return False
+    b = m.node_tree.nodes.get("Principled BSDF")
+    if b is None or b.inputs["Base Color"].is_linked or m.blend_method != "OPAQUE": return False
+    key = "Emission Color" if "Emission Color" in b.inputs else "Emission"
+    if b.inputs["Emission Strength"].default_value > 0.0 and max(b.inputs[key].default_value[:3]) > 0.0: return False
+    return True
+
+
+def flatten():
+    """Fewer draw calls: every plain colour in the model (see _plain) is multiplied into the vertex colours, on top of
+    the baked shadows, and the faces share one material (or one for painted metal), so a model draws in one or two
+    calls per part instead of one per colour. Textured, glowing and see-through materials are left as they are.
+    It looks the same: the game multiplies the vertex colours into the material's colour, which is now white. (The
+    colour is stored as the sRGB value, because Godot's Compatibility renderer uses vertex colours as they are; on the
+    Forward+ or Mobile renderer the material would need vertex_color_is_srgb.)"""
+    flat = mat("flat", "#ffffff", rough=0.6)
+    flat_metal = mat("flat_metal", "#ffffff", rough=0.4, metal=0.28)
+    for ob in [o for o in bpy.context.scene.objects if o.type == "MESH"]:
+        me = ob.data
+        if not me.materials or not me.color_attributes or not me.polygons: continue
+        attr = me.color_attributes.get("Col") or me.color_attributes[0]
+        if attr.domain != "CORNER": continue
+        plain = {}
+        for i, m in enumerate(me.materials):
+            if _plain(m) and m not in (flat, flat_metal):
+                b = m.node_tree.nodes.get("Principled BSDF")
+                lin = np.array(b.inputs["Base Color"].default_value[:3], dtype=np.float32)
+                # the game's renderer (Godot's Compatibility) uses a vertex colour as it is, the way it uses a material
+                # colour written in sRGB: so the colour goes in as sRGB, times the shadow, exactly as it shaded before
+                srgb = np.where(lin <= 0.0031308, lin * 12.92, 1.055 * np.power(np.maximum(lin, 0.0), 1.0 / 2.4) - 0.055)
+                plain[i] = (srgb.astype(np.float32), b.inputs["Metallic"].default_value > 0.1)
+        if not plain: continue
+        npoly = len(me.polygons)
+        mi = np.empty(npoly, np.int32)
+        me.polygons.foreach_get("material_index", mi)
+        ls = np.empty(npoly, np.int32)
+        me.polygons.foreach_get("loop_start", ls)
+        lt = np.empty(npoly, np.int32)
+        me.polygons.foreach_get("loop_total", lt)
+        col = np.empty(len(me.loops) * 4, np.float32)
+        attr.data.foreach_get("color", col)
+        col = col.reshape(-1, 4)
+        mats = list(me.materials)
+        for extra in (flat, flat_metal):
+            if extra not in mats: mats.append(extra)
+        fi, fmi = mats.index(flat), mats.index(flat_metal)
+        loop_poly = np.repeat(np.arange(npoly), lt)
+        loop_idx = np.concatenate([np.arange(a, a + n) for a, n in zip(ls, lt)]) if npoly else np.zeros(0, np.int32)
+        for i, (rgb, metal) in plain.items():
+            faces = mi == i
+            if not faces.any(): continue
+            loops = loop_idx[faces[loop_poly]]
+            col[loops, :3] *= rgb[None, :]
+            mi[faces] = fmi if metal else fi
+        attr.data.foreach_set("color", col.ravel())
+        # keep only the materials still used, in order, and renumber the faces
+        used = sorted(set(mi.tolist()))
+        remap = {old: new for new, old in enumerate(used)}
+        me.materials.clear()
+        for old in used: me.materials.append(mats[old])
+        me.polygons.foreach_set("material_index", np.array([remap[x] for x in mi], np.int32))
+        me.update()
+
+
 def export(key):
     os.makedirs(OUT, exist_ok=True)
     for o in bpy.context.scene.objects:

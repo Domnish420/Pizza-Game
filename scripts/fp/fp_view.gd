@@ -16,6 +16,12 @@ func _init(svc: ServiceScreen, ctrls: Dictionary, host = null) -> void:
 	add_child(vp)
 	world = FPWorld.new(svc, ctrls, host)
 	vp.add_child(world)
+	# Graphics (Settings): how sharp the kitchen is drawn, whether edges are smoothed, and how soon far things
+	# switch to their simpler versions. High suits most phones; Low is for old ones.
+	var q: String = Game.s.get("quality", "high")
+	vp.scaling_3d_scale = {"high": 1.0, "medium": 0.85, "low": 0.7}.get(q, 1.0)
+	vp.msaa_3d = Viewport.MSAA_2X if q == "high" else Viewport.MSAA_DISABLED
+	vp.mesh_lod_threshold = {"high": 1.0, "medium": 2.0, "low": 4.0}.get(q, 1.0)
 	if Game.s.get("retro", false):
 		# the Retro look: half resolution, no smoothing of edges, dithered colour, lighting per corner (set by the world)
 		vp.scaling_3d_scale = 0.5

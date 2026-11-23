@@ -72,6 +72,7 @@ for k in keys:
         lib.bake_ao(targets, **_bake_opts(k, targets))
         if getattr(fn, "after", None): fn.after(**kw)      # e.g. soot painted inside an oven, over its baked shadows
         for o in occ: bpy.data.objects.remove(o)
+        lib.flatten()                                       # plain colours into the vertex colours: fewer draw calls
         lib.export(k)
     except Exception:
         traceback.print_exc()

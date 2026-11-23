@@ -1091,9 +1091,9 @@ func _process(dt: float) -> void:
 		gyro.y = clamp(gyro.y + rad_to_deg(g.y) * dt * (-1.0 if DisplayServer.screen_get_orientation() == DisplayServer.SCREEN_REVERSE_LANDSCAPE else 1.0), -60.0, 60.0)
 	if stick != Vector2.ZERO:
 		# the look stick: the further you push, the faster you turn (eased so small pushes are fine aiming)
-		var sp := stick * stick.length()
+		var sp := stick * stick.length() * look_speed()
 		t_yaw -= sp.x * 120.0 * dt
-		t_pitch = clamp(t_pitch - sp.y * 80.0 * dt, -85.0, 40.0)
+		t_pitch = clamp(t_pitch - sp.y * 80.0 * dt * look_flip(), -85.0, 40.0)
 	var k := 1.0 - exp(-dt * 9.0)
 	yaw = lerp_angle(deg_to_rad(yaw), deg_to_rad(t_yaw + gyro.x), k) * 180.0 / PI
 	pitch = lerp(pitch, clamp(t_pitch + gyro.y, -85.0, 40.0), k)
@@ -1684,8 +1684,8 @@ func _move(index: int, pos: Vector2, rel: Vector2) -> void:
 			if c.moved: c.kind = "look"
 		"look":
 			var k: float = LOOK * 720.0 / max(1.0, get_viewport().get_visible_rect().size.y)
-			t_yaw -= rel.x * k
-			t_pitch = clamp(t_pitch - rel.y * k, -85.0, 40.0)
+			t_yaw -= rel.x * k * look_speed()
+			t_pitch = clamp(t_pitch - rel.y * k * look_speed() * look_flip(), -85.0, 40.0)
 
 ## the look stick let go: settle on a station if you are looking near one
 func settle_look() -> void:
@@ -1708,6 +1708,14 @@ func _sound(dt: float) -> void:
 		crowd = clamp(n / 14.0, 0.0, 1.0)
 	Art.loop("murmur", crowd * (0.6 if cur_view() == "front" else 0.3), dt)
 	Art.loop("music", 0.0 if svc != null else 0.28, dt)        # quietly between services; in service, the room
+## how fast the stick and a drag turn your head (Settings > Controls: Look speed)
+func look_speed() -> float:
+	return {"slow": 0.6, "normal": 1.0, "fast": 1.6}.get(String(Game.s.get("look_speed", "normal")), 1.0)
+
+## -1 when up and down are swapped (Settings > Controls: Invert up and down)
+func look_flip() -> float:
+	return -1.0 if Game.s.get("invert_look", false) else 1.0
+
 ## the look stick tapped: look back at the station you are at
 func recentre() -> void:
 	_look_at(cur_view())

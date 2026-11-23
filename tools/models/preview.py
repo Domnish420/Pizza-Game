@@ -7,7 +7,8 @@
 as it reaches --python.)
 
 For each key it imports the exported model (what the game will load), checks it, and renders four views - front,
-side, top and a three-quarter perspective - with Workbench into one sheet: /tmp/previews/<key>.png. Two more keys
+side, top and a three-quarter perspective - with EEVEE (as the game shades them: textures and the colours and shadows
+in the vertex colours; PREVIEW_ENGINE=workbench for a quicker, flat look) into one sheet: /tmp/previews/<key>.png. Two more keys
 put the models together the way the game does: `scene.van` (the van, the street and every prop where the game
 places it, customers at the hatch) and `scene.kitchen` (the restaurant kitchen and dining room, wood oven, seated
 customers). `all` does every model and both scenes. The last sheet is also written to /tmp/preview.png.
@@ -197,9 +198,50 @@ def bounds(objs=None):
 
 def setup_scene():
     sc = bpy.context.scene
-    sc.render.engine = "BLENDER_WORKBENCH"
     sc.render.resolution_x = SIZE
     sc.render.resolution_y = SIZE
+    if os.environ.get("PREVIEW_ENGINE", "eevee") == "eevee":
+        # EEVEE renders the materials as the game does: a model's plain colours live in its vertex colours (see
+        # lib.flatten), multiplied into a white material, which Workbench cannot show alongside textures
+        sc.render.engine = "BLENDER_EEVEE"
+        sc.eevee.taa_render_samples = 8
+        sc.view_settings.view_transform = "Standard"
+        if sc.world is None: sc.world = bpy.data.worlds.new("w")
+        sc.world.use_nodes = True
+        bg = sc.world.node_tree.nodes["Background"]
+        bg.inputs[0].default_value = (0.58, 0.58, 0.6, 1.0)
+        bg.inputs[1].default_value = 1.0
+        if "preview_sun" not in bpy.data.objects:
+            sun = bpy.data.lights.new("preview_sun", "SUN")
+            sun.energy = 2.2
+            so = bpy.data.objects.new("preview_sun", sun)
+            sc.collection.objects.link(so)
+            so.rotation_euler = (math.radians(40), math.radians(15), math.radians(25))
+        sc.render.use_stamp = True
+        for a in dir(sc.render):
+            if a.startswith("use_stamp_") and a not in ("use_stamp_note", "use_stamp_labels"):
+                try: setattr(sc.render, a, False)
+                except Exception: pass
+        sc.render.use_stamp_note = True
+        sc.render.stamp_font_size = 18
+        # the vertex colours hold sRGB values (the game's renderer uses them as they are: see lib.flatten); EEVEE reads
+        # them as linear, so turn them back here, or every plain colour would look washed out
+        for m in bpy.data.materials:
+            if not m.use_nodes or m.get("_vc_gamma"): continue
+            nt = m.node_tree
+            for n in [n for n in nt.nodes if n.type == "VERTEX_COLOR"]:
+                links = [l for l in nt.links if l.from_node == n and l.from_socket.name == "Color"]
+                if not links: continue
+                g = nt.nodes.new("ShaderNodeGamma")
+                g.inputs["Gamma"].default_value = 2.2
+                nt.links.new(n.outputs["Color"], g.inputs["Color"])
+                for l in links:
+                    to = l.to_socket
+                    nt.links.remove(l)
+                    nt.links.new(g.outputs["Color"], to)
+            m["_vc_gamma"] = True
+        return
+    sc.render.engine = "BLENDER_WORKBENCH"            # PREVIEW_ENGINE=workbench: quicker, flat material colours
     sh = sc.display.shading
     sh.light = "STUDIO"
     sh.color_type = "TEXTURE"

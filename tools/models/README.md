@@ -13,10 +13,20 @@ blender -b --factory-startup --python-exit-code 1 --python tools/models/build.py
 `--python-exit-code 1` has to come before `--python`: Blender reads its arguments in order and runs the script as
 soon as it reaches `--python`, so the flag placed after it is ignored and a failed build would still exit 0.
 
+## Draw calls: plain colours live in the vertex colours
+
+On a phone the cost that matters is draw calls (one per mesh per material), not triangles; see "Phone budget" in
+`DESIGN.md`. So after the shadows are baked, `lib.flatten()` multiplies every plain colour (a material with no
+texture, no glow and no transparency) into the vertex colours and gives those faces one shared white material (and one
+for painted metal). A person draws in about 12 calls instead of 36. Textured, glowing and see-through materials stay
+as they were, so use a texture only where it earns its draw call. The colours are stored as sRGB, because Godot's
+Compatibility renderer uses vertex colours as they are; the preview turns them back for EEVEE.
+
 ## Checking a model before calling it done
 
 Every change is checked with a 4-view diagnostic contact sheet (front, side, top and a three-quarter perspective),
-rendered with Workbench under a virtual display:
+rendered with EEVEE under a virtual display, so the sheet shades a model as the game does (`PREVIEW_ENGINE=workbench`
+for a quicker sheet in flat colours):
 
 ```
 xvfb-run -a blender -b --factory-startup --python-exit-code 1 --python tools/models/preview.py -- counter oven.wood

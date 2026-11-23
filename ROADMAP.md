@@ -102,7 +102,11 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [x] Marco and Luca in the kitchen (the boss by the pass, the junior at the prep counter), alive and watching you
 - [x] Proper oven doors between services; the prep list on the prep tablet; the 2D layout can light the wood oven
 - [x] Each person is one mesh per joint (about half the draw calls)
-- [ ] Lower-detail versions of the people for far tables in a busy dining room
+- [x] Lower-detail versions of the people for far tables (Godot's automatic LOD: about 2,500 triangles past 8 m)
+- [x] Fewer draw calls: plain colours merged into vertex colours (a person 36 draw calls to 12, the restaurant's pass
+      500 to 250); a performance overlay and a Graphics setting for phones
+- [x] Controls: look speed, invert, the stick on either side, bigger buttons, a put-it-down button, cut assist,
+      station buttons that pulse when they need you
 - [x] A look stick for the camera; hands without arms; a sparse HUD (a short recipe card, labels only when they
       matter)
 - [x] A clock on the wall in each scene to clock in and out on (open, close early, lock up), its hands keeping time

@@ -89,8 +89,21 @@ instead; the PS2 look lives on as an optional "Retro look" switch on the phone's
 - **The pizza is the hero**: the one thing allowed real detail and appetite appeal (stretchy dough, glossy sauce,
   melting cheese, leopard-spot char, steam), standing out against the simple world.
 - **Text stays sharp**: labels, tickets and the HUD are always drawn at full resolution.
-- **Phone budget**: about 12,000-18,000 triangles for a person (a far-table version with fewer is still to do), a few hundred to 5,000 for a prop, up to about 15,000 for a
-  room; a whole scene is about 100,000.
+- **Phone budget** (measured, not guessed: the numbers below are what the game draws). On a phone the limit is
+  **draw calls**, not triangles: every separate mesh-and-material is one, and a mid-range phone running this renderer
+  is comfortable up to about 300 a frame. Aim for each view to stay under about 250 draw calls and 150,000 triangles.
+  - Where we are: the van at the hatch in service about 75 draw calls and 70,000 triangles; the restaurant's pass with
+    a few tables seated about 250 and 155,000 (it was 500 before plain colours were merged). Every other station is
+    under 90.
+  - What things cost: a person about 12 draw calls and 15,000 triangles near, falling to about 2,500 triangles past
+    8 m (Godot makes lower-detail versions on import and switches by distance, so far tables are already cheap); a
+    table and chairs 5; a prop 1 to 5; a room 5 to 7.
+  - What keeps it down: every plain colour in a model is merged into one material, its colour stored in the vertex
+    colours (`lib.flatten`), so only textured, glowing and see-through parts add draw calls; and fewer separate parts.
+  - How to raise it: measure on the phones you care about with **Show performance** (Settings), then spend what is
+    spare. **Graphics** (Settings) trades sharpness for speed on old phones: Low draws the kitchen at 70%, without
+    edge smoothing, and switches far things to simpler versions sooner. The next savings, if a full restaurant
+    needs them: tables and chairs drawn as one batch (a MultiMesh), and far customers as a single mesh.
 
 ## How the code is split (keep it this way)
 
@@ -205,8 +218,9 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   through the mushroom on the prep board, the mop on the real floor, crates unpacked onto the real shelves, traps placed
   on the real floor, the dough in the real mixer).
 - The classic 2D layout is still there (on the phone's Today page, "Service in 3D: off") for testing; keep it working.
-- Performance: the Compatibility renderer, four small SubViewports for the surfaces, unshaded quads. Keep the polygon
-  budget phone-sized, bake lighting where you can, and check frame time on a low-end Android phone.
+- Performance: the Compatibility renderer, four small SubViewports for the surfaces, unshaded quads. Keep inside the
+  phone budget above (draw calls first), bake lighting where you can, and check frame time on a low-end Android phone
+  with Show performance on.
 
 ### 1. Dough forming (the centrepiece)
 

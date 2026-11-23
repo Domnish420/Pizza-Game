@@ -38,5 +38,9 @@ check `python3 tools/sfx/sheet.py` (it must exit 0); look at the sheet for click
   three-quarter perspective) to `/tmp/preview.png`:
   `xvfb-run -a blender -b --factory-startup --python-exit-code 1 --python tools/models/preview.py -- <keys> scene.van scene.kitchen`
   Look at the rendered PNG yourself and check for floating parts, inverted normals (holes: back faces are culled),
-  clipping and broken framing. The script must exit 0 (no FLOAT or FLIP). Iterate until it looks right.
+  clipping and broken framing. The script must exit 0 (no FLOAT or FLIP). Iterate until it looks right. The sheets
+  render with EEVEE, as the game shades them (`PREVIEW_ENGINE=workbench` is quicker but shows flat colours).
+- Plain colours are merged into the vertex colours on export (`lib.flatten`, fewer draw calls); they are stored as
+  sRGB because the game's Compatibility renderer uses vertex colours as they are. Check the draw calls a change costs
+  against the phone budget in `DESIGN.md`.
 - Then import into Godot (`godot --headless --path . --import`) and check the models in in-game screenshots.
