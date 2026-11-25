@@ -46,3 +46,17 @@ renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0.11, 0.165, 0.133, 1)
+
+[xr]
+
+openxr/enabled=false
+openxr/enabled.quest=true
+openxr/reference_space=2
+openxr/foveation_level=3
+openxr/foveation_dynamic=true
+openxr/foveation_eye_tracked=false
+openxr/startup_alert=false
+openxr/extensions/hand_tracking=true
+openxr/extensions/hand_interaction_profile=true
+shaders/enabled=false
+shaders/enabled.quest=true
