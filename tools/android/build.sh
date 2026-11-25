@@ -9,6 +9,9 @@ KIND=${1:-debug}
 mkdir -p build
 godot --headless --path . --import > /dev/null 2>&1 || true
 OUT=build/CrustEmpire-$KIND.apk
-godot --headless --path . --export-$KIND "Android" $OUT 2>&1 | grep -E "ERROR|error:|export: end" || true
+# a Gradle build (the ARCore plugin is an Android library): Godot's Android project goes in android/ the first time
+INSTALL=""
+[ -d android/build ] || INSTALL="--install-android-build-template"
+godot --headless --path . $INSTALL --export-$KIND "Android" $OUT 2>&1 | tee build/export.log | grep -E "ERROR|error:|FAILURE|export: end" || true
 [ -f $OUT ] || { echo "no APK built"; exit 1; }
 ls -la $OUT

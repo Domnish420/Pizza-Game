@@ -9,7 +9,7 @@ model the game asks for; `ROADMAP.md` is what is built and what is next.
 
 ## Run it
 
-1. Install Godot 4.3 or newer (standard build, no C#).
+1. Install Godot 4.7.2 or newer (standard build, no C#). To build for Android, see `tools/android/` (an APK with AR).
 2. Open `project.godot` and press Play.
 3. On a computer the left mouse button is one finger and the right button (or Shift + left) is two fingers.
 
@@ -119,9 +119,12 @@ empty hand swipes the wheel.
 stick moves your right hand over what you are looking at and the right trigger puts it down (hold it and move the
 stick to press, spread, stretch or slide, the way a thumb on the screen would); the same on the left. Clicking a stick
 in is that hand's thumb: it lets go of what the hand holds. The shoulder buttons turn you to the next station round
-(left or right); your head (the phone) still looks round. A white dot shows where each hand would touch. In a dialog
-the main button has a gold ring: A presses it, the d-pad moves between buttons. Touch the screen and the
-controller's hands rest.
+(left or right); your head (the phone) still looks round. A white dot shows where each hand would touch. Point a hand
+at anything on the 2D screens (the top bar, the phone, a job's sheet like cleaning or folding boxes, a dialog; in VR
+the floating panel) and it becomes a ring there: the trigger presses, drags and lets go just as a finger would
+(scrubbing, kneading, folding all work), and the d-pad scrolls. The title and the other menus work the same way:
+the sticks move the rings, the triggers click. In a dialog the main button has a gold ring: A presses it, the d-pad
+moves between buttons. Touch the screen and the controller's hands rest.
 
 **Phone VR** (Settings > Controls > VR viewer, or on the phone): put the phone in a Cardboard-style headset. The
 kitchen is drawn for each eye, bent for the lens; your head is your head (turn, nod and tilt: it follows at once), and
@@ -132,8 +135,14 @@ read. A dialog, and the menus away from the kitchen, come to where you are looki
 looking on the panel: the viewer's button (or A) clicks the button under it, so every menu works from inside the
 headset. Your hands are a game controller (see above); without one, the viewer's button, looking past the panel's
 buttons, is your right hand at the middle of your view (a white dot shows where). Back on the controller, or holding a
-finger on the screen for two seconds, leaves VR. For now it follows your head turning, not you walking (that needs
-the phone's camera tracking, ARCore, next).
+finger on the screen for two seconds, leaves VR. With AR on (below), walking moves you too.
+
+**AR** (Settings > Controls > AR, Android phones with ARCore): the phone's camera works out where the phone is in
+your room, so walking, leaning and crouching move you in the kitchen, on the screen and in a VR viewer. Two ways:
+*walk round the kitchen* (the van all round you, your real steps move you) and *the kitchen in your room* (the
+camera's picture behind the counters, the oven and the customers, without the van's walls). Start puts you back where
+you stood, facing your station. The first time, the phone asks to install Google Play Services for AR and to use the
+camera; nothing is asked unless AR is turned on.
 
 On a computer (or with Look set to the stick) a thumb stick in the bottom-left corner turns your head instead (push
 further to turn faster; let go near a station to settle on it, tap it to look back at your station), and the

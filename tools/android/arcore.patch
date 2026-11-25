@@ -1,0 +1,143 @@
+diff --git a/build.gradle.kts b/build.gradle.kts
+index 83658ce..6bcf312 100644
+--- a/build.gradle.kts
++++ b/build.gradle.kts
+@@ -1,5 +1,5 @@
+ // Top-level build file where you can add configuration options common to all sub-projects/modules.
+ plugins {
+-    id("com.android.library") version "7.4.1" apply false
+-    id("org.jetbrains.kotlin.android") version "1.8.0" apply false
++    id("com.android.library") version "8.6.1" apply false
++    id("org.jetbrains.kotlin.android") version "2.1.21" apply false
+ }
+diff --git a/plugin/build.gradle.kts b/plugin/build.gradle.kts
+index 0746255..f27ada9 100644
+--- a/plugin/build.gradle.kts
++++ b/plugin/build.gradle.kts
+@@ -27,7 +27,7 @@ val gdextensionSupportsNonAndroidPlatforms = false
+ 
+ android {
+     namespace = pluginPackageName
+-    compileSdk = 33
++    compileSdk = 36
+ 
+     buildFeatures {
+         buildConfig = true
+@@ -72,12 +72,12 @@ android {
+     kotlinOptions {
+         jvmTarget = "17"
+     }
+-    ndkVersion = "23.2.8568313"
+-    buildToolsVersion = "33.0.2"
++    ndkVersion = "28.1.13356709"
++    buildToolsVersion = "36.1.0"
+ }
+ 
+ dependencies {
+-    implementation("org.godotengine:godot:4.2.0.stable")
++    implementation("org.godotengine:godot:4.7.2.stable")
+     implementation("com.google.ar:core:1.44.0")
+     configurations.create("arcoreImplementation")
+     "arcoreImplementation" ("com.google.ar:core:1.44.0")
+diff --git a/plugin/src/main/AndroidManifest.xml b/plugin/src/main/AndroidManifest.xml
+index bb596f4..74bf432 100644
+--- a/plugin/src/main/AndroidManifest.xml
++++ b/plugin/src/main/AndroidManifest.xml
+@@ -7,7 +7,8 @@
+ 
+     <!-- Limits app visibility in the Google Play Store to ARCore supported devices
+         (https://developers.google.com/ar/devices). -->
+-    <uses-feature android:name="android.hardware.camera.ar" />
++    <!-- Crust Empire: AR is one way to play, not required: the game installs on any phone -->
++    <uses-feature android:name="android.hardware.camera.ar" android:required="false" />
+ 
+     <queries>
+         <package android:name="com.google.ar.core" />
+@@ -36,7 +37,7 @@
+          to be installed, as the app does not include any non-AR features. -->
+         <meta-data
+             android:name="com.google.ar.core"
+-            android:value="required"
++            android:value="optional"
+             tools:replace="android:value"/>
+ 
+         <!-- The minimal version code of ARCore APK required for an app using this SDK. -->
+diff --git a/plugin/src/main/java/org/godotengine/plugin/android/arcore/ARCorePlugin.kt b/plugin/src/main/java/org/godotengine/plugin/android/arcore/ARCorePlugin.kt
+index f2d1c3d..7feead6 100644
+--- a/plugin/src/main/java/org/godotengine/plugin/android/arcore/ARCorePlugin.kt
++++ b/plugin/src/main/java/org/godotengine/plugin/android/arcore/ARCorePlugin.kt
+@@ -33,6 +33,8 @@ class ARCorePlugin(godot: Godot): GodotPlugin(godot) {
+ 
+         // Installation and Setup Flow
+         var userRequestedInstall: Boolean = false
++        // Crust Empire: AR is one way to play, so nothing is asked (install, camera) until the game turns AR on
++        var arWanted: Boolean = false
+         var arCoreInstalled: Boolean = false
+         var arCoreSupported: Boolean = false
+         var cameraPermissionGranted : Boolean = false
+@@ -56,8 +58,9 @@ class ARCorePlugin(godot: Godot): GodotPlugin(godot) {
+         }
+     }
+ 
+-    override fun onMainCreate(activity: Activity): View? {
++    override fun onMainCreate(activity: Activity?): View? {
+         super.onMainCreate(activity)
++        if (activity == null) return null
+         Log.d(TAG, "onMainCreate()")
+ 
+         // 1. Check if ARCore is available and/or can be installed
+@@ -74,7 +77,6 @@ class ARCorePlugin(godot: Godot): GodotPlugin(godot) {
+             }
+             else -> {
+                 Log.d(TAG, "ARCoreApk.Availability: Not SUPPORTED_*")
+-                Toast.makeText(activity, "ARCore support can't be determined, AR features probably won't work", Toast.LENGTH_LONG).show()
+             }
+             // the else branch represents all these (non)-availabilities:
+             /*ArCoreApk.Availability.UNKNOWN_CHECKING -> Log.d(TAG, "ARCoreApk.Availability: UNKNOWN_CHECKING")
+@@ -96,7 +98,12 @@ class ARCorePlugin(godot: Godot): GodotPlugin(godot) {
+     override fun onMainResume() {
+         super.onMainResume()
+         Log.d(TAG, "onMainResume")
++        if (arWanted) askForAR()
++    }
+ 
++    /** the install and the camera permission, asked for when the game turns AR on (and again on resume after) */
++    private fun askForAR() {
++        val activity = activity ?: return
+         if(arCoreSupported && !arCoreInstalled) {
+             try {
+                 when(ArCoreApk.getInstance().requestInstall(activity, userRequestedInstall)) {
+@@ -163,7 +170,7 @@ class ARCorePlugin(godot: Godot): GodotPlugin(godot) {
+             // Note that the order of pausing matters - GLSurfaceView is paused first so that it does not try
+             // to query the session. If Session is paused before GLSurfaceView, GLSurfaceView may
+             // still call session.update() and get a SessionPausedException.
+-            surfaceView!!.onPause()
++            // (Godot pauses its own drawing; the plugin has no surface of its own to pause)
+             session!!.pause()
+         }
+     }
+@@ -296,6 +303,24 @@ class ARCorePlugin(godot: Godot): GodotPlugin(godot) {
+ 
+     override fun getPluginGDExtensionLibrariesPaths() = setOf("res://addons/${BuildConfig.GODOT_PLUGIN_NAME}/plugin.gdextension")
+ 
++    /** the game turns AR on: ask for ARCore (install) and the camera, if not yet given */
++    @UsedByGodot
++    fun requestAR() {
++        arWanted = true
++        activity?.runOnUiThread { askForAR() }
++    }
++
++    /** where AR stands: "ready", "install" (ARCore must be installed or updated), "camera" (no permission yet),
++     *  or "unsupported" (this phone cannot run ARCore) */
++    @UsedByGodot
++    fun arStatus(): String {
++        val activity = activity ?: return "unsupported"
++        if (!arCoreSupported) return "unsupported"
++        if (!arCoreInstalled) return "install"
++        if (!checkCameraPermission()) return "camera"
++        return "ready"
++    }
++
+     @UsedByGodot
+     private external fun initializeEnvironment()
+ 

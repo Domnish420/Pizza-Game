@@ -76,10 +76,21 @@ var pad_at := [Vector2.ZERO, Vector2.ZERO]   # where each hand points, in the vi
 var pad_down := [false, false]          # that hand's trigger is pulled: the hand is down on what it points at
 var pad_btn := {}                       # the buttons held last frame (each acts once per press)
 var pad_dots: Array = []                # a dot where each hand would touch
+var pad_ui := [false, false]            # that hand's trigger went down on the game's screens: it is the mouse there till it lets go
+var pad_ui_at := [Vector2.ZERO, Vector2.ZERO]   # where (the screens' pixels)
+var pad_over: Array = [null, null]      # what each hand points at on the screens this frame ({vp, px}), or null (the kitchen)
+var pad_last := 0                       # the hand that moved last (the d-pad scrolls what it points at)
 # a VR viewer (VRView): the headset is your head
 var vr_roll := 0.0                      # your head's tilt (radians)
 var _vr_turn := ""                      # a station you asked to face (Start, a shoulder button): the only thing that turns you round in VR
-var _vr_was := false                    # VR was on last frame
+var _vr_was := false                    # VR (or AR) was on last frame
+# AR (ARMode): the phone's real position moves you
+var immersive := false                  # your real head is your head this frame: a VR viewer, or AR tracking
+var ar_ref = null                       # where the phone was in the room when AR started (or Start was pressed)
+var ar_pos := Vector3.ZERO              # how far you have moved from there, in the kitchen
+var shell: Array = []                   # the walls, floor, ceiling and the view outside: hidden in AR's camera mode
+var env: Environment
+var _cam_bg := -1                       # the camera feed shown behind the kitchen (-1: the usual background)
 var stick := Vector2.ZERO               # the look stick (LookStick): -1..1 each way, held = turning
 var lean := Vector3.ZERO
 var t_lean := Vector3.ZERO
@@ -238,7 +249,7 @@ func _shade(n: Node) -> void:
 # ---------- the room ----------
 func _environment() -> void:
 	var we := WorldEnvironment.new()
-	var env := Environment.new()
+	env = Environment.new()
 	env.background_mode = Environment.BG_COLOR
 	env.background_color = Color("9cc6e8") if not dine else Color("2a2622")
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -263,7 +274,7 @@ func _environment() -> void:
 	add_child(lamp)
 
 func _room() -> void:
-	_prop("room." + ("kitchen" if dine else "van"), Vector3.ZERO, _mk_room)
+	shell.append(_prop("room." + ("kitchen" if dine else "van"), Vector3.ZERO, _mk_room))
 
 func _mk_room(r: Node3D) -> void:
 	var wall := Color("e9e4da") if dine else Color("dfe5e8")
@@ -727,7 +738,7 @@ func _mk_crates(r: Node3D) -> void:
 
 ## the van or kiosk looks out over a street
 func _street() -> void:
-	_prop("street", Vector3.ZERO, _mk_street)
+	shell.append(_prop("street", Vector3.ZERO, _mk_street))
 
 func _mk_street(r: Node3D) -> void:
 	_box(Vector3(40, 0.1, 40), Vector3(0, ground_y - 0.05, -21.2), Color("6d6f70"), r)          # road
@@ -740,7 +751,7 @@ func _mk_street(r: Node3D) -> void:
 
 ## shops and restaurants look out over the dining room from the pass
 func _dining_room() -> void:
-	_prop("dining", Vector3.ZERO, _mk_dining)
+	shell.append(_prop("dining", Vector3.ZERO, _mk_dining))
 	for i in 3:
 		var l := OmniLight3D.new()
 		l.position = Vector3(-1.5 + i * 2.0, 2.7, -4.0 - i * 3.0)
@@ -1082,14 +1093,17 @@ func _to3d(p2: Vector2) -> Vector3:
 
 func _look_at(v: String, snap: bool = false) -> void:
 	var st: Vector2 = STATIONS.get(v, STATIONS.front)
-	if VRView.active and not snap:
-		# in VR your real head is where you look: the game moving you on never swings you round (that makes people
-		# sick); only a station you asked to face does (Start, the shoulder buttons)
-		if v == _vr_turn: t_yaw = st.x - gyro.x
+	if immersive and not snap:
+		# in VR (and AR) your real head is where you look: the game moving you on never swings you round (that makes
+		# people sick); only a station you asked to face does (Start, the shoulder buttons), and that also puts you
+		# back where you stood
+		if v == _vr_turn:
+			t_yaw = st.x - gyro.x
+			if ARMode.pose() != null: ar_ref = ARMode.pose()
 		_vr_turn = ""
 		_faced = ""
 		t_pitch = 0.0
-		t_lean = (CLOSED_LEAN.get(v, STATION_LEAN.get(v, Vector3.ZERO)) if svc == null else STATION_LEAN.get(v, Vector3.ZERO))
+		t_lean = Vector3.ZERO if ARMode.active else (CLOSED_LEAN.get(v, STATION_LEAN.get(v, Vector3.ZERO)) if svc == null else STATION_LEAN.get(v, Vector3.ZERO))
 		t_fov = VRView.FOV
 		last_view = v
 		return
@@ -1125,16 +1139,27 @@ func _process(dt: float) -> void:
 		clock_hands[1].rotation.z = -TAU * fmod(mins, 60.0) / 60.0
 	if cur_view() != last_view: _look_at(cur_view())
 	var g: Vector3 = gyro_test if gyro_test != null else Input.get_gyroscope()
-	var phone := LookStick.phone_look() and not VRView.active
+	var arp = ARMode.pose()
+	immersive = VRView.active or arp != null
+	var phone := LookStick.phone_look() and not immersive
 	var working := _working()
-	if VRView.active:
-		# the headset: where it points is where you look, at once
-		var he := VRView.head_basis().get_euler(EULER_ORDER_YXZ)
+	if immersive:
+		# the headset, or the phone tracked by AR: where it points is where you look, at once; with AR, where it is
+		# is where you are
+		var hb: Basis = arp.basis if arp != null else VRView.head_basis()
+		var he := hb.get_euler(EULER_ORDER_YXZ)
 		gyro = Vector2(rad_to_deg(he.y), clampf(rad_to_deg(he.x), -85.0, 60.0))
 		vr_roll = he.z
 		if not _vr_was:
 			t_yaw = STATIONS.get(cur_view(), STATIONS.front).x - gyro.x      # put on: you face your station
 			_vr_was = true
+			ar_ref = arp
+			if arp != null: t_lean = Vector3.ZERO
+		if arp != null:
+			if ar_ref == null: ar_ref = arp
+			ar_pos = Basis(Vector3.UP, deg_to_rad(t_yaw)) * (arp.origin - ar_ref.origin)
+		else:
+			ar_pos = Vector3.ZERO
 		if not working: _face_station(dt)
 		g = Vector3.ZERO
 	elif _vr_was:
@@ -1142,8 +1167,11 @@ func _process(dt: float) -> void:
 		_vr_was = false
 		gyro = Vector2.ZERO
 		vr_roll = 0.0
+		ar_pos = Vector3.ZERO
+		ar_ref = null
 		cam.rotation.z = 0.0
 		_look_at(cur_view())
+	_ar_camera()
 	# the phone's movement turns your head; while a thumb is working on something it holds still, so the dough does
 	# not slide under your thumb when the phone moves in your hands
 	if g.length() > 0.02 and (phone or LookStick.gyro_helps()) and not working:
@@ -1156,26 +1184,29 @@ func _process(dt: float) -> void:
 		else: gyro.y = clamp(gyro.y + dy, -60.0, 60.0)
 	if phone and not working: _face_station(dt)
 	_pad(dt)
-	if stick != Vector2.ZERO and not VRView.active:
+	if stick != Vector2.ZERO and not immersive:
 		# the look stick: the further you push, the faster you turn (eased so small pushes are fine aiming)
 		var sp := stick * stick.length() * look_speed()
 		t_yaw -= sp.x * 120.0 * dt
 		t_pitch = clamp(t_pitch - sp.y * 80.0 * dt * look_flip(), -85.0, 40.0)
 	var k := 1.0 - exp(-dt * 9.0)
-	if VRView.active:
+	if immersive:
 		t_pitch = 0.0
 		yaw = t_yaw + gyro.x                   # no smoothing: your head is your head
 		pitch = gyro.y
+		if not VRView.active and Kit.main != null and Kit.main.ar != null and ARMode.mode() == "camera":
+			var f: float = Kit.main.ar.fov(get_viewport().get_visible_rect().size.aspect())
+			if f > 1.0: t_fov = f                  # the camera's own view, so the kitchen sits right in its picture
 	else:
 		yaw = lerp_angle(deg_to_rad(yaw), deg_to_rad(t_yaw + gyro.x), k) * 180.0 / PI
 		pitch = lerp(pitch, clamp(t_pitch + gyro.y, -85.0, 40.0), k)
 	lean = lean.lerp(t_lean, k)
-	head.position = Vector3(0, EYE, 0) + lean
+	head.position = Vector3(0, EYE, 0) + lean + ar_pos
 	head.rotation_degrees.y = yaw
 	cam.rotation_degrees.x = pitch
-	if VRView.active: cam.rotation.z = vr_roll
+	if immersive: cam.rotation.z = vr_roll
 	cam.fov = lerp(cam.fov, t_fov, k)
-	cam.position.y = 0.0 if VRView.active else sin(time * 1.7) * 0.004       # breathing (not in VR: it would sway you)
+	cam.position.y = 0.0 if immersive else sin(time * 1.7) * 0.004       # breathing (not in VR or AR: it would sway you)
 	_sync_pans()
 	_sync_ladles()
 	_sync_hands(dt)
@@ -1869,25 +1900,14 @@ func _settle() -> void:
 ## the controller now: both sticks, both triggers, the stick clicks (your thumbs) and the shoulder buttons
 func _pad_read() -> Dictionary:
 	if pad_test != null: return pad_test
-	var pads := Input.get_connected_joypads()
-	if pads.is_empty(): return {}
-	var d: int = pads[0]
-	return {
-		"l": Vector2(Input.get_joy_axis(d, JOY_AXIS_LEFT_X), Input.get_joy_axis(d, JOY_AXIS_LEFT_Y)),
-		"r": Vector2(Input.get_joy_axis(d, JOY_AXIS_RIGHT_X), Input.get_joy_axis(d, JOY_AXIS_RIGHT_Y)),
-		"lt": Input.get_joy_axis(d, JOY_AXIS_TRIGGER_LEFT),
-		"rt": Input.get_joy_axis(d, JOY_AXIS_TRIGGER_RIGHT),
-		"l3": Input.is_joy_button_pressed(d, JOY_BUTTON_LEFT_STICK),
-		"r3": Input.is_joy_button_pressed(d, JOY_BUTTON_RIGHT_STICK),
-		"lb": Input.is_joy_button_pressed(d, JOY_BUTTON_LEFT_SHOULDER),
-		"rb": Input.is_joy_button_pressed(d, JOY_BUTTON_RIGHT_SHOULDER),
-		"start": Input.is_joy_button_pressed(d, JOY_BUTTON_START),
-	}
+	return PadUI.read()
 
 ## each frame: the right stick moves the right hand over what you look at and the right trigger puts it down (a
 ## thumb on the screen, in effect: hold and move to press, spread, stretch, slide); the same on the left. Clicking a
 ## stick in is that hand's thumb: it lets go of what the hand holds. The shoulder buttons turn you to the station on
-## the left or the right. Looking is your head (the phone, or the headset).
+## the left or the right. Looking is your head (the phone, or the headset). A hand pointing at the game's screens (the
+## top bar, the phone, a job's sheet, a dialog; in VR, the panel) is a finger there instead: a ring shows where, the
+## trigger presses and drags (scrubbing, kneading, folding, buttons), the d-pad scrolls.
 func _pad(dt: float) -> void:
 	var p := _pad_read()
 	if VRView.active and not pad_on: _gaze_dot()
@@ -1899,7 +1919,6 @@ func _pad(dt: float) -> void:
 	var trig: Array = [float(p.get("rt", 0.0)), float(p.get("lt", 0.0))]
 	var size := get_viewport().get_visible_rect().size
 	if not pad_on:
-		if modal: return
 		for i in 2:
 			if sticks[i].length() > 0.4 or trig[i] > 0.6: pad_on = true
 		for b in ["r3", "l3", "lb", "rb", "start"]:
@@ -1909,28 +1928,54 @@ func _pad(dt: float) -> void:
 		var spread := size.y * 0.16 if VRView.active else size.x * 0.12
 		pad_at = [Vector2(size.x * 0.5 + spread, size.y * 0.66), Vector2(size.x * 0.5 - spread, size.y * 0.66)]
 	if Kit.main != null and not modal: Kit.main.content.get_viewport().gui_release_focus()     # the sticks are hands, not menu keys
-	# in VR the hands stay inside what one eye sees
+	# the hands reach the whole screen (the top bar too); in VR, what one eye sees
 	var lo := Vector2(4, 4)
 	var hi := size - Vector2(4, 4)
 	if VRView.active:
 		lo.x = size.x * 0.5 - size.y * 0.42
 		hi.x = size.x * 0.5 + size.y * 0.42
+	else:
+		var fv := _fpview()
+		if fv != null and fv.size.x > 1.0 and Kit.main != null:
+			var sc: Vector2 = fv.size / size
+			var o: Vector2 = fv.get_global_rect().position
+			lo = -o / sc + Vector2(4, 4)
+			hi = (Kit.main.get_viewport().get_visible_rect().size - o) / sc - Vector2(4, 4)
 	for i in 2:
 		var v: Vector2 = sticks[i]
 		var mag := clampf((v.length() - 0.15) / 0.85, 0.0, 1.0)
 		var prev: Vector2 = pad_at[i]
-		if mag > 0.0 and not modal:
+		if mag > 0.0:
 			pad_at[i] = (prev + v.normalized() * pow(mag, 1.6) * size.y * 0.95 * look_speed() * dt).clamp(lo, hi)
-		var want: bool = trig[i] > (0.3 if pad_down[i] else 0.55) and not modal
+			pad_last = i
+		pad_over[i] = _pad_ui_point(i)
+		var want: bool = trig[i] > (0.3 if pad_down[i] else 0.55)
 		if want != pad_down[i]:
 			pad_down[i] = want
-			_press(PAD + i, pad_at[i], want)
-			if want: Art.buzz(6)
+			if want:
+				if pad_over[i] != null and not pad_ui[1 - i]:
+					pad_ui[i] = true                   # a finger on the screens
+					_ui_mouse(pad_over[i], true, i)
+				elif pad_over[i] == null:
+					_press(PAD + i, pad_at[i], true)
+				Art.buzz(6)
+			elif pad_ui[i]:
+				pad_ui[i] = false
+				var u = _pad_ui_px(i)
+				_ui_mouse(u if u != null else {"vp": _ui_vp(), "px": pad_ui_at[i]}, false, i)
+			else:
+				_press(PAD + i, pad_at[i], false)
 		elif pad_down[i] and pad_at[i] != prev:
-			_move(PAD + i, pad_at[i], pad_at[i] - prev)
-	for b in ["r3", "l3", "lb", "rb", "start"]:
+			if pad_ui[i]:
+				var u = _pad_ui_px(i)
+				if u != null: _ui_drag(u, i)
+			else:
+				_move(PAD + i, pad_at[i], pad_at[i] - prev)
+	for b in ["r3", "l3", "lb", "rb", "start", "up", "down"]:
 		var on: bool = p.get(b, false)
-		if on and not pad_btn.get(b, false) and not modal: _pad_button(b)
+		if on and not pad_btn.get(b, false):
+			if b in ["up", "down"]: _pad_scroll(b == "up")
+			elif not modal: _pad_button(b)
 		pad_btn[b] = on
 	_pad_hover()
 
@@ -1944,18 +1989,78 @@ func _pad_button(b: String) -> void:
 		"rb": turn_station(1)
 		"start": face(cur_view())                  # look at your station again (where you are looking now becomes it)
 
+# ---- the controller's hands on the game's screens (2D) ----
+## the 3D view on screen (FPView), the container this world is drawn in
+func _fpview() -> Control:
+	var p := get_parent()
+	return p.get_parent() as Control if p != null else null
+
+## where the game's screens are drawn: the window, or in VR the panel's viewport
+func _ui_vp() -> Viewport:
+	return Kit.main.vr.ui_vp if VRView.active and Kit.main.vr != null else Kit.main.get_viewport()
+
+## where hand i points on the game's screens ({vp, px}), whatever is there; null if it misses them (in VR, the panel)
+func _pad_ui_px(i: int):
+	if Kit.main == null: return null
+	if VRView.active:
+		if Kit.main.vr == null: return null
+		var px = Kit.main.vr.panel_px(cam.project_ray_origin(pad_at[i]), cam.project_ray_normal(pad_at[i]))
+		return {"vp": Kit.main.vr.ui_vp, "px": px} if px != null else null
+	var fv := _fpview()
+	if fv == null: return null
+	var sc: Vector2 = fv.size / get_viewport().get_visible_rect().size
+	return {"vp": Kit.main.get_viewport(), "px": fv.get_global_rect().position + pad_at[i] * sc}
+
+## the same, but only if something there takes a finger (a button, the phone, a sheet, a dialog), not the kitchen
+func _pad_ui_point(i: int):
+	var u = _pad_ui_px(i)
+	if u == null: return null
+	var c: Control = Kit.main.ui_at(u.px)
+	var fv := _fpview()
+	if c == null or c == fv or (fv != null and c.is_ancestor_of(fv)): return null
+	return u
+
+## a finger going down on (or lifting off) the game's screens (PadUI does the work)
+func _ui_mouse(u: Dictionary, down: bool, i: int) -> void:
+	Kit.main.pad_ui.mouse(u, down)
+	pad_ui_at[i] = u.px
+
+## and moving with it down (scrubbing, kneading, dragging)
+func _ui_drag(u: Dictionary, i: int) -> void:
+	Kit.main.pad_ui.drag(u, pad_ui_at[i])
+	pad_ui_at[i] = u.px
+
+## the d-pad scrolls what the last-moved hand points at on the screens (the phone's pages); in a dialog it moves
+## between buttons instead (Godot's own focus)
+func _pad_scroll(up: bool) -> void:
+	if Kit.main != null and Kit.main.modal_root.visible: return
+	var u = pad_over[pad_last]
+	if u != null: Kit.main.pad_ui.scroll(u, up)
+
+## a ring on the screens where each hand points at them
+func _pad_rings() -> void:
+	if Kit.main == null: return
+	for i in 2:
+		var u = _pad_ui_px(i) if pad_ui[i] else pad_over[i]
+		Kit.main.pad_ui.ring(i, u if pad_on else null, pad_ui[i])
+
 ## turn to the next station round to the left (-1) or the right (1)
 func turn_station(step: int) -> void:
 	var ring: Array = ["prep", "front", "bench", "board", "oven"] if svc != null else ["prep", "front", "bench", "oven", "stores"]
 	var i := ring.find(cur_view())
 	var st: String = ring[wrapi(i + step, 0, ring.size())] if i >= 0 else "front"
-	if LookStick.phone_look() or VRView.active: face(st)
+	if LookStick.phone_look() or immersive: face(st)
 	else: goto(st)
 
 ## each hand hovers over what it points at, with a dot where it would touch
 func _pad_hover() -> void:
 	if pad_dots.is_empty(): _pad_hover_dots()
+	_pad_rings()
 	for i in 2:
+		if pad_over[i] != null or pad_ui[i]:
+			pad_dots[i].visible = false            # it points at the screens: the ring shows where
+			if not ptr.has(PAD + i): hands[i].target = null
+			continue
 		var hit := _ray(pad_at[i])
 		var at: Vector3 = hit.point if hit.has("point") else hit.from + hit.dir * 0.6
 		pad_dots[i].visible = pad_on
@@ -1979,6 +2084,20 @@ func _pad_hover_dots() -> void:
 		add_child(d)
 		pad_dots.append(d)
 
+## AR's camera mode: the camera's picture behind the kitchen, without the room's walls (the counters, the oven and the
+## people stand in your room); otherwise the usual background
+func _ar_camera() -> void:
+	var want := ARMode.feed_id() if ARMode.mode() == "camera" else -1
+	if want == _cam_bg or env == null: return
+	_cam_bg = want
+	if want >= 0:
+		env.background_mode = Environment.BG_CAMERA_FEED
+		env.background_camera_feed_id = want
+	else:
+		env.background_mode = Environment.BG_COLOR
+	for n in shell:
+		if is_instance_valid(n): n.visible = want < 0
+
 ## the viewer's button (a tap on the screen in a Cardboard-style viewer): your right hand at the middle of your view
 func gaze_press(down: bool) -> void:
 	_press(PAD, get_viewport().get_visible_rect().size * 0.5, down)
@@ -1995,8 +2114,13 @@ func _gaze_dot() -> void:
 func _pad_off() -> void:
 	pad_on = false
 	for i in 2:
-		if pad_down[i]: _press(PAD + i, pad_at[i], false)
+		if pad_ui[i]:
+			pad_ui[i] = false
+			if Kit.main != null: _ui_mouse({"vp": _ui_vp(), "px": pad_ui_at[i]}, false, i)
+		elif pad_down[i]: _press(PAD + i, pad_at[i], false)
 		pad_down[i] = false
+		pad_over[i] = null
+		if Kit.main != null: Kit.main.pad_ui.ring(i, null, false)
 		hands[i].target = null
 		if i < pad_dots.size(): pad_dots[i].visible = false
 

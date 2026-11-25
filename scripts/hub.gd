@@ -264,6 +264,9 @@ func _page_home() -> void:
 	vh.add_theme_constant_override("v_separation", 6)
 	vh.add_child(Kit.button("Service in 3D: " + ("on" if G.s.get("view3d", true) else "off"), func(): _act(func(): Game.s.view3d = not Game.s.get("view3d", true)), "ghost", 15))
 	vh.add_child(Kit.button(LookStick.look_name(), func(): _act(LookStick.next_look), "ghost", 15))
+	vh.add_child(Kit.button(ARMode.mode_name(), func(): _act(func():
+		ARMode.next_mode()
+		Kit.main.set_ar(ARMode.mode() != "off")), "ghost", 15))
 	vh.add_child(Kit.button("VR viewer: " + ("on" if G.s.get("vr", false) else "off"), func(): _act(func():
 		Game.s.vr = not Game.s.get("vr", false)
 		Kit.main.set_vr(Game.s.vr)), "ghost", 15))

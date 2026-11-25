@@ -116,8 +116,12 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
       thumbs (let go), the shoulders turn to the next station; dialogs answerable with A
 - [x] Phone VR (a Cardboard-style viewer): two eyes bent for the lens, head tracking, the controller's hands (or the
       viewer's button at the middle of your view), the game's screens on a panel in the room, dialogs where you look
-- [ ] Walking round the kitchen for real (ARCore tracking, in VR and on the screen)
-- [ ] AR mode on Android (ARCore): the kitchen placed in your room, walking between stations
+- [x] Every mechanic with a controller: the 2D screens (sheets, phone, dialogs, menus) take the controller's hands
+      as fingers (rings, press, drag, scroll), in the kitchen, the menus and VR
+- [x] Android: an APK build (tools/android), the ARCore plugin built for the game
+- [x] AR (ARCore): walking round the kitchen for real (on the screen and in VR), and the kitchen in your room
+      (the camera's picture behind the counters) — to be tried on a phone
+- [ ] AR: put the kitchen down on your floor (plane detection), scale it, light it like the room
 - [ ] VR (OpenXR, Quest): the same kitchen with tracked hands
 - [x] A clock on the wall in each scene to clock in and out on (open, close early, lock up), its hands keeping time
 - [x] Hands that change pose with what they hold (open, pinch, grip)

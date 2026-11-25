@@ -1,11 +1,25 @@
 extends "res://tests/bot.gd"
 ## A game controller (a stand-in for one): the sticks are your hands, the triggers put them down, the stick clicks
 ## are your thumbs (they let go of what that hand holds), the shoulder buttons turn you to the next station. The
-## two hands work at once: the left presses the dough while the right scatters the cheese. A dialog gives its main
-## button the focus; while one is open the hands rest; thumbs on the screen put the controller's hands away.
+## two hands work at once: the left presses the dough while the right scatters the cheese. A hand pointing at the
+## game's 2D screens is a finger there: the Phone button in the top bar, the phone, a job's sheet (scrubbing with the
+## trigger held). A dialog gives its main button the focus; thumbs on the screen put the controller's hands away.
+## Away from the kitchen (the title), the sticks move rings over the menu and the trigger clicks.
 
 var w
 const IDLE := {"r": Vector2.ZERO}       # the controller in your hands, nothing pressed
+
+## put hand i's pointer at a point of the screen (the screens' pixels)
+func point(i: int, at: Vector2) -> void:
+	var fv = w._fpview()
+	var sc: Vector2 = fv.size / Vector2(w.get_viewport().get_visible_rect().size)
+	w.pad_at[i] = (at - fv.get_global_rect().position) / sc
+
+## the first button under n whose text starts with word
+func button(n: Node, word: String):
+	for b in n.find_children("*", "Button", true, false):
+		if b.text.begins_with(word): return b
+	return null
 
 ## hold the controller like this for n frames, then let go of everything
 func hold(state: Dictionary, n: int) -> void:
@@ -42,6 +56,37 @@ func run() -> void:
 	await frames(3)
 	var f = root.gui_get_focus_owner()
 	check(f is Button and f.text == "Yes please", "a dialog gives its main button the focus (A presses it)", f.text if f is Button else f)
+	m.close_modal()
+	await frames(2)
+
+	# the 2D screens: the Phone button up in the top bar, the phone, a job's sheet
+	w.pad_test = IDLE
+	await frames(2)
+	point(0, k.phone_btn.get_global_rect().get_center())
+	await frames(3)
+	check(m.pad_ui.rings[0].visible and not w.pad_dots[0].visible, "pointing at the Phone button up in the top bar: a ring there, not a dot in the kitchen", m.pad_ui.rings[0].position)
+	await hold({"rt": 1.0}, 3)
+	check(k.phone.visible, "the trigger on it opens the phone", k.phone.visible)
+	await shot("phone-ring")
+	point(0, button(k.phone, "Put the phone away").get_global_rect().get_center())
+	await hold({"rt": 1.0}, 3)
+	check(not k.phone.visible, "the trigger on Put the phone away puts it away", k.phone.visible)
+	k.job("clean_boh", {})
+	await frames(5)
+	var ct = m.modal_center.find_children("*", "CleanTask", true, false)[0]
+	var l0: float = ct.pad.left()
+	point(0, ct.pad.get_global_rect().position + ct.pad.spots[0].pos)
+	w.pad_test = {"rt": 1.0}
+	await frames(2)
+	for rep in 4:
+		w.pad_test = {"rt": 1.0, "r": Vector2(0.5, 0.0)}
+		await frames(5)
+		w.pad_test = {"rt": 1.0, "r": Vector2(-0.5, 0.0)}
+		await frames(5)
+	w.pad_test = IDLE
+	await frames(2)
+	check(ct.pad.left() < l0, "a job's sheet: scrubbing with the trigger held and the stick going back and forth cleans the dirt", [snappedf(l0, 0.01), snappedf(ct.pad.left(), 0.01)])
+	await shot("scrubbing")
 	m.close_modal()
 	await frames(2)
 
@@ -124,3 +169,23 @@ func run() -> void:
 	w._unhandled_input(e)
 	await frames(2)
 	check(not w.pad_on and not w.pad_dots[0].visible, "a thumb on the screen and the controller's hands rest", w.pad_on)
+
+	# away from the kitchen: the title, with the rings over the menu
+	m.show_start()
+	await frames(10)
+	var PU = load("res://scripts/pad_ui.gd")
+	PU.test = {"r": Vector2(0.6, 0.0)}
+	await frames(3)
+	PU.test = IDLE
+	await frames(2)
+	var ng = button(m.content, "New game")
+	m.pad_ui.at[0] = ng.get_global_rect().get_center()
+	await frames(2)
+	check(m.pad_ui.on and m.pad_ui.rings[0].visible, "on the title the controller's ring shows on the menu", m.pad_ui.on)
+	PU.test = {"rt": 1.0}
+	await frames(3)
+	PU.test = IDLE
+	await frames(8)
+	check(button(m.content, "Story") != null, "and the trigger clicks New game", button(m.content, "Story") != null)
+	await shot("title-ring")
+	PU.test = null

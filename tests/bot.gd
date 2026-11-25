@@ -53,6 +53,12 @@ func open_game() -> void:
 func frames(n: int) -> void:
 	for i in n: await process_frame
 
+## wait until ok() is true, or at most `limit` real seconds (for what happens after a short dwell, on a slow machine)
+func until(ok: Callable, limit: float) -> void:
+	var t0 := Time.get_ticks_msec()
+	while not ok.call() and Time.get_ticks_msec() - t0 < limit * 1000.0:
+		await process_frame
+
 ## real seconds (the game runs on real time, sped up by the speed buttons)
 func wait(sec: float) -> void:
 	var t0 := Time.get_ticks_msec()

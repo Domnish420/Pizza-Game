@@ -6,9 +6,16 @@ looks or plays. `ROADMAP.md` is what is built and what is next.
 
 ## Tools
 
-`godot` (4.3), `blender` (4.0) and `gdlint` are installed by the cloud environment's setup script. If one is missing,
-install it the same way: Godot 4.3 from the GitHub release into `/opt/godot` with a `godot` link in `/usr/local/bin`,
+`godot` (4.7.2), `blender` (4.0) and `gdlint` are installed by the cloud environment's setup script. If one is missing,
+install it the same way: Godot 4.7.2 from the GitHub release into `/opt/godot` with a `godot` link in `/usr/local/bin`,
 `apt-get install blender`, `pip install --break-system-packages "gdtoolkit==4.*"`.
+
+## Android
+
+`tools/android/setup.sh` installs the Android build (JDK 17, the SDK and NDKs, Godot's Android templates, a debug key;
+the setup script runs it) and `tools/android/build.sh` builds `build/CrustEmpire-debug.apk` (a Gradle build, with the
+ARCore plugin from `addons/ARCorePlugin`). Send the owner the APK with the zip when a change is worth trying on the
+phone. `tools/android/build_arcore.sh` rebuilds the ARCore plugin itself (rarely needed: its libraries are committed).
 
 ## Tests
 

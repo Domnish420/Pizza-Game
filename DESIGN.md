@@ -2,7 +2,7 @@
 
 ## What this is
 
-A pizza-making and restaurant-management game for phones in landscape, built in Godot 4.3 (GDScript,
+A pizza-making and restaurant-management game for phones in landscape, built in Godot 4.7 (GDScript,
 Compatibility renderer). The player makes every pizza by hand, buys every ingredient by weight from real kinds
 of suppliers, and grows a one-person pop-up van into a flagship trattoria with a full front- and back-of-house team.
 
@@ -164,7 +164,21 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   shown on a panel in the room (eye level, drifting round when you look 32 degrees away; a dialog or a menu comes to
   where you look and then holds still so you can aim). Gaze clicking: `VRView._gaze` finds where the middle of your
   view meets the panel (a gold dot) and `click_gaze` clicks the button there (mouse events pushed into the panel's
-  viewport); off the buttons, the viewer's button is the right hand (`FPWorld.gaze_press`). Next: walking for real (ARCore's tracking moving the body), a VR-sized HUD if the panel is hard to read, and
+  viewport); off the buttons, the viewer's button is the right hand (`FPWorld.gaze_press`).
+- **Every mechanic in every mode.** The 2D screens (minigame sheets, the phone, dialogs, the title, the hub) all take
+  mouse presses and drags (touch arrives as an emulated mouse), so a controller's hand pointing at them is a mouse
+  there: `Main.ui_at` finds what on the screens would take a finger at a point (the 3D view itself doesn't count),
+  `PadUI` injects the press, drag and release (and the wheel for the d-pad) and draws the ring. In the kitchen,
+  `FPWorld._pad` decides per hand: a 2D screen under it, or the kitchen. Away from the kitchen `PadUI` moves the
+  rings itself. In VR the same pointers hit the panel (`VRView.panel_px`).
+- **AR** (`scripts/fp/ar_mode.gd`, setting `ar`: off / move / camera; the owner: "an AR mode ... still using the phone
+  to control"). ARCore comes from the godot_arcore plugin (`addons/ARCorePlugin`, built by
+  `tools/android/build_arcore.sh`). The game keeps drawing the kitchen itself: it reads only the phone's pose (the
+  "head" tracker), the camera's field of view and the camera picture (a CameraFeed as the 3D background,
+  `BG_CAMERA_FEED`). The pose drives the head like VR does (`FPWorld.immersive`), plus position (`ar_pos`, from where
+  the phone was at the start or the last Start); the station lean is off (you lean). The camera mode hides `shell`
+  (the room, the street, the dining room's walls). The plugin is changed so it asks for ARCore and the camera only
+  when the game turns AR on (`requestAR`, `arStatus`), and AR is optional in the manifest. Next: walking for real (ARCore's tracking moving the body), a VR-sized HUD if the panel is hard to read, and
   the Quest (OpenXR) with tracked hands driving the same two hands.
 - **The clock on the wall** (`fp.timeclock`, above the hatch or the pass, in every scene): you clock in on it to open,
   clock out early in service, and clock out at night to lock up. Its hands show the game's time. The owner wants a

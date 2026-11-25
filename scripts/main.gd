@@ -5,6 +5,8 @@ var content: MarginContainer
 var modal_root: Control
 var pad := false                       # a game controller has been used: dialogs give their main button the focus
 var vr: VRView = null                  # the phone in a VR viewer (Settings > Controls > VR viewer)
+var pad_ui: PadUI                      # a game controller on the 2D screens (rings, clicks, drags)
+var ar: ARMode = null                  # AR on an Android phone (Settings > Controls > AR)
 var modal_center: CenterContainer
 var toast_box: PanelContainer
 var toast_label: Label
@@ -13,6 +15,8 @@ var toast_t := 0.0
 func _ready() -> void:
 	Kit.main = self
 	add_child(PerfOverlay.new())          # (shown when "Show performance" is on in Settings)
+	pad_ui = PadUI.new()
+	add_child(pad_ui)
 	var bg := ColorRect.new()
 	bg.color = Kit.BG
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -43,6 +47,17 @@ func _ready() -> void:
 	add_child(toast_box)
 	show_start()                    # the game always opens on the title screen
 	if Game.s.get("vr", false): set_vr(true)
+	if ARMode.mode() != "off": set_ar(true)
+
+## AR on or off: ARCore tracks the phone (ARMode); asks for ARCore and the camera the first time
+func set_ar(on: bool) -> void:
+	if on and ar == null:
+		ar = ARMode.new()
+		add_child(ar)
+	elif not on and ar != null:
+		ar.close()
+		ar.queue_free()
+		ar = null
 
 ## the phone in a VR viewer, or not: the kitchen drawn for two eyes, the screens on a panel in the room (VRView)
 func set_vr(on: bool) -> void:
@@ -100,6 +115,26 @@ func modal(node: Control, width: int = 760) -> void:
 	modal_center.add_child(p)
 	modal_root.visible = true
 	if pad or not Input.get_connected_joypads().is_empty(): _pad_focus.call_deferred(p)
+
+## the control on the game's screens at p (in the screens' own pixels) that would take a finger there, or null:
+## Marco's guide on top, then a dialog, then the screen (the phone, a sheet, a button). The 3D view counts too (the
+## caller tells it apart). For a game controller's hands and the VR panel: they work the screens wherever a finger would.
+func ui_at(p: Vector2) -> Control:
+	for r in [get_node_or_null("/root/Tutor"), modal_root, content]:
+		if r == null: continue
+		var c := _hit(r, p)
+		if c != null: return c
+	return null
+
+func _hit(n: Node, p: Vector2) -> Control:
+	if n is CanvasItem and not n.visible: return null
+	for i in range(n.get_child_count() - 1, -1, -1):
+		var ch := n.get_child(i)
+		if ch is Viewport: continue                 # another viewport's controls are not on these screens
+		var c := _hit(ch, p)
+		if c != null: return c
+	if n is Control and n.mouse_filter == Control.MOUSE_FILTER_STOP and n.get_global_rect().has_point(p): return n
+	return null
 
 ## with a game controller, the dialog's main button (the last one) has the focus: A presses it, the d-pad moves on
 func _pad_focus(p: Control) -> void:

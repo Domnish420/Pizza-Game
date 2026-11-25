@@ -1,13 +1,14 @@
 #!/bin/bash
-# Install what building the Android APK needs (Linux, as root): JDK 17, the Android SDK (platform 33 and 34, build
-# tools, CMake, NDK r23c) in $ANDROID_HOME (default /opt/android-sdk), Godot 4.3's Android export templates, and the
-# editor settings pointing Godot at them. Safe to run again: it skips what is already there.
+# Install what building the Android APK needs (Linux, as root): JDK 17, the Android SDK (platform 36, build tools
+# 36.1, CMake 3.22.1, NDK 28.1 for the ARCore plugin and 29 for Godot's Gradle build) in $ANDROID_HOME (default
+# /opt/android-sdk), Godot 4.7.2's Android export templates, and the editor settings pointing Godot at them. Safe to
+# run again: it skips what is already there.
 #   tools/android/setup.sh
 set -e
 ANDROID_HOME=${ANDROID_HOME:-/opt/android-sdk}
 JDK=/usr/lib/jvm/java-17-openjdk-amd64
-TPL=~/.local/share/godot/export_templates/4.3.stable
-GODOT_VERSION=4.3-stable
+TPL=~/.local/share/godot/export_templates/4.7.2.stable
+GODOT_VERSION=4.7.2-stable
 
 [ -x $JDK/bin/java ] || (apt-get update -qq && apt-get install -y -qq openjdk-17-jdk-headless)
 command -v scons > /dev/null || apt-get install -y -qq scons
@@ -19,10 +20,10 @@ if [ ! -x $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager ]; then
 	rm -rf $ANDROID_HOME/cmdline-tools/latest && mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
 fi
 SM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-if [ ! -d $ANDROID_HOME/ndk/23.2.8568313 ] || [ ! -d $ANDROID_HOME/cmake/3.22.1 ]; then
+if [ ! -d $ANDROID_HOME/ndk/29.0.14206865 ] || [ ! -d $ANDROID_HOME/ndk/28.1.13356709 ]; then
 	yes | JAVA_HOME=$JDK $SM --licenses > /dev/null 2>&1 || true
-	JAVA_HOME=$JDK $SM --install "platform-tools" "build-tools;34.0.0" "build-tools;33.0.2" "platforms;android-34" \
-		"platforms;android-33" "cmake;3.10.2.4988404" "cmake;3.22.1" "ndk;23.2.8568313" > /dev/null
+	JAVA_HOME=$JDK $SM --install "platform-tools" "build-tools;36.1.0" "platforms;android-36" "cmake;3.22.1" \
+		"ndk;28.1.13356709" "ndk;29.0.14206865" > /dev/null
 fi
 
 if [ ! -f $TPL/android_source.zip ]; then
@@ -32,13 +33,23 @@ if [ ! -f $TPL/android_source.zip ]; then
 		templates/version.txt -d $TPL && rm -f /tmp/templates.tpz
 fi
 
-# Godot's editor settings: where the SDK and JDK are (Godot writes the file, with a debug keystore, the first time
-# the editor runs)
-ES=~/.config/godot/editor_settings-4.3.tres
-[ -f $ES ] || godot --headless --editor --quit > /dev/null 2>&1 || true
-if [ -f $ES ]; then
-	grep -q "export/android/android_sdk_path" $ES || echo 'export/android/android_sdk_path = ""' >> $ES
-	grep -q "export/android/java_sdk_path" $ES || echo 'export/android/java_sdk_path = ""' >> $ES
-	sed -i "s|^export/android/java_sdk_path = .*|export/android/java_sdk_path = \"$JDK\"|; s|^export/android/android_sdk_path = .*|export/android/android_sdk_path = \"$ANDROID_HOME\"|" $ES
+# a debug key to sign test builds with (the same one Godot's editor would make)
+KS=~/.local/share/godot/keystores/debug.keystore
+if [ ! -f $KS ]; then
+	mkdir -p "$(dirname $KS)"
+	$JDK/bin/keytool -genkeypair -keyalg RSA -keysize 2048 -validity 9999 -alias androiddebugkey -keypass android \
+		-keystore $KS -storepass android -dname "CN=Android Debug,O=Android,C=US" > /dev/null 2>&1
 fi
+# Godot's editor settings: where the SDK, the JDK and the debug key are
+ES=~/.config/godot/editor_settings-4.7.tres
+if [ ! -f $ES ]; then
+	mkdir -p "$(dirname $ES)"
+	printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n' > $ES
+fi
+for kv in "java_sdk_path=$JDK" "android_sdk_path=$ANDROID_HOME" "debug_keystore=$KS" "debug_keystore_user=androiddebugkey" \
+		"debug_keystore_pass=android"; do
+	k=${kv%%=*}; v=${kv#*=}
+	if grep -q "^export/android/$k = " $ES; then sed -i "s|^export/android/$k = .*|export/android/$k = \"$v\"|" $ES
+	else echo "export/android/$k = \"$v\"" >> $ES; fi
+done
 echo "Android build tools ready: $ANDROID_HOME, $JDK, $TPL"

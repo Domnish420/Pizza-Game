@@ -105,27 +105,34 @@ func run() -> void:
 	svc.dirty = true
 	await frames(3)
 	check(svc.tool == "mozz" and w.held.get_parent() == w.hands[0].node, "the cheese is in the right hand", [svc.tool, w.held.get_parent()])
-	var left := Vector2(minf(mid.x - 30.0, half - 20.0), mid.y)
-	var right := Vector2(maxf(mid.x + 30.0, half + 20.0), mid.y)
+	# the dough is small on screen (about 2 bench units a pixel): the thumbs go either side of the middle of the screen,
+	# on the dough
+	var left := Vector2(minf(mid.x - 10.0, half - 6.0), mid.y)
+	var right := Vector2(maxf(mid.x + 10.0, half + 6.0), mid.y)
 	var r0: float = pz.base.mean_r()
 	var c0: float = pz.grams.get("mozz", 0.0)
 	w._press(3, left, true)
 	check(w.ptr[3].get("hand", -1) == 1, "a thumb on the left half of the screen is the left hand", w.ptr[3].get("hand", -1))
 	for i in 12:
-		w._move(3, left + Vector2(-4.0 * i, 3.0 * i), Vector2(-4, 3))
+		w._move(3, left + Vector2(-1.0 * i, 0.8 * i), Vector2(-1, 0.8))
 		await process_frame
 	var r1: float = pz.base.mean_r()
 	var c1: float = pz.grams.get("mozz", 0.0)
 	check(r1 > r0 and is_equal_approx(c1, c0), "the empty left hand presses the dough out (and puts no cheese on)", [snappedf(r0, 0.1), snappedf(r1, 0.1), c0, c1])
 	w._press(4, right, true)
 	check(w.ptr[4].get("hand", -1) == 0, "and one on the right half is the right hand", w.ptr[4].get("hand", -1))
+	for a in 36:                                          # the dough opened out (cheese goes on the base, not the ball)
+		for rr in [12.0, 26.0]: pz.base.press(Vector2.from_angle(a * TAU / 36.0) * rr)
+	r1 = pz.base.mean_r()
 	for i in 12:
-		w._move(4, right + Vector2(5.0 * i, -3.0 * i), Vector2(5, -3))
-		w._move(3, left + Vector2(-4.0 * (12 + i), 3.0 * (12 + i)), Vector2(-4, 3))
+		w._move(4, right + Vector2(1.0 * i, -0.8 * i), Vector2(1, -0.8))
+		w._move(3, left + Vector2(-1.0 * (12 + i), 0.8 * (12 + i)), Vector2(-1, 0.8))
 		await process_frame
 	var r2: float = pz.base.mean_r()
 	var c2: float = pz.grams.get("mozz", 0.0)
-	check(c2 > c1 and r2 > r1, "both at once: the right hand scatters the cheese while the left keeps pressing the dough", [snappedf(c1, 0.1), snappedf(c2, 0.1), snappedf(r2, 0.1)])
+	var bn = s.control
+	check(c2 > c1 and bn.roles.get(1, "") == "dough" and bn.roles.get(0, "") == "tool", "both at once: the right hand scatters the cheese while the left keeps working the dough",
+		[snappedf(c1, 0.1), snappedf(c2, 0.1), snappedf(r2, 0.1), bn.roles])
 	await shot("two-hands")
 	w._press(4, right, false)
 	w._press(3, left, false)

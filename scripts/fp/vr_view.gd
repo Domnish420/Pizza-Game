@@ -40,13 +40,15 @@ var gaze_click_down := false    # the viewer's button went down on the panel (it
 ## where the headset is looking (the phone's sensors, or the tests' stand-in)
 static func head_basis() -> Basis:
 	if head_test != null: return head_test
+	var arp = ARMode.pose()
+	if arp != null: return arp.basis            # AR tracking the phone: its rotation (and FPWorld its position too)
 	return XRServer.get_hmd_transform().basis
 
 func _ready() -> void:
 	layer = 80
 	active = true
 	var xr := XRServer.find_interface("Native mobile")
-	if xr != null and not xr.is_initialized(): xr.initialize()
+	if xr != null and not xr.is_initialized() and ARMode.mode() == "off": xr.initialize()      # (with AR on, ARCore tracks)
 	var size := get_viewport().get_visible_rect().size
 	# the game's screens and dialogs, drawn into a picture for the panel
 	ui_vp = SubViewport.new()
@@ -211,23 +213,28 @@ func _gaze(host: Node3D, base: Transform3D) -> void:
 		m.albedo_color = Kit.CHEESE
 		cursor.material_override = m
 		host.add_child(cursor)
-	gaze_px = null
 	cursor.visible = false
+	gaze_px = panel_px(base.origin, -base.basis.z)
+	if gaze_px == null: return
+	var q: Vector2 = panel.mesh.size
+	var uv: Vector2 = gaze_px / Vector2(ui_vp.size)
+	cursor.global_position = panel.global_transform * Vector3((uv.x - 0.5) * q.x, (0.5 - uv.y) * q.y, 0.0)
+	cursor.visible = true
+
+## where a ray (from a point, along a direction) meets the panel, in the game's screens' pixels; null if it misses
+func panel_px(from: Vector3, d: Vector3):
+	if panel == null or not is_instance_valid(panel): return null
 	var pt := panel.global_transform
-	var d := -base.basis.z
 	var n := pt.basis.z
 	var den := n.dot(d)
-	if absf(den) < 0.0001: return
-	var t := n.dot(pt.origin - base.origin) / den
-	if t <= 0.0: return
-	var hit := base.origin + d * t
-	var local := pt.affine_inverse() * hit
+	if absf(den) < 0.0001: return null
+	var t := n.dot(pt.origin - from) / den
+	if t <= 0.0: return null
+	var local := pt.affine_inverse() * (from + d * t)
 	var q: Vector2 = panel.mesh.size
 	var uv := Vector2(local.x / q.x + 0.5, 0.5 - local.y / q.y)
-	if uv.x < 0.0 or uv.x > 1.0 or uv.y < 0.0 or uv.y > 1.0: return
-	gaze_px = uv * Vector2(ui_vp.size)
-	cursor.global_position = hit
-	cursor.visible = true
+	if uv.x < 0.0 or uv.x > 1.0 or uv.y < 0.0 or uv.y > 1.0: return null
+	return uv * Vector2(ui_vp.size)
 
 ## the button you are looking at on the panel (in a dialog, only the dialog's), or null
 func button_at(px: Vector2) -> BaseButton:
@@ -272,7 +279,7 @@ func _input(e: InputEvent) -> void:
 			return
 		# A clicks what you look at on the panel (in a dialog, A presses the button with the gold ring)
 		if e is InputEventJoypadButton and e.button_index == JOY_BUTTON_A and not Kit.main.modal_root.visible:
-			if e.pressed: click_gaze()
+			if e.pressed and not Kit.main.pad_ui.on: click_gaze()        # (once the sticks move rings, A clicks under them)
 			return
 		ui_vp.push_input(e)
 	elif e is InputEventScreenTouch:

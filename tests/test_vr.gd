@@ -37,6 +37,27 @@ func run() -> void:
 	check(vr.panel != null and vr.panel.get_parent() == w and vr.panel.material_override.albedo_texture == vr.ui_vp.get_texture(), "the panel floats in the kitchen, showing the game's screens", vr.panel.get_parent())
 	await shot("kitchen-vr")
 
+	# the controller's hand on the panel: the Phone button
+	w.pad_test = {"r": Vector2(0.5, 0.0)}
+	await frames(2)
+	w.pad_test = {"r": Vector2.ZERO}
+	await wait(0.4)
+	var pr: Rect2 = k.phone_btn.get_global_rect()
+	var pq: Vector2 = vr.panel.mesh.size
+	var puv: Vector2 = pr.get_center() / Vector2(vr.ui_vp.size)
+	w.pad_at[0] = w.cam.unproject_position(vr.panel.global_transform * Vector3((puv.x - 0.5) * pq.x, (0.5 - puv.y) * pq.y, 0.0))
+	await frames(3)
+	check(w.pad_over[0] != null and pr.has_point(w.pad_over[0].px), "the controller's hand pointing at the panel: its ring is on the Phone button", w.pad_over[0])
+	w.pad_test = {"rt": 1.0}
+	await frames(3)
+	w.pad_test = {"r": Vector2.ZERO}
+	await frames(3)
+	check(k.phone.visible, "and the trigger opens the phone, in VR", k.phone.visible)
+	await shot("phone-vr")
+	k.close_phone()
+	w.pad_test = null
+	await frames(2)
+
 	# the head turns the view at once
 	w.goto("front")
 	await frames(3)
@@ -49,7 +70,7 @@ func run() -> void:
 	# turn to the oven
 	var ov: Vector2 = w.STATIONS.oven
 	head(ov.x - w.t_yaw, ov.y)
-	await wait(0.5)
+	await until(func(): return w.cur_view() == "oven", 2.0)
 	check(w.cur_view() == "oven", "turn your head to the oven and you are at the oven", w.cur_view())
 	await shot("oven-vr")
 	# the game moving you on does not swing you round; the shoulder buttons and Start do
@@ -89,7 +110,7 @@ func run() -> void:
 	svc.claim(svc.tickets[-1])
 	var bn: Vector2 = w.STATIONS.bench
 	head(bn.x - w.t_yaw, bn.y)
-	await wait(0.6)
+	await until(func(): return svc.view == "bench", 2.0)
 	check(svc.view == "bench", "look down at the bench and you are at the bench", svc.view)
 	await shot("bench-vr")
 	# the viewer's button: the right hand at the middle of your view
@@ -140,10 +161,11 @@ func run() -> void:
 	var r: Rect2 = ng.get_global_rect()
 	var q: Vector2 = vr.panel.mesh.size
 	var uv: Vector2 = r.get_center() / Vector2(vr.ui_vp.size)
-	var spot: Vector3 = vr.panel.global_transform * Vector3((uv.x - 0.5) * q.x, (0.5 - uv.y) * q.y, 0.0)
-	var dv: Vector3 = spot - vr.base_t.origin
-	head(rad_to_deg(atan2(-dv.x, -dv.z)), rad_to_deg(atan2(dv.y, Vector2(dv.x, dv.z).length())))
-	await frames(3)
+	for aim in 3:                                       # aim, and again once the panel has settled
+		var spot: Vector3 = vr.panel.global_transform * Vector3((uv.x - 0.5) * q.x, (0.5 - uv.y) * q.y, 0.0)
+		var dv: Vector3 = spot - vr.base_t.origin
+		head(rad_to_deg(atan2(-dv.x, -dv.z)), rad_to_deg(atan2(dv.y, Vector2(dv.x, dv.z).length())))
+		await wait(0.4)
 	check(vr.gaze_px != null and vr.cursor.visible and r.has_point(vr.gaze_px), "a dot shows where you look on the panel", [vr.gaze_px, r])
 	await shot("title-gaze")
 	e = InputEventScreenTouch.new()

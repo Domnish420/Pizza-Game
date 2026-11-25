@@ -308,6 +308,11 @@ func show_page(p: String) -> void:
 			_chalk("Invert up and down: " + ("on" if G.s.get("invert_look", false) else "off"), func(): _ctl_toggle("invert_look", false), "", false, 28)
 			_chalk("Look stick on the " + ("right" if G.s.get("stick_right", false) else "left"), func(): _ctl_toggle("stick_right", false), "", false, 28)
 			_chalk("Bigger buttons: " + ("on" if G.s.get("big_controls", false) else "off"), func(): _ctl_toggle("big_controls", false), "", false, 28)
+			_chalk(ARMode.mode_name(), func():
+				ARMode.next_mode()
+				Game.save_game()
+				Kit.main.set_ar(ARMode.mode() != "off")
+				show_page("controls"), "", false, 28)
 			_chalk("VR viewer (the phone in a headset): " + ("on" if G.s.get("vr", false) else "off"), func():
 				Game.s.vr = not Game.s.get("vr", false)
 				Game.save_game()
