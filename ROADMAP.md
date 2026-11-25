@@ -122,6 +122,12 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [x] AR (ARCore): walking round the kitchen for real (on the screen and in VR), and the kitchen in your room
       (the camera's picture behind the counters) — to be tried on a phone
 - [ ] AR: put the kitchen down on your floor (plane detection), scale it, light it like the room
+- [x] The Quest (OpenXR): a Quest build (Meta's plugin, hand tracking); real head (walking), real hands: fingertips
+      on the dough, pinch at things out of reach and at the panel's buttons, the thumbstick turns, B/Y put down,
+      controller buzz — to be tried on the headset
+- [x] Quest: passthrough (AR's "the kitchen in your room": the room through the headset's cameras)
+- [ ] Quest: the kitchen at counter height for your height, hand-made hand poses on the tracked joints, sounds placed
+      in the room, picking things up with a fist
 - [ ] VR (OpenXR, Quest): the same kitchen with tracked hands
 - [x] A clock on the wall in each scene to clock in and out on (open, close early, lock up), its hands keeping time
 - [x] Hands that change pose with what they hold (open, pinch, grip)

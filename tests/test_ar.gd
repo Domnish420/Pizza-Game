@@ -49,6 +49,7 @@ func run() -> void:
 	check(w.head.global_position.distance_to(eye0) < 0.05, "Start puts you back where you stood", w.head.global_position - eye0)
 
 	# the camera mode: the camera's picture behind the kitchen, the walls gone
+	CameraServer.set_monitoring_feeds(true)
 	var feed := CameraFeed.new()
 	CameraServer.add_feed(feed)
 	AR.test_feed = feed.get_id()

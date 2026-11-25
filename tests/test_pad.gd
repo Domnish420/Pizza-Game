@@ -185,7 +185,7 @@ func run() -> void:
 	PU.test = {"rt": 1.0}
 	await frames(3)
 	PU.test = IDLE
-	await frames(8)
+	await until(func(): return button(m.content, "Story") != null, 2.0)        # (the chalkboard slides to the next page)
 	check(button(m.content, "Story") != null, "and the trigger clicks New game", button(m.content, "Story") != null)
 	await shot("title-ring")
 	PU.test = null

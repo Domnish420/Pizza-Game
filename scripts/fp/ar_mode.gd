@@ -78,6 +78,7 @@ func _ready() -> void:
 		status = "unsupported"
 		Kit.main.toast("AR needs ARCore, on an Android phone that supports it", true)
 		return
+	CameraServer.set_monitoring_feeds(true)               # (ARCore's camera picture is one of its feeds)
 	var plugin := Engine.get_singleton(PLUGIN)
 	plugin.requestAR()                                   # install ARCore and allow the camera, if not yet
 	status = "starting"

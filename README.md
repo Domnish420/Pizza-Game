@@ -137,6 +137,21 @@ headset. Your hands are a game controller (see above); without one, the viewer's
 buttons, is your right hand at the middle of your view (a white dot shows where). Back on the controller, or holding a
 finger on the screen for two seconds, leaves VR. With AR on (below), walking moves you too.
 
+**The Quest** (`tools/android/build.sh debug Quest`, a separate app, "Crust Empire VR"): the game is in VR from the
+start, through OpenXR. Your head is your head: turn, lean, walk round the van for real (the station you turn to is
+where you work). Your hands are your hands, tracked or holding the Touch controllers:
+- touch the marble with a fingertip and that is a finger on the dough: press it out; two fingertips stretch it. The
+  same on the cutting board, the oven's deck and the prep tablet
+- pinch (or pull the trigger) at something out of reach: a pan on the rail (that hand takes what is in it), a
+  ticket, a customer, the pass, the clock. A thin beam shows what the hand points at
+- the game's screens float on a panel in front of you; point at a button and pinch to press it (a ring shows where);
+  hold the pinch to drag
+- the thumbstick turns you to the next station round; B (right) or Y (left) puts down what that hand holds; the menu
+  button makes where you stand and look your station again
+- the controllers buzz as your hands touch and pinch
+- AR's "the kitchen in your room" (Settings > Controls > AR) is the headset's passthrough: your real room through
+  its cameras, with the counters, the oven and the customers standing in it
+
 **AR** (Settings > Controls > AR, Android phones with ARCore): the phone's camera works out where the phone is in
 your room, so walking, leaning and crouching move you in the kitchen, on the screen and in a VR viewer. Two ways:
 *walk round the kitchen* (the van all round you, your real steps move you) and *the kitchen in your room* (the

@@ -32,6 +32,10 @@ var cursor: MeshInstance3D      # where you are looking on the panel
 var gaze_px = null              # and that point in the game's screens (pixels), or null when you look past the panel
 var base_t := Transform3D()     # where your eyes are this frame
 var moved: Array = []           # what was moved into ui_vp, to put back
+var rig: XRRig = null           # a real headset (OpenXR): it draws the window; no phone eyes then
+var root_world: World3D = null  # the window's own 3D world, to give back
+var xr_menu_down := [false, false]   # (in the menus a headset's pinch is a click on the panel)
+var xr_menu_at := [Vector2.ZERO, Vector2.ZERO]
 var hidden_views: Array = []    # the flat 3D views (and the look stick) switched off while the eyes draw the kitchen
 var hold_t := 0.0               # how long a finger has been on the screen (two seconds leaves VR)
 var holding := false
@@ -40,6 +44,7 @@ var gaze_click_down := false    # the viewer's button went down on the panel (it
 ## where the headset is looking (the phone's sensors, or the tests' stand-in)
 static func head_basis() -> Basis:
 	if head_test != null: return head_test
+	if XRRig.active: return XRRig.head().basis
 	var arp = ARMode.pose()
 	if arp != null: return arp.basis            # AR tracking the phone: its rotation (and FPWorld its position too)
 	return XRServer.get_hmd_transform().basis
@@ -47,8 +52,14 @@ static func head_basis() -> Basis:
 func _ready() -> void:
 	layer = 80
 	active = true
-	var xr := XRServer.find_interface("Native mobile")
-	if xr != null and not xr.is_initialized() and ARMode.mode() == "off": xr.initialize()      # (with AR on, ARCore tracks)
+	if XRRig.running():
+		# a real headset: OpenXR tracks you and draws the window (the tests' stand-in still draws two eyes here)
+		rig = XRRig.new()
+		add_child(rig)
+		root_world = get_viewport().world_3d
+	else:
+		var xr := XRServer.find_interface("Native mobile")
+		if xr != null and not xr.is_initialized() and ARMode.mode() == "off": xr.initialize()      # (with AR on, ARCore tracks)
 	var size := get_viewport().get_visible_rect().size
 	# the game's screens and dialogs, drawn into a picture for the panel
 	ui_vp = SubViewport.new()
@@ -72,7 +83,8 @@ func _ready() -> void:
 	we.environment.background_mode = Environment.BG_COLOR
 	we.environment.background_color = Kit.BG
 	void_root.add_child(we)
-	# the two eyes, side by side, each bent for its lens
+	# the two eyes, side by side, each bent for its lens (a real headset draws its own)
+	if rig != null and XRRig.test == null: return
 	var black := ColorRect.new()
 	black.color = Color.BLACK
 	black.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -114,6 +126,10 @@ func _layers() -> Array:
 ## put everything back the way it was (before this is freed)
 func close() -> void:
 	active = false
+	if rig != null:
+		get_viewport().world_3d = root_world
+		rig.queue_free()
+		rig = null
 	set_process(false)                          # (it is freed at the end of the frame: do nothing more till then)
 	set_process_input(false)
 	for n in moved:
@@ -149,11 +165,19 @@ func _process(dt: float) -> void:
 	for e in eyes:
 		if e.vp.world_3d != w3d: e.vp.world_3d = w3d
 	var base: Transform3D = w.cam.global_transform if w != null else Transform3D(head_basis(), Vector3(0, 1.6, 0))
+	if rig != null:
+		# the headset: the window shows the kitchen's world (the rig stays in the window, where OpenXR draws from), and
+		# the headset's space sits where the kitchen puts you (FPWorld.xr_origin); in the menus, as it is
+		if XRRig.test == null and get_viewport().world_3d != w3d: get_viewport().world_3d = w3d
+		rig.place(w.xr_origin() if w != null else Transform3D())
+		base = rig.head_global()
+		if w == null: _xr_menu()
 	base_t = base
 	for i in eyes.size():
 		eyes[i].cam.global_transform = base.translated_local(Vector3((float(i) - 0.5) * IPD, 0.0, 0.0))
 	_panel(host, base, dt)
 	_gaze(host, base)
+	if rig != null and cursor != null: cursor.visible = false      # (in a headset your hands point, not your eyes)
 	if holding:
 		hold_t += dt
 		if hold_t > 2.0:
@@ -221,9 +245,38 @@ func _gaze(host: Node3D, base: Transform3D) -> void:
 	cursor.global_position = panel.global_transform * Vector3((uv.x - 0.5) * q.x, (0.5 - uv.y) * q.y, 0.0)
 	cursor.visible = true
 
+## where a ray meets the panel: {"px": the game's screens' pixels, "pos": the point in the room}, or null
+func panel_hit(from: Vector3, d: Vector3):
+	var px = panel_px(from, d)
+	if px == null: return null
+	var q: Vector2 = panel.mesh.size
+	var uv: Vector2 = px / Vector2(ui_vp.size)
+	return {"px": px, "pos": panel.global_transform * Vector3((uv.x - 0.5) * q.x, (0.5 - uv.y) * q.y, 0.0)}
+
+## in the menus (no kitchen), a headset's hands point at the panel: a ring where each points, a pinch clicks and drags
+func _xr_menu() -> void:
+	for i in 2:
+		var h := XRRig.hand(i)
+		var u = null
+		if h.get("tracked", false):
+			var aim: Transform3D = rig.origin.global_transform * h.aim
+			var px = panel_px(aim.origin, -aim.basis.z)
+			if px != null: u = {"vp": ui_vp, "px": px}
+		var down: bool = u != null and float(h.get("pinch", 0.0)) > (0.45 if xr_menu_down[i] else 0.75)
+		if down and not xr_menu_down[i]:
+			Kit.main.pad_ui.mouse(u, true)
+			XRRig.pulse(i, 0.4, 0.03)
+		elif down and u.px != xr_menu_at[i]:
+			Kit.main.pad_ui.drag(u, xr_menu_at[i])
+		elif not down and xr_menu_down[i]:
+			Kit.main.pad_ui.mouse({"vp": ui_vp, "px": xr_menu_at[i]}, false)
+		xr_menu_down[i] = down
+		if u != null: xr_menu_at[i] = u.px
+		Kit.main.pad_ui.ring(i, u, down)
+
 ## where a ray (from a point, along a direction) meets the panel, in the game's screens' pixels; null if it misses
 func panel_px(from: Vector3, d: Vector3):
-	if panel == null or not is_instance_valid(panel): return null
+	if panel == null or not is_instance_valid(panel) or not panel.is_inside_tree(): return null
 	var pt := panel.global_transform
 	var n := pt.basis.z
 	var den := n.dot(d)
@@ -311,6 +364,7 @@ func _press_dialog() -> void:
 
 ## take the phone out of the viewer: the game on the screen again
 func leave() -> void:
+	if rig != null: return                       # a headset is always in VR
 	Game.s.vr = false
 	Game.save_game()
 	Kit.main.set_vr(false)

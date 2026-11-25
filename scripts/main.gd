@@ -46,11 +46,12 @@ func _ready() -> void:
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toast_box)
 	show_start()                    # the game always opens on the title screen
-	if Game.s.get("vr", false): set_vr(true)
+	if Game.s.get("vr", false) or XRRig.running(): set_vr(true)       # (a headset is always in VR)
 	if ARMode.mode() != "off": set_ar(true)
 
 ## AR on or off: ARCore tracks the phone (ARMode); asks for ARCore and the camera the first time
 func set_ar(on: bool) -> void:
+	if XRRig.running(): return                   # (on a headset the AR setting is its passthrough: FPWorld)
 	if on and ar == null:
 		ar = ARMode.new()
 		add_child(ar)

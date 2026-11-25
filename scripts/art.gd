@@ -53,6 +53,9 @@ var buzzes := 0                           # how many have been asked for (for th
 func buzz(ms: int) -> void:
 	if not Game.s.get("vibrate", true): return
 	buzzes += 1
+	if XRRig.active:
+		XRRig.pulse(0, 0.5, ms / 1000.0)              # in a headset, the controller in your hand buzzes
+		return
 	Input.vibrate_handheld(ms)
 
 ## The background loops (fire, murmur, room) and the music: whoever is on screen calls loop() every frame with how

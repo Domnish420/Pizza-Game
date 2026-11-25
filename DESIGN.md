@@ -171,6 +171,20 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   `PadUI` injects the press, drag and release (and the wheel for the d-pad) and draws the ring. In the kitchen,
   `FPWorld._pad` decides per hand: a 2D screen under it, or the kitchen. Away from the kitchen `PadUI` moves the
   rings itself. In VR the same pointers hit the panel (`VRView.panel_px`).
+- **The Quest** (the owner: "Lets start fully going all out on the vr"; a Quest 3S). A second export preset, "Quest":
+  OpenXR with Meta's vendor plugin (`addons/godotopenxrvendors`), hand tracking and the hand interaction profile,
+  OpenXR switched on only for the `quest` feature. `XRRig` (`scripts/fp/xr_rig.gd`) reads the headset (`head()`,
+  `hand(i)`: aim, fingertip, palm, pinch, grip, stick, buttons; tracked hands measure the pinch between thumb and
+  finger) and holds the XROrigin3D and XRCamera3D in the window (OpenXR draws it). VRView's "openxr" backend: no
+  phone eyes, the window shows the kitchen's World3D, the rig's origin is `FPWorld.xr_origin()` so its camera is
+  exactly the game's head (the head pose goes through the same path as AR: `immersive`, position from `ar_ref`).
+  The hands (`FPWorld._xr`): the hand models on the tracked palms; a fingertip within 1.2 cm of a working surface is
+  a press there (`_xr_touch`, a ray straight down onto it: the same per-finger bench code as thumbs, so two
+  fingertips stretch); a pinch is a ray from the hand (`_xr_point`): the panel first (PadUI's mouse), then the
+  kitchen (`_press` with a ray); buttons in `_xr_buttons`. Pointer ids XRP + hand. AR's camera mode on the headset is
+  Meta's passthrough (`XRRig.passthrough`: the alpha-blend environment and a see-through window behind the kitchen,
+  the `shell` hidden); ARCore is never started on the headset. Tests: `XRRig.test` is a
+  stand-in headset (head and hands in the headset's space); the stand-in draws through the phone eyes.
 - **AR** (`scripts/fp/ar_mode.gd`, setting `ar`: off / move / camera; the owner: "an AR mode ... still using the phone
   to control"). ARCore comes from the godot_arcore plugin (`addons/ARCorePlugin`, built by
   `tools/android/build_arcore.sh`). The game keeps drawing the kitchen itself: it reads only the phone's pose (the

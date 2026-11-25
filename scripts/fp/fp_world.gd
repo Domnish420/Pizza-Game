@@ -91,6 +91,15 @@ var ar_pos := Vector3.ZERO              # how far you have moved from there, in 
 var shell: Array = []                   # the walls, floor, ceiling and the view outside: hidden in AR's camera mode
 var env: Environment
 var _cam_bg := -1                       # the camera feed shown behind the kitchen (-1: the usual background)
+# a VR headset's hands (XRRig): your real hands, each its own hand in the game
+const XRP := 200                        # pointer ids for the headset's hands: XRP + 0 the right, XRP + 1 the left
+var xr_touch := [null, null]            # the surface each fingertip is touching (FPSurface), or null
+var xr_tip := [Vector3.ZERO, Vector3.ZERO]      # where it was (it moves the press only when it moves)
+var xr_pinch := [false, false]          # pinching (or the trigger) on something in the kitchen
+var xr_ui := [false, false]             # pinching on the game's screens (the panel): the mouse there
+var xr_ui_at := [Vector2.ZERO, Vector2.ZERO]
+var xr_btn := {}                        # buttons and the stick last frame (each acts once)
+var xr_lasers: Array = []               # a thin beam from each hand to what it points at
 var stick := Vector2.ZERO               # the look stick (LookStick): -1..1 each way, held = turning
 var lean := Vector3.ZERO
 var t_lean := Vector3.ZERO
@@ -1099,11 +1108,12 @@ func _look_at(v: String, snap: bool = false) -> void:
 		# back where you stood
 		if v == _vr_turn:
 			t_yaw = st.x - gyro.x
-			if ARMode.pose() != null: ar_ref = ARMode.pose()
+			if XRRig.active: ar_ref = XRRig.head()
+			elif ARMode.pose() != null: ar_ref = ARMode.pose()
 		_vr_turn = ""
 		_faced = ""
 		t_pitch = 0.0
-		t_lean = Vector3.ZERO if ARMode.active else (CLOSED_LEAN.get(v, STATION_LEAN.get(v, Vector3.ZERO)) if svc == null else STATION_LEAN.get(v, Vector3.ZERO))
+		t_lean = Vector3.ZERO if (ARMode.active or XRRig.active) else (CLOSED_LEAN.get(v, STATION_LEAN.get(v, Vector3.ZERO)) if svc == null else STATION_LEAN.get(v, Vector3.ZERO))
 		t_fov = VRView.FOV
 		last_view = v
 		return
@@ -1139,7 +1149,7 @@ func _process(dt: float) -> void:
 		clock_hands[1].rotation.z = -TAU * fmod(mins, 60.0) / 60.0
 	if cur_view() != last_view: _look_at(cur_view())
 	var g: Vector3 = gyro_test if gyro_test != null else Input.get_gyroscope()
-	var arp = ARMode.pose()
+	var arp = XRRig.head() if XRRig.active else ARMode.pose()
 	immersive = VRView.active or arp != null
 	var phone := LookStick.phone_look() and not immersive
 	var working := _working()
@@ -1210,6 +1220,7 @@ func _process(dt: float) -> void:
 	_sync_pans()
 	_sync_ladles()
 	_sync_hands(dt)
+	if XRRig.active: _xr(dt)
 	if not staff.is_empty(): _animate_staff(dt)
 	job_t -= dt
 	if job_t <= 0.0:
@@ -1698,6 +1709,7 @@ func _sync_hands(dt: float) -> void:
 	# what you hold is in the hand that picked it up; each hand takes the shape of what it is doing
 	var th: int = clampi(svc.tool_hand if svc != null else 0, 0, hands.size() - 1)
 	if held.get_parent() != hands[th].node: held.reparent(hands[th].node, false)
+	if XRRig.active: return                    # (in a headset your real hands place them: _xr)
 	for i in hands.size():
 		var want := "open"
 		if tool != "" and i == th: want = "grip" if Data.ING[tool].kind == "sauce" else "pinch"
@@ -1731,31 +1743,40 @@ func _unhandled_input(e: InputEvent) -> void:
 		_move(-1, e.position, e.relative)
 
 func _ray(pos: Vector2) -> Dictionary:
-	var from := cam.project_ray_origin(pos)
-	var dir := cam.project_ray_normal(pos)
+	return _ray_from(cam.project_ray_origin(pos), cam.project_ray_normal(pos))
+
+## what a ray from a point meets (a headset's hand points from where it is, not from the screen)
+func _ray_from(from: Vector3, dir: Vector3) -> Dictionary:
 	var q := PhysicsRayQueryParameters3D.create(from, from + dir * 40.0)
 	var res := get_world_3d().direct_space_state.intersect_ray(q)
 	if res.is_empty() or not res.collider.has_meta("act"): return {"from": from, "dir": dir}
 	return {"act": res.collider.get_meta("act"), "point": res.position, "from": from, "dir": dir}
 
-func _press(index: int, pos: Vector2, down: bool) -> void:
+## the hand a pointer is, when it is fixed (a controller's or a headset's hand), or -1 (a thumb: by the screen's side)
+func _fixed_hand(index: int) -> int:
+	if index >= XRP: return index - XRP
+	if index >= PAD: return index - PAD
+	return -1
+
+func _press(index: int, pos: Vector2, down: bool, ray = null) -> void:
 	if down:
-		var hit := _ray(pos)
+		var hit: Dictionary = ray if ray != null else _ray(pos)
 		var cap := {"start": pos, "moved": false, "kind": "look"}
 		if hit.has("act"):
 			var act: Dictionary = hit.act
 			if act.kind == "surface":
 				var s: FPSurface = act.surface
-				if cur_view() != s.station:
-					goto(s.station)                  # first touch on another station turns you to face it
-					cap.kind = "none"
+				var other := cur_view() != s.station
+				if other: goto(s.station)            # first touch on another station turns you to face it
+				if other and index < XRP:
+					cap.kind = "none"                # (a headset's fingertip is already there: it presses at once)
 				else:
 					var px = s.to_px(hit.from, hit.dir)
 					if px != null:
 						cap.kind = "surface"
 						cap.s = s
 						cap.px = px
-						cap.hand = index if index < 0 else (index - PAD if index >= PAD else _hand_for(pos))   # your left thumb is your left hand
+						cap.hand = index if index < 0 else (_fixed_hand(index) if index >= PAD else _hand_for(pos))   # your left thumb is your left hand
 						s.press(cap.hand, px, true)
 						_hand(cap.hand, s.from_px(px))
 			else:
@@ -1769,23 +1790,23 @@ func _press(index: int, pos: Vector2, down: bool) -> void:
 	ptr.erase(index)
 	match c.kind:
 		"surface":
-			var hit := _ray(pos)
+			var hit: Dictionary = ray if ray != null else _ray(pos)
 			var px = c.s.to_px(hit.from, hit.dir)
 			c.s.press(c.hand, px if px != null else c.px, false)
 			_hand(c.hand, null)
 		"tap":
-			tap_hand = index - PAD if index >= PAD else (1 if c.start.x < get_viewport().get_visible_rect().size.x * 0.5 else 0)
+			tap_hand = _fixed_hand(index) if index >= PAD else (1 if c.start.x < get_viewport().get_visible_rect().size.x * 0.5 else 0)
 			if not c.moved: _tap(c.act)
 		"look":
 			_settle()
 
-func _move(index: int, pos: Vector2, rel: Vector2) -> void:
+func _move(index: int, pos: Vector2, rel: Vector2, ray = null) -> void:
 	if not ptr.has(index): return
 	var c: Dictionary = ptr[index]
 	if pos.distance_to(c.start) > 14.0: c.moved = true
 	match c.kind:
 		"surface":
-			var hit := _ray(pos)
+			var hit: Dictionary = ray if ray != null else _ray(pos)
 			var px = c.s.to_px(hit.from, hit.dir)
 			if px == null: return
 			c.s.drag(c.hand, px, px - c.px)
@@ -2086,17 +2107,197 @@ func _pad_hover_dots() -> void:
 
 ## AR's camera mode: the camera's picture behind the kitchen, without the room's walls (the counters, the oven and the
 ## people stand in your room); otherwise the usual background
+## On the Quest the same setting is Meta's passthrough: your real room through the headset's cameras, behind a
+## see-through background.
 func _ar_camera() -> void:
-	var want := ARMode.feed_id() if ARMode.mode() == "camera" else -1
+	var rig = Kit.main.vr.rig if Kit.main != null and Kit.main.vr != null else null
+	var want := -1
+	if ARMode.mode() == "camera":
+		want = 999 if (XRRig.active and rig != null) else ARMode.feed_id()        # (999: the headset's passthrough)
 	if want == _cam_bg or env == null: return
+	if _cam_bg == 999 and rig != null: rig.passthrough(false)
 	_cam_bg = want
-	if want >= 0:
+	if want == 999:
+		if not rig.passthrough(true): Kit.main.toast("This headset cannot show your room", true)
+		env.background_mode = Environment.BG_COLOR
+		env.background_color = Color(0, 0, 0, 0)
+	elif want >= 0:
+		CameraServer.set_monitoring_feeds(true)        # (Godot 4.5+: the camera server watches its feeds only when asked)
 		env.background_mode = Environment.BG_CAMERA_FEED
 		env.background_camera_feed_id = want
 	else:
 		env.background_mode = Environment.BG_COLOR
+		env.background_color = Color("9cc6e8") if not dine else Color("2a2622")
 	for n in shell:
 		if is_instance_valid(n): n.visible = want < 0
+
+# ---------- a VR headset: your real hands ----------
+## where the headset's space sits in the kitchen, so that its camera is exactly your head here (see the head's
+## composition in _process: your station's turn, then the headset's own turn and position from where you started)
+func xr_origin() -> Transform3D:
+	var b := Basis(Vector3.UP, deg_to_rad(t_yaw))
+	var r: Vector3 = ar_ref.origin if ar_ref != null else Vector3.ZERO
+	return Transform3D(b, Vector3(0, EYE, 0) + lean - b * r)
+
+## each frame in a headset: your hands where your real hands are; a fingertip on a working surface is a finger on it
+## (two fingertips stretch the dough); a pinch (or the trigger) works what the hand points at further away, and the
+## game's screens on the panel; the thumbstick turns you to the next station; B or Y lets go of what that hand holds;
+## the menu button looks at your station again
+func _xr(_dt: float) -> void:
+	var o := xr_origin()
+	for i in 2:
+		var h := XRRig.hand(i)
+		if not h.get("tracked", false):
+			_xr_release(i)
+			continue
+		var tip: Vector3 = o * (h.tip as Vector3)
+		var aim: Transform3D = o * (h.aim as Transform3D)
+		var palm: Transform3D = o * (h.get("palm", h.aim) as Transform3D)
+		_xr_place_hand(i, palm, h)
+		var touching := _xr_touch(i, tip)
+		_xr_point(i, aim, float(h.get("pinch", 0.0)), touching)
+		_xr_buttons(i, h)
+
+## the hand model on your real hand, shaped by what it does
+func _xr_place_hand(i: int, palm: Transform3D, h: Dictionary) -> void:
+	var hn: Node3D = hands[i].node
+	hn.global_transform = palm * Transform3D(Basis(), Vector3(0.0, 0.0, 0.05))     # (the model's wrist sits behind the palm)
+	var want := "open"
+	if svc != null and svc.tool != "" and svc.tool_hand == i: want = "grip" if Data.ING[svc.tool].kind == "sauce" else "pinch"
+	elif float(h.get("pinch", 0.0)) > 0.6: want = "pinch"
+	elif float(h.get("grip", 0.0)) > 0.6: want = "grip"
+	_pose(hands[i], want)
+
+## a fingertip on a working surface (the dough on the bench, the board, the oven's deck, the prep tablet): within a
+## centimetre of it, inside it. True while it is touching.
+func _xr_touch(i: int, tip: Vector3) -> bool:
+	var s = xr_touch[i]
+	if s != null:
+		var l: Vector3 = s.to_local(tip)
+		var q: Vector2 = s.quad_size
+		if not is_instance_valid(s) or l.z > 0.025 or absf(l.x) > q.x * 0.5 + 0.02 or absf(l.y) > q.y * 0.5 + 0.02:
+			if is_instance_valid(s): _press(XRP + i, Vector2.ZERO, false, _xr_down(s, tip))
+			xr_touch[i] = null
+			return false
+		if tip.distance_to(xr_tip[i]) > 0.001:
+			_move(XRP + i, Vector2.ZERO, Vector2.ZERO, _xr_down(s, tip))
+			xr_tip[i] = tip
+		return true
+	if xr_pinch[i] or xr_ui[i]: return false            # (a pinch keeps that hand on what it pinched)
+	for k in surfaces:
+		var sf = surfaces[k]
+		if sf == null or not is_instance_valid(sf) or not sf.is_visible_in_tree(): continue
+		var l: Vector3 = sf.to_local(tip)
+		var q: Vector2 = sf.quad_size
+		if l.z < 0.012 and l.z > -0.06 and absf(l.x) <= q.x * 0.5 and absf(l.y) <= q.y * 0.5:
+			xr_touch[i] = sf
+			xr_tip[i] = tip
+			_press(XRP + i, Vector2.ZERO, true, _xr_down(sf, tip))
+			XRRig.pulse(i, 0.3, 0.03)
+			return true
+	return false
+
+## the ray straight down onto a surface under a fingertip
+func _xr_down(s: FPSurface, tip: Vector3) -> Dictionary:
+	var n := s.global_transform.basis.z.normalized()
+	return _ray_from(tip + n * 0.05, -n)
+
+## a pinch (or the trigger): the game's screens on the panel first, then what the hand points at in the kitchen
+func _xr_point(i: int, aim: Transform3D, pinch: float, touching: bool) -> void:
+	var from := aim.origin
+	var dir := -aim.basis.z.normalized()
+	var u = null
+	var ui_pos = null
+	if Kit.main != null and Kit.main.vr != null:
+		var ph = Kit.main.vr.panel_hit(from, dir)
+		if ph != null:
+			var c: Control = Kit.main.ui_at(ph.px)
+			var fv := _fpview()
+			if xr_ui[i] or (c != null and c != fv and not (fv != null and c.is_ancestor_of(fv))):
+				u = {"vp": Kit.main.vr.ui_vp, "px": ph.px}
+				ui_pos = ph.pos
+	var hit := _ray_from(from, dir)
+	var down := pinch > (0.45 if (xr_pinch[i] or xr_ui[i]) else 0.75)
+	if down and not xr_pinch[i] and not xr_ui[i]:
+		if not touching:
+			if u != null and not xr_ui[1 - i]:
+				xr_ui[i] = true
+				xr_ui_at[i] = u.px
+				Kit.main.pad_ui.mouse(u, true)
+			else:
+				xr_pinch[i] = true
+				_press(XRP + i, Vector2.ZERO, true, hit)
+			XRRig.pulse(i, 0.4, 0.03)
+	elif down and xr_ui[i]:
+		if u != null and u.px != xr_ui_at[i]:
+			Kit.main.pad_ui.drag(u, xr_ui_at[i])
+			xr_ui_at[i] = u.px
+	elif down and xr_pinch[i]:
+		_move(XRP + i, Vector2.ZERO, Vector2.ZERO, hit)
+	elif not down:
+		if xr_ui[i]:
+			Kit.main.pad_ui.mouse({"vp": Kit.main.vr.ui_vp, "px": xr_ui_at[i]}, false)
+			xr_ui[i] = false
+		if xr_pinch[i]:
+			_press(XRP + i, Vector2.ZERO, false, hit)
+			xr_pinch[i] = false
+	if Kit.main != null: Kit.main.pad_ui.ring(i, u if not touching else null, xr_ui[i])
+	var to = ui_pos if ui_pos != null else (hit.point if hit.has("point") else null)
+	_xr_laser(i, from, to if not touching else null)
+
+## a thin beam from the hand to what it points at (nothing when it points at nothing)
+func _xr_laser(i: int, from: Vector3, to) -> void:
+	while xr_lasers.size() <= i:
+		var l := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = Vector3(0.003, 0.003, 1.0)
+		l.mesh = bm
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.albedo_color = Color(1, 1, 1, 0.45)
+		l.material_override = m
+		l.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(l)
+		xr_lasers.append(l)
+	var ln: MeshInstance3D = xr_lasers[i]
+	ln.visible = to != null and from.distance_to(to) > 0.05
+	if not ln.visible: return
+	var d: float = from.distance_to(to)
+	ln.global_transform = Transform3D(Basis.looking_at(to - from, Vector3.UP), from.lerp(to, 0.5)).scaled_local(Vector3(1, 1, d))
+
+## the thumbstick turns you to the next station; B or Y lets go of what that hand holds; the menu button looks at your
+## station again (where you stand and look becomes it)
+func _xr_buttons(i: int, h: Dictionary) -> void:
+	var st: Vector2 = h.get("stick", Vector2.ZERO)
+	var tk := "turn%d" % i
+	if absf(st.x) > 0.7 and not xr_btn.get(tk, false):
+		xr_btn[tk] = true
+		turn_station(1 if st.x > 0.0 else -1)
+		XRRig.pulse(i, 0.3, 0.03)
+	elif absf(st.x) < 0.3:
+		xr_btn[tk] = false
+	for b in ["by", "menu"]:
+		var on := bool(h.get(b, false))
+		var key := "%s%d" % [b, i]
+		if on and not xr_btn.get(key, false):
+			if b == "by" and svc != null and svc.tool != "" and svc.tool_hand == i: svc.put_down()
+			elif b == "menu": face(cur_view())
+		xr_btn[key] = on
+
+## a hand gone (out of sight, the controller put down): what it was doing ends
+func _xr_release(i: int) -> void:
+	if xr_touch[i] != null:
+		if is_instance_valid(xr_touch[i]): _press(XRP + i, Vector2.ZERO, false, _xr_down(xr_touch[i], xr_tip[i]))
+		xr_touch[i] = null
+	if xr_pinch[i]:
+		_press(XRP + i, Vector2.ZERO, false, null)
+		xr_pinch[i] = false
+	if xr_ui[i]:
+		if Kit.main != null and Kit.main.vr != null: Kit.main.pad_ui.mouse({"vp": Kit.main.vr.ui_vp, "px": xr_ui_at[i]}, false)
+		xr_ui[i] = false
+	if i < xr_lasers.size(): xr_lasers[i].visible = false
+	if Kit.main != null: Kit.main.pad_ui.ring(i, null, false)
 
 ## the viewer's button (a tap on the screen in a Cardboard-style viewer): your right hand at the middle of your view
 func gaze_press(down: bool) -> void:

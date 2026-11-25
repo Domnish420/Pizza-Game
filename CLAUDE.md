@@ -14,8 +14,9 @@ install it the same way: Godot 4.7.2 from the GitHub release into `/opt/godot` w
 
 `tools/android/setup.sh` installs the Android build (JDK 17, the SDK and NDKs, Godot's Android templates, a debug key;
 the setup script runs it) and `tools/android/build.sh` builds `build/CrustEmpire-debug.apk` (a Gradle build, with the
-ARCore plugin from `addons/ARCorePlugin`). Send the owner the APK with the zip when a change is worth trying on the
-phone. `tools/android/build_arcore.sh` rebuilds the ARCore plugin itself (rarely needed: its libraries are committed).
+ARCore plugin from `addons/ARCorePlugin`); `tools/android/build.sh debug Quest` builds the Quest's
+(`build/CrustEmpire-quest-debug.apk`, OpenXR with Meta's plugin from `addons/godotopenxrvendors`). Send the owner the
+APKs with the zip when a change is worth trying on the phone or the headset. `tools/android/build_arcore.sh` rebuilds the ARCore plugin itself (rarely needed: its libraries are committed).
 
 ## Tests
 
