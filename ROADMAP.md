@@ -114,7 +114,8 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
       topping up holds it)
 - [x] A game controller as two hands: the sticks move them, the triggers put them down, the stick clicks are the
       thumbs (let go), the shoulders turn to the next station; dialogs answerable with A
-- [ ] Phone VR (a Cardboard-style viewer): two eyes, head tracking, the controller's hands, the HUD in the room
+- [x] Phone VR (a Cardboard-style viewer): two eyes bent for the lens, head tracking, the controller's hands (or the
+      viewer's button at the middle of your view), the game's screens on a panel in the room, dialogs where you look
 - [ ] Walking round the kitchen for real (ARCore tracking, in VR and on the screen)
 - [ ] AR mode on Android (ARCore): the kitchen placed in your room, walking between stations
 - [ ] VR (OpenXR, Quest): the same kitchen with tracked hands

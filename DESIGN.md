@@ -152,6 +152,20 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   (`_press(PAD + hand, ...)`: the same path as a thumb on the screen, so everything a thumb does a trigger does);
   R3/L3 let go of what that hand holds; LB/RB turn to the next station (`turn_station`). The hand hovers over what it
   points at with a dot. This is also the VR hands until tracked hands: the same pointers, aimed from the headset.
+- **Phone VR** (`scripts/fp/vr_view.gd`, setting `vr`; the owner: "head movements and real life movement to move the
+  player and we use both joysticks to move the hands"). Godot's own phone VR drawing skips the lens correction and
+  the 2D screens with the Compatibility renderer, so VRView draws the eyes itself: two SubViewports sharing the
+  kitchen's World3D, cameras an eye's width apart (`IPD`) following `FPWorld.cam`, shown side by side through
+  `shaders/lens.gdshader` (barrel distortion for the viewer's pincushion lens). Only Godot's head tracking is used
+  (`MobileVRInterface`, read through `XRServer.get_hmd_transform()`; tests use `VRView.head_test`). In VR the head is
+  never smoothed and the station's pitch is not added (the horizon stays level), the game moving you to a station does
+  not turn you (`_vr_turn`: only Start and the shoulders do), and the breathing sway is off. The game's screens
+  (`content`, the dialogs, the toast, Marco's guide and the performance numbers) move into a transparent SubViewport
+  shown on a panel in the room (eye level, drifting round when you look 32 degrees away; a dialog or a menu comes to
+  where you look and then holds still so you can aim). Gaze clicking: `VRView._gaze` finds where the middle of your
+  view meets the panel (a gold dot) and `click_gaze` clicks the button there (mouse events pushed into the panel's
+  viewport); off the buttons, the viewer's button is the right hand (`FPWorld.gaze_press`). Next: walking for real (ARCore's tracking moving the body), a VR-sized HUD if the panel is hard to read, and
+  the Quest (OpenXR) with tracked hands driving the same two hands.
 - **The clock on the wall** (`fp.timeclock`, above the hatch or the pass, in every scene): you clock in on it to open,
   clock out early in service, and clock out at night to lock up. Its hands show the game's time. The owner wants a
   clock in each scene for this, rather than buttons on the screen.

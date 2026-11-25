@@ -123,6 +123,18 @@ in is that hand's thumb: it lets go of what the hand holds. The shoulder buttons
 the main button has a gold ring: A presses it, the d-pad moves between buttons. Touch the screen and the
 controller's hands rest.
 
+**Phone VR** (Settings > Controls > VR viewer, or on the phone): put the phone in a Cardboard-style headset. The
+kitchen is drawn for each eye, bent for the lens; your head is your head (turn, nod and tilt: it follows at once), and
+turning to a station puts you there, as on the screen. The game moving you on never swings you round; the shoulder
+buttons turn you to the next station, and Start makes where you are looking your station again. The game's screens
+(the top bar, the recipe card, Marco's guide) float on a panel in front of you at eye level: look down to work, up to
+read. A dialog, and the menus away from the kitchen, come to where you are looking. A gold dot shows where you are
+looking on the panel: the viewer's button (or A) clicks the button under it, so every menu works from inside the
+headset. Your hands are a game controller (see above); without one, the viewer's button, looking past the panel's
+buttons, is your right hand at the middle of your view (a white dot shows where). Back on the controller, or holding a
+finger on the screen for two seconds, leaves VR. For now it follows your head turning, not you walking (that needs
+the phone's camera tracking, ARCore, next).
+
 On a computer (or with Look set to the stick) a thumb stick in the bottom-left corner turns your head instead (push
 further to turn faster; let go near a station to settle on it, tap it to look back at your station), and the
 station buttons sit beside it.

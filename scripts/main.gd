@@ -4,6 +4,7 @@ extends Control
 var content: MarginContainer
 var modal_root: Control
 var pad := false                       # a game controller has been used: dialogs give their main button the focus
+var vr: VRView = null                  # the phone in a VR viewer (Settings > Controls > VR viewer)
 var modal_center: CenterContainer
 var toast_box: PanelContainer
 var toast_label: Label
@@ -41,6 +42,17 @@ func _ready() -> void:
 	toast_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(toast_box)
 	show_start()                    # the game always opens on the title screen
+	if Game.s.get("vr", false): set_vr(true)
+
+## the phone in a VR viewer, or not: the kitchen drawn for two eyes, the screens on a panel in the room (VRView)
+func set_vr(on: bool) -> void:
+	if on and vr == null:
+		vr = VRView.new()
+		add_child(vr)
+	elif not on and vr != null:
+		vr.close()
+		vr.queue_free()
+		vr = null
 
 func _process(delta: float) -> void:
 	if toast_t > 0:
