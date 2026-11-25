@@ -1,6 +1,7 @@
 .godot/
 *.import
-export_presets.cfg
 tools/models/tex/
 __pycache__/
 tests/out/
+build/
+android/
