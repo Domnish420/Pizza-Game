@@ -109,6 +109,11 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
       station buttons that pulse when they need you
 - [x] A look stick for the camera; hands without arms; a sparse HUD (a short recipe card, labels only when they
       matter)
+- [x] The phone is your head: moving the phone looks round and picks the station you face (no snapping, steady
+      while a thumb works); both thumbs are hands, each independent (left thumb, left hand; the hand that picks a
+      topping up holds it)
+- [ ] AR mode on Android (ARCore): the kitchen placed in your room, walking between stations
+- [ ] VR (OpenXR, Quest): the same kitchen with tracked hands
 - [x] A clock on the wall in each scene to clock in and out on (open, close early, lock up), its hands keeping time
 - [x] Hands that change pose with what they hold (open, pinch, grip)
 - [ ] Hand-made models to replace the generated ones; keyframed animation (waving, paying, leaving with a box)

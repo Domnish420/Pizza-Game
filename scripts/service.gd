@@ -78,6 +78,8 @@ var palette: VBoxContainer
 var mini_panel: PanelContainer
 var mini_box: VBoxContainer
 var btn_row: HBoxContainer
+var top_bar: HBoxContainer            # the strip along the top (the station buttons go here when the phone looks)
+var tool_hand := 0                    # which hand holds the topping or the ladle: 0 the right, 1 the left (3D)
 var put_btn: Button                   # "Put down the pepperoni": hands free in one tap (3D)
 var tab_btns := {}
 var top_lbl := {}
@@ -162,6 +164,7 @@ func _build_ui() -> void:
 	add_theme_constant_override("separation", 8)
 	fp_mode = Game.s.get("view3d", true)
 	var top := Kit.hbox(12)
+	top_bar = top
 	add_child(top)
 	# the time. In 3D you clock out early on the clock above the pass; the 2D layout has no room, so its time is the
 	# button (at closing time the day ends by itself)
@@ -334,17 +337,17 @@ func _build_fp_body() -> void:
 	# looking around: the stick in the corner, and one button per station beside it (see LookStick.lay_out)
 	var tabs := Kit.hbox(5)
 	for k in ["front", "bench", "oven", "board", "prep"]:
-		var b := Kit.button("", set_view.bind(k), "tab", 16)
+		var b := Kit.button("", (func(st): fp.world.face(st)).bind(k) if LookStick.phone_look() else set_view.bind(k), "tab", 16)
 		b.custom_minimum_size = Vector2(84, 46)
 		tabs.add_child(b)
 		tab_btns[k] = b
 	var lb := Kit.button("List", func(): tl.visible = not tl.visible, "ghost", 15)
 	lb.custom_minimum_size = Vector2(56, 46)
 	tabs.add_child(lb)
-	var stk := LookStick.lay_out(stack, fp.world, tabs)
+	var stk := LookStick.lay_out(stack, fp.world, tabs, top_bar)
 	btn_row = Kit.hbox(8)
 	btn_row.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
-	var lift: float = (stk.custom_minimum_size.x + 10.0) if Game.s.get("stick_right", false) else 0.0   # clear of a right-hand stick
+	var lift: float = (stk.custom_minimum_size.x + 10.0) if stk != null and Game.s.get("stick_right", false) else 0.0   # clear of a right-hand stick
 	btn_row.offset_top = -62 - lift
 	btn_row.offset_bottom = -8 - lift
 	btn_row.offset_left = -470
@@ -2200,6 +2203,12 @@ func _build_side() -> void:
 	bin_btn.visible = pz != null
 	if put_btn != null:
 		put_btn.visible = tool != "" and not (Data.ING[tool].kind == "sauce" and ladle_g > 0.0)
+		var lefty: bool = tool_hand == 1                    # under the thumb that is holding it
+		put_btn.anchor_left = 0.0 if lefty else 1.0
+		put_btn.anchor_right = 0.0 if lefty else 1.0
+		var w := 290.0
+		put_btn.offset_left = 10.0 if lefty else -10.0 - w
+		put_btn.offset_right = 10.0 + w if lefty else -10.0
 		if put_btn.visible: put_btn.text = "Put down the %s" % ("ladle" if Data.ING[tool].kind == "sauce" else Data.ING[tool].name.to_lower())
 	auto_btn.visible = pz != null and view == "bench" and pz.base.method == "roll" and c.roll_auto > 0
 	mini_panel.visible = view != "oven" and oven.mine().size() + oven.shelf.size() > 0

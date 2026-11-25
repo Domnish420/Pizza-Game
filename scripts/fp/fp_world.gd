@@ -63,6 +63,11 @@ var pitch := -9.0
 var t_yaw := 0.0
 var t_pitch := -9.0
 var gyro := Vector2.ZERO
+var gyro_test = null                    # tests: a Vector3 to read instead of the phone's gyroscope
+var _faced := ""                        # the station you just turned to face (the view follows the phone, not the station)
+var face_want := ""                     # a station you are turning towards, and for how long (a glance does not count)
+var face_dwell := 0.0
+var tap_hand := 0                       # the hand (by screen side) of the last tap: it picks up what it tapped
 var stick := Vector2.ZERO               # the look stick (LookStick): -1..1 each way, held = turning
 var lean := Vector3.ZERO
 var t_lean := Vector3.ZERO
@@ -1065,6 +1070,17 @@ func _to3d(p2: Vector2) -> Vector3:
 
 func _look_at(v: String, snap: bool = false) -> void:
 	var st: Vector2 = STATIONS.get(v, STATIONS.front)
+	if LookStick.phone_look() and not snap:
+		# the phone is your head: a station you turned to face changes nothing about where you look; any other change
+		# (a station button, the game moving you on) turns you to it from where the phone points now
+		if v != _faced:
+			t_yaw = st.x - gyro.x
+			t_pitch = st.y - gyro.y
+		_faced = ""
+		t_lean = (CLOSED_LEAN.get(v, STATION_LEAN.get(v, Vector3.ZERO)) if svc == null else STATION_LEAN.get(v, Vector3.ZERO))
+		t_fov = STATION_FOV.get(v, 74.0)
+		last_view = v
+		return
 	t_yaw = st.x
 	t_pitch = st.y
 	t_lean = (CLOSED_LEAN.get(v, STATION_LEAN.get(v, Vector3.ZERO)) if svc == null else STATION_LEAN.get(v, Vector3.ZERO))
@@ -1085,10 +1101,20 @@ func _process(dt: float) -> void:
 		clock_hands[0].rotation.z = -TAU * fmod(mins, 720.0) / 720.0
 		clock_hands[1].rotation.z = -TAU * fmod(mins, 60.0) / 60.0
 	if cur_view() != last_view: _look_at(cur_view())
-	var g := Input.get_gyroscope()
-	if g.length() > 0.02 and Game.s.get("gyro", true):
-		gyro.x += rad_to_deg(g.x) * dt
-		gyro.y = clamp(gyro.y + rad_to_deg(g.y) * dt * (-1.0 if DisplayServer.screen_get_orientation() == DisplayServer.SCREEN_REVERSE_LANDSCAPE else 1.0), -60.0, 60.0)
+	var g: Vector3 = gyro_test if gyro_test != null else Input.get_gyroscope()
+	var phone := LookStick.phone_look()
+	var working := _working()
+	# the phone's movement turns your head; while a thumb is working on something it holds still, so the dough does
+	# not slide under your thumb when the phone moves in your hands
+	if g.length() > 0.02 and (phone or LookStick.gyro_helps()) and not working:
+		# Godot turns the phone's gyroscope into the screen's axes (x to the right of the screen, y up it, in either
+		# landscape): turning round is about y (to the left is +), tilting the top towards you is about x (looking up)
+		var gain := look_speed() if phone else 1.0
+		gyro.x += rad_to_deg(g.y) * dt * gain
+		var dy: float = rad_to_deg(g.x) * dt * gain * look_flip()
+		if phone: gyro.y = clamp(gyro.y + dy, -85.0 - t_pitch, 40.0 - t_pitch)
+		else: gyro.y = clamp(gyro.y + dy, -60.0, 60.0)
+	if phone and not working: _face_station(dt)
 	if stick != Vector2.ZERO:
 		# the look stick: the further you push, the faster you turn (eased so small pushes are fine aiming)
 		var sp := stick * stick.length() * look_speed()
@@ -1591,11 +1617,14 @@ func _sync_hands(dt: float) -> void:
 		var sauce: bool = Data.ING[tool].kind == "sauce"
 		held.material_override = _mat(Color(Data.ING[tool].col) if not sauce or svc.ladle_g > 0.0 else Color("c3c9cc"), 0.6, 0.8 if sauce and svc.ladle_g <= 0.0 else 0.0)
 		held.scale = Vector3(1.4, 0.7, 1.4) if sauce else Vector3.ONE
-	# the right hand takes the shape of what it is doing
-	var want := "open"
-	if tool != "": want = "grip" if Data.ING[tool].kind == "sauce" else "pinch"
-	elif grip_at != null: want = "grip"
-	_pose(hands[0], want)
+	# what you hold is in the hand that picked it up; each hand takes the shape of what it is doing
+	var th: int = clampi(svc.tool_hand if svc != null else 0, 0, hands.size() - 1)
+	if held.get_parent() != hands[th].node: held.reparent(hands[th].node, false)
+	for i in hands.size():
+		var want := "open"
+		if tool != "" and i == th: want = "grip" if Data.ING[tool].kind == "sauce" else "pinch"
+		elif i == 0 and grip_at != null: want = "grip"
+		_pose(hands[i], want)
 	for i in hands.size():
 		var h: Dictionary = hands[i]
 		var goal: Vector3 = h.rest
@@ -1647,8 +1676,9 @@ func _press(index: int, pos: Vector2, down: bool) -> void:
 						cap.kind = "surface"
 						cap.s = s
 						cap.px = px
-						s.press(index, px, true)
-						_hand(index, s.from_px(px))
+						cap.hand = index if index < 0 else _hand_for(pos)       # your left thumb is your left hand
+						s.press(cap.hand, px, true)
+						_hand(cap.hand, s.from_px(px))
 			else:
 				cap.kind = "tap"
 				cap.act = act
@@ -1661,9 +1691,10 @@ func _press(index: int, pos: Vector2, down: bool) -> void:
 		"surface":
 			var hit := _ray(pos)
 			var px = c.s.to_px(hit.from, hit.dir)
-			c.s.press(index, px if px != null else c.px, false)
-			_hand(index, null)
+			c.s.press(c.hand, px if px != null else c.px, false)
+			_hand(c.hand, null)
 		"tap":
+			tap_hand = 1 if c.start.x < get_viewport().get_visible_rect().size.x * 0.5 else 0
 			if not c.moved: _tap(c.act)
 		"look":
 			_settle()
@@ -1677,9 +1708,9 @@ func _move(index: int, pos: Vector2, rel: Vector2) -> void:
 			var hit := _ray(pos)
 			var px = c.s.to_px(hit.from, hit.dir)
 			if px == null: return
-			c.s.drag(index, px, px - c.px)
+			c.s.drag(c.hand, px, px - c.px)
 			c.px = px
-			_hand(index, c.s.from_px(px))
+			_hand(c.hand, c.s.from_px(px))
 		"tap":
 			if c.moved: c.kind = "look"
 		"look":
@@ -1716,12 +1747,62 @@ func look_speed() -> float:
 func look_flip() -> float:
 	return -1.0 if Game.s.get("invert_look", false) else 1.0
 
+## with the phone for looking: the station you turn to face (and hold for a moment, so a glance does not count)
+## becomes the one you work at. The one you are at keeps you until another is clearly nearer.
+func _face_station(dt: float) -> void:
+	var h := t_yaw + gyro.x
+	var p := t_pitch + gyro.y
+	var keys: Array = ["front", "bench", "board", "oven", "prep"] if svc != null else ["front", "bench", "oven", "prep", "stores"]
+	var cur := cur_view()
+	var best := cur
+	var bd := _off_station(cur, h, p) - 6.0
+	for st in keys:
+		var d := _off_station(st, h, p)
+		if d < bd and d < 32.0:
+			best = st
+			bd = d
+	if best == cur:
+		face_dwell = 0.0
+		face_want = ""
+		return
+	if best != face_want:
+		face_want = best
+		face_dwell = 0.0
+	face_dwell += dt
+	if face_dwell >= 0.3:
+		_faced = best
+		face_dwell = 0.0
+		face_want = ""
+		goto(best)
+
+## how far (degrees) where you look is from a station
+func _off_station(st: String, h: float, p: float) -> float:
+	var a: Vector2 = STATIONS.get(st, STATIONS.front)
+	return Vector2(rad_to_deg(angle_difference(deg_to_rad(a.x), deg_to_rad(h))), a.y - p).length()
+
+## a thumb is on a working surface (the dough, the board, the oven's deck, the prep tablet)
+func _working() -> bool:
+	for c in ptr.values():
+		if c.kind == "surface": return true
+	return false
+
+## a station button, with the phone for looking: face that station from where you stand (the phone's direction now
+## points at it), without having to turn round
+func face(st: String) -> void:
+	_faced = ""
+	goto(st)
+	_look_at(st)
+
 ## the look stick tapped: look back at the station you are at
 func recentre() -> void:
+	if LookStick.phone_look():
+		face(cur_view())
+		return
 	_look_at(cur_view())
 
 ## let go of a free look near a station and you settle on it
 func _settle() -> void:
+	if LookStick.phone_look(): return             # the phone is your head: where it points, you look (turning to a station picks it)
 	var best := ""
 	var bd := SNAP
 	for st in STATIONS:
@@ -1733,6 +1814,14 @@ func _settle() -> void:
 	if best != "":
 		if best != cur_view(): goto(best)
 		else: _look_at(best)
+
+## the hand for a thumb on the screen: 1 (the left) on the left half, 0 (the right) on the right half; if that hand is
+## already working, the other one
+func _hand_for(pos: Vector2) -> int:
+	var want := 1 if pos.x < get_viewport().get_visible_rect().size.x * 0.5 else 0
+	for c in ptr.values():
+		if c.get("hand", -9) == want: return 1 - want
+	return want
 
 func _hand(index: int, at) -> void:
 	var i: int = 1 if index == 1 else 0
@@ -1775,6 +1864,7 @@ func _tap(act: Dictionary) -> void:
 			Art.sfx("tap")
 		"pan":
 			if svc.view in ["front", "oven", "prep"]: svc.set_view("bench")
+			svc.tool_hand = tap_hand                # the hand that tapped the pan takes what is in it
 			svc.rail_tap(int(act.i))
 		"ladle":
 			if svc.ladle_g > 0.0:
@@ -1785,6 +1875,7 @@ func _tap(act: Dictionary) -> void:
 				svc.dirty = true
 				return
 			svc.ladle_oz = int(act.oz)
+			svc.tool_hand = tap_hand                # the hand that took the ladle holds it
 			if svc.bench != null and svc.bench.rec.sauce != "": svc.tool = svc.bench.rec.sauce
 			svc.dirty = true
 		"ticket":

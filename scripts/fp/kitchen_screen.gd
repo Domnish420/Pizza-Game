@@ -30,6 +30,7 @@ var hub: Hub
 var phone: Control
 var top_l: Label
 var cash_l: Label
+var top_bar: HBoxContainer            # the strip along the top (the station buttons go here when the phone looks)
 var clock_l: Label                # the time, and when you open (you clock in on the clock above the pass)
 var phone_btn: Button
 var list_box: VBoxContainer
@@ -62,6 +63,7 @@ func _build() -> void:
 	# the strip along the top: the time, where and when, your money, the phone (you open and lock up on the clock
 	# above the pass, in the room)
 	var top := Kit.hbox(10)
+	top_bar = top
 	col.add_child(top)
 	clock_l = Kit.label("", 19, Kit.CHEESE)
 	top.add_child(clock_l)
@@ -83,14 +85,14 @@ func _build() -> void:
 	# where to look: the stick in the corner, and one button per station beside it
 	var tabs := Kit.hbox(5)
 	for k in [["front", "Hatch" if Game.calc_tables() == 0 else "Pass"], ["bench", "Counter"], ["oven", "Oven"], ["prep", "Prep"], ["stores", "Stores"]]:
-		var b := Kit.button(k[1], world.goto.bind(k[0]), "tab", 16)
+		var b := Kit.button(k[1], world.face.bind(k[0]) if LookStick.phone_look() else world.goto.bind(k[0]), "tab", 16)
 		b.custom_minimum_size = Vector2(88, 46)
 		tabs.add_child(b)
 		tab_btns[k[0]] = b
 	var cl := Kit.button("Checklist", func(): list_panel.visible = not list_panel.visible, "ghost", 15)
 	cl.custom_minimum_size = Vector2(92, 46)
 	tabs.add_child(cl)
-	LookStick.lay_out(stack, world, tabs)
+	LookStick.lay_out(stack, world, tabs, top_bar)
 	# what is still to do today, in the corner
 	list_panel = Kit.panel(Color(0.1, 0.14, 0.11, 0.82), 10)
 	list_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)

@@ -86,6 +86,8 @@ func from_px(px: Vector2) -> Vector3:
 	return to_global(Vector3(u * quad_size.x, v * quad_size.y, 0.0))
 
 ## pass a finger (index >= 0) or the mouse (index -1) on to the control
+var mouse_by := -9                     # the finger working a mouse-driven surface (the first one down on it)
+
 func press(index: int, px: Vector2, down: bool) -> void:
 	if touch_events and index >= 0:
 		var e := InputEventScreenTouch.new()
@@ -93,8 +95,13 @@ func press(index: int, px: Vector2, down: bool) -> void:
 		e.position = px
 		e.pressed = down
 		vp.push_input(e, true)
-	if not touch_events or index < 0:
-		if index > 0: return            # mouse-driven controls only follow the first finger
+	else:
+		# mouse-driven controls follow one finger: whichever thumb got there first
+		if down:
+			if mouse_by != -9: return
+			mouse_by = index
+		elif index != mouse_by: return
+		else: mouse_by = -9
 		var m := InputEventMouseButton.new()
 		m.button_index = MOUSE_BUTTON_LEFT
 		m.pressed = down
@@ -110,8 +117,7 @@ func drag(index: int, px: Vector2, rel: Vector2) -> void:
 		e.position = px
 		e.relative = rel
 		vp.push_input(e, true)
-	if not touch_events or index < 0:
-		if index > 0: return
+	elif index == mouse_by:
 		var m := InputEventMouseMotion.new()
 		m.position = px
 		m.global_position = px

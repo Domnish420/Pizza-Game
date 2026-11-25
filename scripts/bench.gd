@@ -9,9 +9,13 @@ extends Control
 ## On a computer the left mouse button is one finger; the right button (or Shift + left) is two fingers
 ## spread either side of the middle.
 ##
-## There are no steps: the moment the dough is on the bench you can shape it, top it (pick a topping up from its pan
-## and one finger puts it on; two fingers still stretch) or take it to the oven. Cutting board: swipe to slice with an
-## empty hand; anything picked up goes on wherever you put it.
+## There are no steps: the moment the dough is on the bench you can shape it, top it or take it to the oven.
+##
+## Each finger is a hand, and the two work independently. The hand holding something (a topping, the cheese, the
+## ladle) puts it on where that finger goes; an empty hand works the dough (one presses, two stretch) or, on the
+## cutting board, swipes the wheel through. So you can hold the dough still with one thumb while the other scatters
+## the basil. In the 3D kitchen your left thumb is your left hand (the one that picked a thing up keeps it); in the
+## flat layout, the first finger down holds it.
 
 const S := 320.0
 const C := Vector2(160, 160)     # where the pizza's centre sits
@@ -19,6 +23,8 @@ const C := Vector2(160, 160)     # where the pizza's centre sits
 var svc: ServiceScreen
 var font: Font
 var touches := {}                # finger index -> last position, pizza-local
+var roles := {}                  # finger index -> what that hand is doing: "tool", "cut", "dough" or ""
+var cuts_from := {}              # finger index -> where its swipe of the wheel started
 var mouse := ""                  # "" / "one" / "two"
 var mouse_at := Vector2.ZERO
 var cut_from = null
@@ -52,16 +58,20 @@ func _gui_input(e: InputEvent) -> void:
 	if not svc.busy.is_empty():
 		if e is InputEventMouseButton or e is InputEventScreenTouch:
 			if e.pressed: svc.is_free()
+		if e is InputEventScreenTouch and not e.pressed:
+			touches.erase(e.index)                  # a hand lifted while you were busy is still lifted
+			roles.erase(e.index)
+			cuts_from.erase(e.index)
 		return
 	if e is InputEventScreenTouch:
 		last_touch = Time.get_ticks_msec()
 		var p := _local(e.position)
 		if e.pressed:
 			touches[e.index] = p
-			if touches.size() == 1: _down(p)
-		else:
+			_finger_down(e.index, p)
+		elif touches.has(e.index):
 			touches.erase(e.index)
-			if touches.is_empty(): _up(p)
+			_finger_up(e.index, p)
 		accept_event()
 	elif e is InputEventScreenDrag:
 		last_touch = Time.get_ticks_msec()
@@ -69,8 +79,7 @@ func _gui_input(e: InputEvent) -> void:
 			var p := _local(e.position)
 			var prev: Vector2 = touches[e.index]
 			touches[e.index] = p
-			if touches.size() >= 2: _two(e.index, prev, p)
-			else: _move(prev, p)
+			_finger_move(e.index, prev, p)
 		accept_event()
 	elif e is InputEventMouseButton:
 		if e.device == InputEvent.DEVICE_ID_EMULATION or Time.get_ticks_msec() - last_touch < 500: return
@@ -95,7 +104,62 @@ func _shaping(two: bool = false):
 	var pz = svc.bench
 	return pz if (_v() == "bench" and pz != null and pz.stage == "shape" and (two or svc.tool == "")) else null
 
-## one finger goes down
+# ---------- fingers, each its own hand ----------
+## this finger is the hand holding something: in the 3D kitchen, the hand that picked it up; in the flat layout, the
+## first finger down
+func _holds(index: int) -> bool:
+	if svc.tool == "": return false
+	if mode != "": return index == svc.tool_hand
+	return not roles.values().has("tool")
+
+## another finger working the dough, if there is one
+func _other_dough(index: int):
+	for i in roles:
+		if i != index and roles[i] == "dough" and touches.has(i): return touches[i]
+	return null
+
+func _finger_down(index: int, p: Vector2) -> void:
+	var role := ""
+	if _holds(index):
+		role = "tool"
+		svc.apply_tool(p, null)
+	elif _v() == "board":
+		role = "cut"
+		cuts_from[index] = p
+		cut_from = p
+		cut_to = p
+	elif _shaping(true) != null:
+		role = "dough"
+		if _other_dough(index) == null: _dough_down(_shaping(true), p)
+	roles[index] = role
+
+func _finger_move(index: int, prev: Vector2, p: Vector2) -> void:
+	match roles.get(index, ""):
+		"tool": svc.apply_tool(p, prev)
+		"cut":
+			cut_from = cuts_from[index]
+			cut_to = p
+		"dough":
+			var pz = _shaping(true)
+			if pz == null: return
+			var other = _other_dough(index)
+			if other != null: _two(prev, p, other)
+			else: _dough_move(pz, prev, p)
+
+func _finger_up(index: int, p: Vector2) -> void:
+	var role: String = roles.get(index, "")
+	roles.erase(index)
+	match role:
+		"tool": svc.stroke_end(p)
+		"cut":
+			svc.cut(cuts_from[index], p)
+			cuts_from.erase(index)
+			cut_from = null
+			cut_to = null
+		"dough":
+			if not roles.values().has("dough"): pin_at = null
+
+## one finger goes down (the mouse)
 func _down(p: Vector2) -> void:
 	if _v() == "board":
 		if svc.tool == "":
@@ -105,25 +169,30 @@ func _down(p: Vector2) -> void:
 			svc.apply_tool(p, null)
 		return
 	var pz = _shaping()
-	if pz == null:
-		svc.apply_tool(p, null)
-	elif pz.base.method == "hand":
+	if pz == null: svc.apply_tool(p, null)
+	else: _dough_down(pz, p)
+
+## a hand goes down on the dough
+func _dough_down(pz, p: Vector2) -> void:
+	if pz.base.method == "hand":
 		pz.base.press(p)
 		Art.sfx("slap", true, 0.18)            # a floury pat on the marble
 		Art.buzz(8)
 	elif pz.base.method == "roll":
 		pin_at = p
 
-## one finger moves
+## one finger moves (the mouse)
 func _move(prev: Vector2, p: Vector2) -> void:
 	if _v() == "board":
 		if svc.tool == "": cut_to = p
 		else: svc.apply_tool(p, prev)
 		return
 	var pz = _shaping()
-	if pz == null:
-		svc.apply_tool(p, prev)
-		return
+	if pz == null: svc.apply_tool(p, prev)
+	else: _dough_move(pz, prev, p)
+
+## one hand works the dough
+func _dough_move(pz, prev: Vector2, p: Vector2) -> void:
 	match pz.base.method:
 		"hand": pz.base.press(p)
 		"roll":
@@ -148,14 +217,11 @@ func _up(p: Vector2) -> void:
 	cut_to = null
 	pin_at = null
 
-## one of two (or more) fingers moves
-func _two(index: int, prev: Vector2, p: Vector2) -> void:
+## one of two hands on the dough moves (other: where the other one is)
+func _two(prev: Vector2, p: Vector2, other) -> void:
 	var pz = _shaping(true)
 	if pz == null: return
 	Art.sfx("slap", true, 0.45)                # the dough slapping as it is stretched
-	var other = null
-	for i in touches:
-		if i != index: other = touches[i]
 	match pz.base.method:
 		"hand":
 			pz.base.stretch(prev, p)

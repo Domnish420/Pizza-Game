@@ -128,12 +128,24 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
 
 - **The camera** (`FPWorld._camera`, `STATION_LEAN`, `STATION_AT`, `STATION_FOV`): eye height 1.62 m, standing at the
   origin facing -Z. Five stations: front (the hatch or the pass), bench, board, oven and prep. Station buttons turn your
-  head and lean you in. A thumb stick (`scripts/fp/look_stick.gd`, bottom left) turns the head without touching the
-  work (let go near a station to settle on it, tap to recentre); you can also drag on anything that isn't a surface,
-  or turn the phone (gyroscope). Keep the wide, slightly low chest-cam framing.
+  head and lean you in. Keep the wide, slightly low chest-cam framing.
+- **The phone is your head** (the owner: "Lets just do moving the phone so both thumbs are the hands and are always
+  independent from each other"). On a phone, looking is moving the phone (`LookStick.phone_look()`, setting `look`:
+  auto / phone / both / stick): the gyroscope turns the view (`FPWorld.gyro`, Godot gives it in the screen's axes, y
+  for turning, x for tilting), the station you face for 0.3 s becomes the one you work at (`_face_station`, the
+  current one keeps you until another is 6° nearer), and the view never snaps: it stays where the phone points. While
+  a thumb is on a working surface the view holds still (`_working`). The station buttons sit in the top bar and turn
+  you to a station from where the phone points (`face()`). This is the first step towards AR: the phone already moves
+  like a window into the kitchen. On a computer, or with Look set to the stick, a thumb stick
+  (`scripts/fp/look_stick.gd`, bottom left) turns the head instead (let go near a station to settle on it, tap to
+  recentre); dragging on anything that isn't a surface looks round either way.
 - **The hands** (`hand.right`, `hand.left`): just hands, no forearms (the owner found the arms got in the way of the
-  pizza). The right hand follows your first finger on a surface and the left your second (two-finger stretching uses
-  both). Poses: open, pinch, grip; driven by which tool is in use (`svc.tool`, `svc.view`).
+  pizza). Each thumb is a hand, independent of the other: the half of the screen a thumb lands on picks the hand
+  (`FPWorld._hand_for`; the other hand if that one is busy), and the hand that taps a pan or a ladle holds it
+  (`svc.tool_hand`; the held mesh is parented to it, and the put-down button sits under that thumb). On the bench each
+  finger has its own job (`Bench.roles`): the holding hand puts the topping on, an empty hand presses the dough (two
+  empty hands stretch it) or cuts on the board. Poses: open, pinch, grip; driven by which tool is in use and which
+  hand holds it.
 - **The clock on the wall** (`fp.timeclock`, above the hatch or the pass, in every scene): you clock in on it to open,
   clock out early in service, and clock out at night to lock up. Its hands show the game's time. The owner wants a
   clock in each scene for this, rather than buttons on the screen.
@@ -181,8 +193,8 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
     mesh and convert to the same bench coordinates.
 - **No step buttons.** The owner wants the pizza free: "Don't need the base is ready button, get rid of the buttons.
   The dough is ready to go in the oven the moment the dough touches the table. Ingredients can be put on whenever,
-  wherever." So the pizza has no stages. Empty hand shapes, two fingers always stretch, a held topping goes on where
-  your finger goes, turning to the oven carries the pizza on the peel, and the pass, bin, sheeter and log stack are
+  wherever." So the pizza has no stages. An empty hand shapes (two empty hands stretch), a held topping goes on where
+  the holding hand goes, turning to the oven carries the pizza on the peel, and the pass, bin, sheeter and log stack are
   objects in the room. Keep it that way: no buttons for steps.
 - **Tappable 3D objects**: the pass, the bin, the dough sheeter and the logs beside a wood oven; the gastro pans on the rail (fill level, the topping in your hand highlighted), the portion
   ladles on their rack, the paper tickets on the ticket rail (with a patience strip), customers with their markers,

@@ -81,10 +81,44 @@ func _draw() -> void:
 	draw_circle(c + knob, KNOB, Color(0.97, 0.93, 0.85, 0.85 if on else 0.6))
 	draw_circle(c + knob, KNOB * 0.55, Color(0.95, 0.77, 0.31, 0.9 if on else 0.55))
 
-## the stick in a bottom corner (the left, or the right with "Look stick on the right" in Settings > Controls) and the
-## row of station buttons beside it, larger with "Bigger buttons". Both screens in the kitchen use this.
-static func lay_out(parent: Control, w: FPWorld, tabs: HBoxContainer) -> LookStick:
+## Looking: "phone" (moving the phone turns your head and faces you to a station, as AR will; both thumbs are your
+## hands) or "stick" (the stick and dragging, for a computer). "auto" (the default) is the phone on a phone.
+## how you look round (Settings > Controls: Look): "phone" (move the phone: it is your head, both thumbs are your
+## hands), "both" (the stick, and turning the phone helps), "stick" (the stick only), "auto" (the phone on a phone,
+## the stick on a computer)
+static func phone_look() -> bool:
+	var m := String(Game.s.get("look", "auto"))
+	return m == "phone" or (m == "auto" and OS.has_feature("mobile"))
+
+## with the stick: turning the phone helps too
+static func gyro_helps() -> bool:
+	return String(Game.s.get("look", "auto")) == "both"
+
+const LOOK_NAMES := {"auto": "automatic", "phone": "move the phone", "both": "stick + phone", "stick": "stick only"}
+
+## the setting's words, and the next one along
+static func look_name() -> String:
+	return "Look: " + LOOK_NAMES.get(String(Game.s.get("look", "auto")), "automatic")
+
+static func next_look() -> void:
+	var order := ["auto", "phone", "both", "stick"]
+	Game.s.look = order[(order.find(String(Game.s.get("look", "auto"))) + 1) % order.size()]
+
+## With the phone for looking: no stick, and the station buttons go small into the top bar (tap one to face that
+## station from where you stand), leaving both bottom corners to your thumbs. With the stick: the stick in a bottom
+## corner (the left, or the right with "Look stick on the right"), the station buttons beside it, larger with "Bigger
+## buttons". Both screens in the kitchen use this. Returns the stick, or null.
+static func lay_out(parent: Control, w: FPWorld, tabs: HBoxContainer, top_bar: HBoxContainer = null) -> LookStick:
 	var big: bool = Game.s.get("big_controls", false)
+	if phone_look() and top_bar != null:
+		for b in tabs.get_children():
+			if not b is Button: continue
+			b.custom_minimum_size = Vector2(0, 40 if big else 34)
+			b.add_theme_font_size_override("font_size", 16 if big else 14)
+		tabs.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		top_bar.add_child(tabs)
+		top_bar.move_child(tabs, 1)
+		return null
 	var right: bool = Game.s.get("stick_right", false)
 	var stk := LookStick.new(w)
 	var side: float = stk.custom_minimum_size.x
@@ -108,4 +142,3 @@ static func lay_out(parent: Control, w: FPWorld, tabs: HBoxContainer) -> LookSti
 		if big: b.add_theme_font_size_override("font_size", 19)
 	parent.add_child(tabs)
 	return stk
-

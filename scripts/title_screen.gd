@@ -297,6 +297,10 @@ func show_page(p: String) -> void:
 		"controls":
 			_heading("Controls")
 			var G := Game
+			_chalk(LookStick.look_name(), func():
+				LookStick.next_look()
+				Game.save_game()
+				show_page("controls"), "", false, 28)
 			_chalk("Look speed: " + String(G.s.get("look_speed", "normal")).capitalize(), func():
 				Game.s.look_speed = {"slow": "normal", "normal": "fast", "fast": "slow"}[String(Game.s.get("look_speed", "normal"))]
 				Game.save_game()
@@ -304,7 +308,6 @@ func show_page(p: String) -> void:
 			_chalk("Invert up and down: " + ("on" if G.s.get("invert_look", false) else "off"), func(): _ctl_toggle("invert_look", false), "", false, 28)
 			_chalk("Look stick on the " + ("right" if G.s.get("stick_right", false) else "left"), func(): _ctl_toggle("stick_right", false), "", false, 28)
 			_chalk("Bigger buttons: " + ("on" if G.s.get("big_controls", false) else "off"), func(): _ctl_toggle("big_controls", false), "", false, 28)
-			_chalk("Look by turning the phone: " + ("on" if G.s.get("gyro", true) else "off"), func(): _ctl_toggle("gyro", true), "", false, 28)
 			_chalk("Back", func(): show_page("settings"), "", true)
 		"settings":
 			_heading("Settings")
