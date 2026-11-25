@@ -3,5 +3,5 @@
 tools/models/tex/
 __pycache__/
 tests/out/
-build/
-android/
+/build/
+/android/
