@@ -115,6 +115,14 @@ that hand, and puts it on where that thumb goes, while the other hand works on i
 dough out while the other scatters the cheese; with nothing held, two thumbs stretch the dough; on the board, an
 empty hand swipes the wheel.
 
+**A game controller** (Bluetooth on the phone, or plugged into a computer): the sticks are your hands. The right
+stick moves your right hand over what you are looking at and the right trigger puts it down (hold it and move the
+stick to press, spread, stretch or slide, the way a thumb on the screen would); the same on the left. Clicking a stick
+in is that hand's thumb: it lets go of what the hand holds. The shoulder buttons turn you to the next station round
+(left or right); your head (the phone) still looks round. A white dot shows where each hand would touch. In a dialog
+the main button has a gold ring: A presses it, the d-pad moves between buttons. Touch the screen and the
+controller's hands rest.
+
 On a computer (or with Look set to the stick) a thumb stick in the bottom-left corner turns your head instead (push
 further to turn faster; let go near a station to settle on it, tap it to look back at your station), and the
 station buttons sit beside it.

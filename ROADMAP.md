@@ -112,6 +112,10 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [x] The phone is your head: moving the phone looks round and picks the station you face (no snapping, steady
       while a thumb works); both thumbs are hands, each independent (left thumb, left hand; the hand that picks a
       topping up holds it)
+- [x] A game controller as two hands: the sticks move them, the triggers put them down, the stick clicks are the
+      thumbs (let go), the shoulders turn to the next station; dialogs answerable with A
+- [ ] Phone VR (a Cardboard-style viewer): two eyes, head tracking, the controller's hands, the HUD in the room
+- [ ] Walking round the kitchen for real (ARCore tracking, in VR and on the screen)
 - [ ] AR mode on Android (ARCore): the kitchen placed in your room, walking between stations
 - [ ] VR (OpenXR, Quest): the same kitchen with tracked hands
 - [x] A clock on the wall in each scene to clock in and out on (open, close early, lock up), its hands keeping time

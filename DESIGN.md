@@ -146,6 +146,12 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   finger has its own job (`Bench.roles`): the holding hand puts the topping on, an empty hand presses the dough (two
   empty hands stretch it) or cuts on the board. Poses: open, pinch, grip; driven by which tool is in use and which
   hand holds it.
+- **A game controller is two hands** (the owner: "both joysticks to move the hands with the triggers being the hands
+  with R3/L3 being the thumbs"). `FPWorld._pad`: each stick moves its hand's pointer over the view (`pad_at`, in the
+  view's pixels, speed eased by how far you push); a trigger past halfway is that hand's finger going down
+  (`_press(PAD + hand, ...)`: the same path as a thumb on the screen, so everything a thumb does a trigger does);
+  R3/L3 let go of what that hand holds; LB/RB turn to the next station (`turn_station`). The hand hovers over what it
+  points at with a dot. This is also the VR hands until tracked hands: the same pointers, aimed from the headset.
 - **The clock on the wall** (`fp.timeclock`, above the hatch or the pass, in every scene): you clock in on it to open,
   clock out early in service, and clock out at night to lock up. Its hands show the game's time. The owner wants a
   clock in each scene for this, rather than buttons on the screen.

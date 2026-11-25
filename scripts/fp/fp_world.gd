@@ -68,6 +68,14 @@ var _faced := ""                        # the station you just turned to face (t
 var face_want := ""                     # a station you are turning towards, and for how long (a glance does not count)
 var face_dwell := 0.0
 var tap_hand := 0                       # the hand (by screen side) of the last tap: it picks up what it tapped
+# a game controller: the sticks move your hands, the triggers put them down, the stick clicks are your thumbs
+const PAD := 100                        # pointer ids for the controller's hands: PAD + 0 the right, PAD + 1 the left
+var pad_test = null                     # tests: a Dictionary standing in for the controller (see _pad_read)
+var pad_on := false                     # the controller is in use: the hands follow the sticks
+var pad_at := [Vector2.ZERO, Vector2.ZERO]   # where each hand points, in the view's pixels (0 the right, 1 the left)
+var pad_down := [false, false]          # that hand's trigger is pulled: the hand is down on what it points at
+var pad_btn := {}                       # the buttons held last frame (each acts once per press)
+var pad_dots: Array = []                # a dot where each hand would touch
 var stick := Vector2.ZERO               # the look stick (LookStick): -1..1 each way, held = turning
 var lean := Vector3.ZERO
 var t_lean := Vector3.ZERO
@@ -1115,6 +1123,7 @@ func _process(dt: float) -> void:
 		if phone: gyro.y = clamp(gyro.y + dy, -85.0 - t_pitch, 40.0 - t_pitch)
 		else: gyro.y = clamp(gyro.y + dy, -60.0, 60.0)
 	if phone and not working: _face_station(dt)
+	_pad(dt)
 	if stick != Vector2.ZERO:
 		# the look stick: the further you push, the faster you turn (eased so small pushes are fine aiming)
 		var sp := stick * stick.length() * look_speed()
@@ -1641,6 +1650,7 @@ func _pose(h: Dictionary, want: String) -> void:
 func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventScreenTouch:
 		touch_seen = true
+		if pad_on and e.pressed: _pad_off()                # thumbs on the screen again: the controller's hands rest
 		_press(e.index, e.position, e.pressed)
 	elif e is InputEventScreenDrag:
 		_move(e.index, e.position, e.relative)
@@ -1676,12 +1686,13 @@ func _press(index: int, pos: Vector2, down: bool) -> void:
 						cap.kind = "surface"
 						cap.s = s
 						cap.px = px
-						cap.hand = index if index < 0 else _hand_for(pos)       # your left thumb is your left hand
+						cap.hand = index if index < 0 else (index - PAD if index >= PAD else _hand_for(pos))   # your left thumb is your left hand
 						s.press(cap.hand, px, true)
 						_hand(cap.hand, s.from_px(px))
 			else:
 				cap.kind = "tap"
 				cap.act = act
+		if index >= PAD and cap.kind == "look": cap.kind = "none"     # a controller hand pointing at nothing does nothing
 		ptr[index] = cap
 		return
 	if not ptr.has(index): return
@@ -1694,7 +1705,7 @@ func _press(index: int, pos: Vector2, down: bool) -> void:
 			c.s.press(c.hand, px if px != null else c.px, false)
 			_hand(c.hand, null)
 		"tap":
-			tap_hand = 1 if c.start.x < get_viewport().get_visible_rect().size.x * 0.5 else 0
+			tap_hand = index - PAD if index >= PAD else (1 if c.start.x < get_viewport().get_visible_rect().size.x * 0.5 else 0)
 			if not c.moved: _tap(c.act)
 		"look":
 			_settle()
@@ -1712,7 +1723,7 @@ func _move(index: int, pos: Vector2, rel: Vector2) -> void:
 			c.px = px
 			_hand(c.hand, c.s.from_px(px))
 		"tap":
-			if c.moved: c.kind = "look"
+			if c.moved: c.kind = "none" if index >= PAD else "look"
 		"look":
 			var k: float = LOOK * 720.0 / max(1.0, get_viewport().get_visible_rect().size.y)
 			t_yaw -= rel.x * k * look_speed()
@@ -1814,6 +1825,117 @@ func _settle() -> void:
 	if best != "":
 		if best != cur_view(): goto(best)
 		else: _look_at(best)
+
+# ---------- a game controller: the sticks are your hands ----------
+## the controller now: both sticks, both triggers, the stick clicks (your thumbs) and the shoulder buttons
+func _pad_read() -> Dictionary:
+	if pad_test != null: return pad_test
+	var pads := Input.get_connected_joypads()
+	if pads.is_empty(): return {}
+	var d: int = pads[0]
+	return {
+		"l": Vector2(Input.get_joy_axis(d, JOY_AXIS_LEFT_X), Input.get_joy_axis(d, JOY_AXIS_LEFT_Y)),
+		"r": Vector2(Input.get_joy_axis(d, JOY_AXIS_RIGHT_X), Input.get_joy_axis(d, JOY_AXIS_RIGHT_Y)),
+		"lt": Input.get_joy_axis(d, JOY_AXIS_TRIGGER_LEFT),
+		"rt": Input.get_joy_axis(d, JOY_AXIS_TRIGGER_RIGHT),
+		"l3": Input.is_joy_button_pressed(d, JOY_BUTTON_LEFT_STICK),
+		"r3": Input.is_joy_button_pressed(d, JOY_BUTTON_RIGHT_STICK),
+		"lb": Input.is_joy_button_pressed(d, JOY_BUTTON_LEFT_SHOULDER),
+		"rb": Input.is_joy_button_pressed(d, JOY_BUTTON_RIGHT_SHOULDER),
+	}
+
+## each frame: the right stick moves the right hand over what you look at and the right trigger puts it down (a
+## thumb on the screen, in effect: hold and move to press, spread, stretch, slide); the same on the left. Clicking a
+## stick in is that hand's thumb: it lets go of what the hand holds. The shoulder buttons turn you to the station on
+## the left or the right. Looking is your head (the phone, or the headset).
+func _pad(dt: float) -> void:
+	var p := _pad_read()
+	if p.is_empty():
+		if pad_on: _pad_off()                      # the controller went away: the hands rest
+		return
+	var modal: bool = Kit.main != null and Kit.main.modal_root.visible
+	var sticks: Array = [p.get("r", Vector2.ZERO), p.get("l", Vector2.ZERO)]
+	var trig: Array = [float(p.get("rt", 0.0)), float(p.get("lt", 0.0))]
+	var size := get_viewport().get_visible_rect().size
+	if not pad_on:
+		if modal: return
+		for i in 2:
+			if sticks[i].length() > 0.4 or trig[i] > 0.6: pad_on = true
+		for b in ["r3", "l3", "lb", "rb"]:
+			if p.get(b, false): pad_on = true
+		if not pad_on: return
+		if Kit.main != null: Kit.main.pad = true
+		pad_at = [Vector2(size.x * 0.62, size.y * 0.66), Vector2(size.x * 0.38, size.y * 0.66)]
+	if Kit.main != null and not modal: Kit.main.get_viewport().gui_release_focus()     # the sticks are hands, not menu keys
+	for i in 2:
+		var v: Vector2 = sticks[i]
+		var mag := clampf((v.length() - 0.15) / 0.85, 0.0, 1.0)
+		var prev: Vector2 = pad_at[i]
+		if mag > 0.0 and not modal:
+			pad_at[i] = (prev + v.normalized() * pow(mag, 1.6) * size.y * 0.95 * look_speed() * dt).clamp(Vector2(4, 4), size - Vector2(4, 4))
+		var want: bool = trig[i] > (0.3 if pad_down[i] else 0.55) and not modal
+		if want != pad_down[i]:
+			pad_down[i] = want
+			_press(PAD + i, pad_at[i], want)
+			if want: Art.buzz(6)
+		elif pad_down[i] and pad_at[i] != prev:
+			_move(PAD + i, pad_at[i], pad_at[i] - prev)
+	for b in ["r3", "l3", "lb", "rb"]:
+		var on: bool = p.get(b, false)
+		if on and not pad_btn.get(b, false) and not modal: _pad_button(b)
+		pad_btn[b] = on
+	_pad_hover()
+
+func _pad_button(b: String) -> void:
+	match b:
+		"r3", "l3":
+			# a thumb: that hand lets go of what it holds
+			var i := 0 if b == "r3" else 1
+			if svc != null and svc.tool != "" and svc.tool_hand == i: svc.put_down()
+		"lb": turn_station(-1)
+		"rb": turn_station(1)
+
+## turn to the next station round to the left (-1) or the right (1)
+func turn_station(step: int) -> void:
+	var ring: Array = ["prep", "front", "bench", "board", "oven"] if svc != null else ["prep", "front", "bench", "oven", "stores"]
+	var i := ring.find(cur_view())
+	var st: String = ring[wrapi(i + step, 0, ring.size())] if i >= 0 else "front"
+	if LookStick.phone_look(): face(st)
+	else: goto(st)
+
+## each hand hovers over what it points at, with a dot where it would touch
+func _pad_hover() -> void:
+	if pad_dots.is_empty():
+		for i in 2:
+			var d := MeshInstance3D.new()
+			var sm := SphereMesh.new()
+			sm.radius = 0.009
+			sm.height = 0.018
+			d.mesh = sm
+			var m := StandardMaterial3D.new()
+			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			m.no_depth_test = true
+			m.albedo_color = Color(1, 1, 1, 0.85)
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			d.material_override = m
+			add_child(d)
+			pad_dots.append(d)
+	for i in 2:
+		var hit := _ray(pad_at[i])
+		var at: Vector3 = hit.point if hit.has("point") else hit.from + hit.dir * 0.6
+		pad_dots[i].visible = pad_on
+		pad_dots[i].global_position = at
+		var c = ptr.get(PAD + i)
+		if c == null or c.kind != "surface": hands[i].target = at + Vector3(0, 0.03, 0)     # hovering just over it
+
+## the controller put away (or thumbs on the screen): the hands go back to rest
+func _pad_off() -> void:
+	pad_on = false
+	for i in 2:
+		if pad_down[i]: _press(PAD + i, pad_at[i], false)
+		pad_down[i] = false
+		hands[i].target = null
+		if i < pad_dots.size(): pad_dots[i].visible = false
 
 ## the hand for a thumb on the screen: 1 (the left) on the left half, 0 (the right) on the right half; if that hand is
 ## already working, the other one

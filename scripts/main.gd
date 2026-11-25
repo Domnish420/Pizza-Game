@@ -3,6 +3,7 @@ extends Control
 
 var content: MarginContainer
 var modal_root: Control
+var pad := false                       # a game controller has been used: dialogs give their main button the focus
 var modal_center: CenterContainer
 var toast_box: PanelContainer
 var toast_label: Label
@@ -86,6 +87,22 @@ func modal(node: Control, width: int = 760) -> void:
 	p.add_child(node)
 	modal_center.add_child(p)
 	modal_root.visible = true
+	if pad or not Input.get_connected_joypads().is_empty(): _pad_focus.call_deferred(p)
+
+## with a game controller, the dialog's main button (the last one) has the focus: A presses it, the d-pad moves on
+func _pad_focus(p: Control) -> void:
+	if not is_instance_valid(p): return
+	var ring := StyleBoxFlat.new()                 # the focused button wears a gold ring
+	ring.draw_center = false
+	ring.set_border_width_all(4)
+	ring.border_color = Kit.CHEESE
+	ring.set_corner_radius_all(12)
+	ring.set_expand_margin_all(3)
+	var bs := p.find_children("*", "Button", true, false)
+	for b in bs:
+		b.focus_mode = Control.FOCUS_ALL
+		b.add_theme_stylebox_override("focus", ring)
+	if not bs.is_empty(): bs[-1].grab_focus()
 
 func close_modal() -> void:
 	modal_root.visible = false
