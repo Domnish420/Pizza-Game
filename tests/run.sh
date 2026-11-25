@@ -6,7 +6,7 @@
 # GODOT=<path> picks the Godot 4.7 binary (default: godot on the PATH); T=<seconds> is the time limit per bot.
 cd "$(dirname "$0")/.." || exit 2
 GODOT=${GODOT:-godot}
-ORDER="stores kitbox wood_oven traps boxes look_stick phone_look pad vr ar quest controls clock sound senior_training day day_2d day_wood first_week"
+ORDER="stores kitbox wood_oven peel dough traps boxes look_stick phone_look pad vr ar quest controls clock sound senior_training day day_2d day_wood first_week"
 names=("$@")
 if [ ${#names[@]} -eq 0 ]; then
 	names=($ORDER)

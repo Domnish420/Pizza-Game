@@ -48,6 +48,21 @@ static func _flat(n: int, col: Color) -> PackedColorArray:
 	a.fill(col)
 	return a
 
+## leopard spots on the crust: dark blisters where the flames hit each side (Pizza.spots), the same spots every frame
+static func _spots(ci: CanvasItem, pz: Pizza) -> void:
+	if pz.spots.size() != Pizza.NSEC: return
+	var b := pz.base
+	var rng := RandomNumberGenerator.new()
+	for j in Pizza.NSEC:
+		rng.seed = pz.id * 131 + j
+		var n := int(clampf(pz.spots[j], 0.0, 2.5) * 5.0)
+		for s in n:
+			var a: float = (j + rng.randf()) * TAU / Pizza.NSEC
+			var rad: float = b.rad_at(a)
+			var w: float = maxf(b.rim_at(a), 5.0)
+			var at := Vector2.from_angle(a) * (rad - w * rng.randf_range(0.15, 0.75))
+			ci.draw_circle(at, rng.randf_range(1.6, 3.4) * (1.3 if pz.spots[j] > 2.0 else 1.0), Color(0.08, 0.05, 0.03, 0.85))
+
 static func bake_at(pz: Pizza, ang: float) -> float:
 	var f := fposmod(ang / TAU, 1.0) * Pizza.NSEC
 	var i := int(f) % Pizza.NSEC
@@ -105,9 +120,26 @@ static func draw(ci: CanvasItem, pz: Pizza, origin: Vector2, k: float) -> void:
 			mid_cols.append(Color(c, c.a * 0.4))
 		_fan(ci, inner, Color(tint(pz.bake_avg()), tint(pz.bake_avg()).a * 0.25), mid_cols)
 		_band(ci, ring, inner, crust_cols, mid_cols)
+		_spots(ci, pz)
+	_holes(ci, b)
 	for ct in pz.cuts:
 		ci.draw_line(ct.a, ct.b, Color(1, 0.98, 0.92, 0.95), 2.5)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+## holes torn through the base: ragged, dark through to what is underneath, thin pale dough round them
+static func _holes(ci: CanvasItem, b: PizzaBase) -> void:
+	var n := 0
+	for h in b.holes():
+		var pts := PackedVector2Array()
+		var lip := PackedVector2Array()
+		for i in 14:
+			var a := i * TAU / 14.0
+			var rr: float = h[1] * (0.75 + 0.5 * float((n * 37 + i * 53) % 11) / 10.0)
+			pts.append(h[0] + Vector2.from_angle(a) * rr)
+			lip.append(h[0] + Vector2.from_angle(a) * (rr + 3.0))
+		ci.draw_colored_polygon(lip, Color(1.0, 0.96, 0.86, 0.9))
+		ci.draw_colored_polygon(pts, Color(0.16, 0.12, 0.09, 0.9))
+		n += 1
 
 ## one piece of a topping, centred on (0,0)
 static func topping(ci: CanvasItem, id: String) -> void:

@@ -116,7 +116,16 @@ func show_pizza(p) -> void:
 	var baked: bool = pz.stage == "oven" or pz.stage == "board"
 	var avg := pz.bake_avg()
 	_mat.set_shader_parameter("bake", PackedFloat32Array(pz.bake) if baked else _zero_bake)
+	_mat.set_shader_parameter("spots", PackedFloat32Array(pz.spots) if baked and pz.spots.size() == Pizza.NSEC else _zero_bake)
 	_mat.set_shader_parameter("mid_b", avg * 0.75 if baked else 0.0)
+	var hs: Array = pz.base.holes()
+	_mat.set_shader_parameter("n_holes", mini(hs.size(), 3))
+	if not hs.is_empty():
+		var hv := PackedVector3Array()
+		for i in 3:
+			var h: Array = hs[mini(i, hs.size() - 1)]
+			hv.append(Vector3(h[0].x, h[0].y, h[1]))
+		_mat.set_shader_parameter("holes", hv)
 	_mat.set_shader_parameter("melt", clamp((avg - 0.3) / 0.4, 0.0, 1.0) if baked else 0.0)
 	var s := _signature()
 	var t := "%s|%d|%d|%d" % [s, pz.tops.size(), pz.cuts.size(), int(avg * 8.0) if baked else -1]

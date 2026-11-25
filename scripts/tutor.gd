@@ -301,7 +301,7 @@ func _day1() -> Array:
 		{"say": "With an empty hand, press the dough out from the middle with one finger, working outwards. Stop short of the edge to leave a rim for the crust.", "at": "surface:bench",
 			"setup": func(): mark.r = _mean_r(_pizza()) if _pizza() != null else 0.0,
 			"done": func(): return _pizza() != null and _mean_r(_pizza()) > mark.r * 1.3},
-		{"say": "Now two fingers on the dough: spread them apart to stretch it out to the ring, and twist them to turn it. Round, even, and out to the ring.", "at": "surface:bench",
+		{"say": "Now two fingers on the dough: spread them apart to stretch it out to the ring, and twist them to turn it. Round, even, and out to the ring. Or your own way: hold two fingers still and it comes up onto your knuckles; turn them round and its weight stretches it, turn and flick them off and up it goes.", "at": "surface:bench",
 			"done": func(): return _pizza() != null and _pizza().base.diameter_cm() >= _pizza().d.size_cm * 0.85},
 		{"say": "That is a base. Turn to the Oven to hand it to me: I top it, bake it, cut it and send it.", "at": "hud:oven",
 			"done": func(): return _svc() != null and _pizza() == null},

@@ -28,6 +28,20 @@ Each part below says how it works now and what would make it better.
   dough stretching for the crust you want or the thinness of the base."
 - "Put the pizza in the oven myself and be the one turning it. Starting with an electric oven: put it in and leave it,
   2 at a time, in a pop-up van. Later a wood-fire that we need to turn to make sure it's all cooking and colouring properly."
+- "Lifting the pizza on one side allows you to rotate it wether you push forward or pull backwards. Pushing rotate to
+  the right and vice versa. This allows you to properly cook the crust to get that leoparding all around." So the
+  turning peel lifts the side you touch (`OvenView`, mode "lift"), and `lift_push` turns the pizza by how far you push
+  across that edge (the lifted edge goes with the peel; it pivots); held up it bakes less from the deck. Leopard spots
+  (`Pizza.spots`, one per crust sector) come only from the flames' radiant heat once the crust has set (`Oven._spot`),
+  so they go all round only if the pizza is turned; `Pizza.leopard()` measures how spotted and how even by quarters,
+  and the review says so. The 3D crust draws them per sector (the pizza shader's `spots`).
+- "Dough streching, tossing and spinning the dough are all unique interactions thats everyone will do differently.
+  Need to make sure that all techniques are able to be used for the get go, wether your passionate about pizza or
+  never done it before. The end progression of this is being able to fully make pizzas that a chef like me can do."
+  So there is no technique to unlock: pressing, stretching, the slap, lifting it onto your knuckles, draping and
+  tossing all work on the first base (`Bench`, see section 1), with fingers, a controller's hands and a headset's real
+  hands. Each can be done well or badly (a pressed-flat crust, a flop, a tear), so a beginner gets a base out and a
+  chef's hands get a better one.
 - "Buying things by weight, as you would in real life", from "different businesses for different quality
   ingredients that all have variable costs". Quality costs more but customers tip more; quantity over quality is a
   valid choice when money is short.
@@ -296,12 +310,21 @@ Techniques are methods on `PizzaBase`, called from `scripts/bench.gd` (touch inp
 | `press(p)` | one finger: fingertip press, pushes gas to the rim |
 | `stretch(p0, p1)` | two fingers spreading apart (each finger calls it) |
 | `rotate(by)` | two fingers twisting |
+| `slap(dir, strength)` | one finger flicked fast outward from the crust (the press waits a moment, `PRESS_WAIT`, to see it is not a slap); stretches most along the flick, turns it, keeps the crust |
+| `lifted` | two fingers held still on it (`LIFT_HOLD`): up on your knuckles (`height()` lifts the 3D pizza) |
+| `drape(turn)` | lifted, the line between your two fingers turning (measured once a frame): it turns, and stretches by its weight, most where it is thick |
+| `toss(turns, airtime)` | lifted, a finger let go fast (`TOSS_SPEED`): the spin is how far your hands turned it over the last `SPIN_OVER` seconds (`Bench.spin()`). Under 0.6 turns a second it flops; over a limit set by how thin it is (`thickness_mm()` against the recipe's) it tears (`tears`, holes the shader cuts and `score()` marks down); else it grows evenly. `fly(dt)` brings it down |
 | `roll(p, mv)` | rolling pin, one or two fingers |
 | `pan(p, mv)` | pushing into a pan |
 | `sheet(evenness)` | the dough sheeter button |
 
-To add a technique (slap, knuckle stretch, toss, docking with a roller, edge pinching), add a method that edits
-`r`, `rim` and `rot`, and a gesture in `bench.gd` that calls it. If you need thickness to vary across the base,
+A controller's hands move more slowly than fingers, so their speed counts `Bench.PAD_K` times (`Bench.pad_hand`, set by
+`FPWorld`). In a headset `FPWorld._xr_dough` holds the lifted dough in your real hands: turning them is `Bench.twist`,
+raising them fast tosses it, lowering it to the marble sets it down. Tests fix the gesture clock with `Bench.test_dt`
+(and `FPWorld.pad_dt`).
+
+To add a technique (docking with a roller, edge pinching, the stretch over the backs of the hands), add a method that
+edits `r`, `rim` and `rot`, and a gesture in `bench.gd` that calls it. If you need thickness to vary across the base,
 add a per-sector or per-cell thickness array here, and have `score()` and `PizzaDraw` read it. Then make the
 dough look like dough: a deforming mesh or shader that shows thickness, the puffed rim and flour, driven by those arrays.
 

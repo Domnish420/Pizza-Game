@@ -137,6 +137,37 @@ func run() -> void:
 	await frames(2)
 	check(svc.tool == "", "B on the right controller: the right hand puts the cheese down", svc.tool)
 
+	# both fingertips held still on the dough: it comes up onto your fingers; lift it, turn your hands round each other
+	# and throw it up, and it flies spinning
+	var db = pz.base
+	bench_ctl.test_dt = 1.0 / 60.0
+	var dl: Vector3 = s.global_transform * Vector3(-0.03, 0.0, 0.004)
+	var dr: Vector3 = s.global_transform * Vector3(0.03, 0.0, 0.004)
+	set_hands(hand(rig(dr), pointing(dr + Vector3(0, 0.1, 0.1), dr)), hand(rig(dl), pointing(dl + Vector3(0, 0.1, 0.1), dl)))
+	await until(func(): return db.lifted, 30.0)
+	await frames(2)
+	check(db.lifted and bench_ctl.xr_hold, "both fingertips held still on the dough: it comes up onto your fingers", [db.lifted, bench_ctl.xr_hold])
+	var rb0: float = db.mean_r()
+	for i in 24:
+		var a := 0.12 * i
+		var z := minf(0.004 + 0.004 * i, 0.05)
+		var pr: Vector3 = s.global_transform * Vector3(0.03 * cos(a), 0.03 * sin(a), z)
+		var pl: Vector3 = s.global_transform * Vector3(-0.03 * cos(a), -0.03 * sin(a), z)
+		set_hands(hand(rig(pr), pointing(pr + Vector3(0, 0.1, 0.1), pr)), hand(rig(pl), pointing(pl + Vector3(0, 0.1, 0.1), pl)))
+		await process_frame
+	check(db.lifted and db.mean_r() > rb0 + 2.0, "turning your hands round under it stretches it", snappedf(db.mean_r() - rb0, 0.1))
+	for i in 4:
+		var a := 0.12 * (24 + i)
+		var z := 0.05 + 0.03 * (i + 1)
+		var pr: Vector3 = s.global_transform * Vector3(0.03 * cos(a), 0.03 * sin(a), z)
+		var pl: Vector3 = s.global_transform * Vector3(-0.03 * cos(a), -0.03 * sin(a), z)
+		set_hands(hand(rig(pr), pointing(pr + Vector3(0, 0.1, 0.1), pr)), hand(rig(pl), pointing(pl + Vector3(0, 0.1, 0.1), pl)))
+		await process_frame
+	check(db.last == "stretched" and db.air > 0.0 and absf(db.spin) > 0.6, "throw it up as you turn it: it flies, spinning", [db.last, snappedf(db.spin, 0.01)])
+	set_hands(rest(1.0), rest(-1.0))
+	await until(func(): return db.air <= 0.0, 30.0)
+	bench_ctl.test_dt = 0.0
+
 	# a pinch on a button on the panel: the Oven button
 	head(0.0, 0.0)
 	await until(func(): return svc.view == "front", 2.0)

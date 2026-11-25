@@ -3,7 +3,10 @@ extends Control
 ## The oven (400 x 320 units): shows the deck, the fire and every pizza, and lets you work it with a finger.
 ##   drag a pizza from the shelf onto a spot on the deck      -> it goes in (a tap puts it in the first free spot)
 ##   drag a pizza by its middle to another spot, or out front -> move it, or take it out
-##   drag a pizza by its edge                                  -> spin it, to turn a different side to the heat
+##   touch a pizza's edge (the turning peel slides under it and lifts that side), then push forward or pull back
+##     -> it turns: lifting the left side, pushing turns it to the right and pulling to the left (the lifted edge goes
+##        where you push it and the pizza pivots); this is how a side that has had the fire is swapped for one that
+##        has not, for leopard spots all round
 ## Art keys: "oven.<type>" (background), "oven.fire" (flame). Pizzas are drawn by PizzaDraw.
 
 const W := 400.0
@@ -12,7 +15,7 @@ const MOUTH_Y := 250.0     # anything dragged below this line has left the oven
 
 var svc: ServiceScreen
 var font: Font
-var drag = null            # {pz, o (deck item or null), mode "move"/"turn", pos, start, last_ang}
+var drag = null            # {pz, o (deck item or null), mode "move"/"lift", pos, start, last, edge (lift: the lifted edge's angle on the pizza)}
 var draw3d := false        # in the 3D kitchen this lies flat on the oven's deck and the world draws the pizzas, fire and
                            # oven in 3D (FPWorld): here we only draw the empty spots and take the touches
 var shelf_pos: Array = Oven.SHELF_POS   # where pizzas wait on the landing (in 3D, further out on the landing shelf)
@@ -66,14 +69,28 @@ func _down(p: Vector2) -> void:
 	elif not Equip.has("turner"):
 		Kit.main.toast("You need a turning peel to turn pizzas in the oven. Order one from %s." % Equip.SHOP.name, true)
 	else:
-		drag = {"pz": best.pz, "o": best, "mode": "turn", "pos": p, "start": p, "last_ang": (p - centre).angle()}
+		# the turning peel slides under this side and lifts it
+		drag = {"pz": best.pz, "o": best, "mode": "lift", "pos": p, "start": p, "last": p, "edge": (p - centre).angle() - best.pz.turn}
+		best.lifted = true
+		Art.sfx("tap", true, 0.2)
 
 func _move(p: Vector2) -> void:
 	drag.pos = p
-	if drag.mode == "turn":
-		var ang: float = (p - drag.o.at).angle()
-		drag.pz.turn += angle_difference(drag.last_ang, ang)
-		drag.last_ang = ang
+	if drag.mode == "lift": lift_push(p - drag.last)
+	drag.last = p
+
+## the peel under the lifted side pushed (forward, away from you) or pulled back by d: the lifted edge goes with it and
+## the pizza pivots by how far you push across that edge (lifted on the left, pushing turns it to the right); it slides
+## a little the way you push too
+func lift_push(d: Vector2) -> void:
+	var o: Dictionary = drag.o
+	var pz: Pizza = drag.pz
+	var r: Vector2 = Vector2.from_angle(drag.edge + pz.turn) * _pizza_r(pz)
+	var dth: float = (r.x * d.y - r.y * d.x) / maxf(r.length_squared(), 1.0)
+	pz.turn += clampf(dth, -0.5, 0.5)
+	var ov: Oven = svc.oven
+	var nat: Vector2 = o.at + d * 0.05
+	if ov.free_place() and ov.spot_ok(nat, o): o.at = nat
 
 func _nearest_free(p: Vector2, except: int = -1) -> int:
 	var ov: Oven = svc.oven
@@ -87,6 +104,9 @@ func _up(p: Vector2) -> void:
 	if drag == null: return
 	var dg: Dictionary = drag
 	drag = null
+	if dg.mode == "lift":
+		dg.o.lifted = false                          # set back down on the deck
+		return
 	if dg.mode != "move": return
 	var ov: Oven = svc.oven
 	var tapped: bool = p.distance_to(dg.start) < 8.0
@@ -220,3 +240,9 @@ func _draw() -> void:
 		PizzaDraw.draw(self, drag.pz, off + drag.pos * k, k * ov.prad / 106.0)
 		draw_set_transform(off, 0, Vector2(k, k))
 		if drag.o != null and drag.pos.y > MOUTH_Y: _text(Vector2(200, 304), "Let go to take it out", 12, Kit.CHEESE)
+	if drag != null and drag.mode == "lift" and not draw3d:
+		# the turning peel under the lifted side, its handle back out of the mouth
+		var e: Vector2 = drag.o.at + Vector2.from_angle(drag.edge + drag.pz.turn) * _pizza_r(drag.pz) * 0.85
+		draw_line(e, Vector2(e.x, MOUTH_Y + 40.0), Color("8a6a48"), 5.0)
+		draw_circle(e, 16.0, Color(0.75, 0.78, 0.8, 0.85))
+		_text(Vector2(200, 304), "Push to turn it right, pull back to turn it left", 12, Kit.CHEESE)

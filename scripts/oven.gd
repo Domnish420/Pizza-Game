@@ -150,6 +150,7 @@ func step(dt: float, speed: float) -> Array:
 			for j in Pizza.NSEC:
 				var h := heat(o.at, j * TAU / Pizza.NSEC + pz.turn)
 				pz.bake[j] += h * dt / t * (def.soft if pz.bake[j] > 1.0 else 1.0)
+				_spot(pz, j, (h - def.ambient * level()) * 0.8, dt, t)          # (gas flames spot it a little; elements barely)
 			pz.floor += (def.ambient + def.fire * 0.5) * level() * dt / t * (def.soft if pz.floor > 1.0 else 1.0)
 		o.p = pz.bake_avg()
 	return done
@@ -279,9 +280,19 @@ func _bake_wood(o: Dictionary, pz: Pizza, dt: float, t: float) -> void:
 		var e: Vector2 = o.at + Vector2.from_angle(a) * r
 		var v: Vector2 = fire_pos - e
 		var facing: float = max(0.0, cos(v.angle() - a))
-		var h: float = 0.75 * dr + 0.95 * fl * facing * min(3.0, pow(FIRE_REACH / max(v.length(), 40.0), 2))
+		var flames: float = 0.95 * fl * facing * min(3.0, pow(FIRE_REACH / max(v.length(), 40.0), 2))
+		var h: float = 0.75 * dr + flames
 		pz.bake[j] += h * dt / t * (def.soft if pz.bake[j] > 1.0 else 1.0)
-	pz.floor += fr * dt / t * (def.soft if pz.floor > 1.0 else 1.0)
+		_spot(pz, j, flames, dt, t)
+	pz.floor += fr * dt / t * (def.soft if pz.floor > 1.0 else 1.0) * (0.35 if o.get("lifted", false) else 1.0)
+
+## leopard spots: once the crust has set, the flames' radiant heat blisters it in dark spots, more where it hits harder
+## (a good spotting all round comes from turning the pizza so each side meets the fire in turn; left facing the fire, one
+## side scorches)
+const SPOT_HEAT := 0.4
+func _spot(pz: Pizza, j: int, flames: float, dt: float, t: float) -> void:
+	if pz.bake[j] < 0.4 or flames <= SPOT_HEAT: return
+	pz.spots[j] += (flames - SPOT_HEAT) * dt / t * 4.0
 
 ## a word on the fire, as you would judge it by eye
 func fire_word() -> String:

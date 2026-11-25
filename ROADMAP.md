@@ -138,7 +138,9 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 - [ ] A modelled phone in the hand for the management screens
 
 - [ ] Art for every screen, animated customers and staff in a visible kitchen
-- [ ] Dough that deforms properly for every stretching technique
+- [x] Every way of opening a base by hand there from the first one, on a phone, a controller and a headset: pressing,
+      stretching, the slap, lifting it onto your knuckles and turning it, tossing it spinning (flops, tears, catches)
+- [ ] Dough that deforms properly for every stretching technique (thickness across the base, not only round the edge)
 - [ ] Leopard-spotted crusts, a living fire
 - [ ] The counter, tubs and stores drawn as the real things
 - [x] Sound: a sound for every action and a background in the kitchen (hum, fire, the dining room), generated

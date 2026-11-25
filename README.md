@@ -193,8 +193,20 @@ The stations (the same in both layouts):
 - **Bench**: the marble top of the pizza counter, with the rail of gastro pans above it. Tap a ticket and the dough ball
   is on the bench. There are no steps and no "base is ready" button: shape it, top it and take it to the oven in
   whatever order you like.
-  - An empty hand works the dough: one finger presses it out (leave a rim) and two stretch and twist it. Thin bases:
-    roll with the pin (or tap the sheeter). Deep pan: push into the pan.
+  - An empty hand works the dough, every technique there from the first base, however you like to do it:
+    - one finger presses it out (leave a rim); two stretch and twist it;
+    - a quick flick outward from the crust slaps it: it stretches and turns a little, and the crust is kept;
+    - hold two fingers still on it a moment and it comes up onto your knuckles (in 3D it rises off the marble); turn
+      your fingers round each other and it turns, and its own weight stretches it evenly; let go gently and it goes back
+      down;
+    - turn it and flick your fingers off as you let go: it is tossed, spinning as fast as you were turning it, and comes
+      down bigger and rounder. No turn and it flops, out of shape; far too fast a spin for how thin it already is and it
+      tears (a hole in the base, and the review says so). A finger on the bench as it comes down catches it.
+    - With a controller the triggers are your fingers: both held still lift it, the sticks steering your hands round
+      turn it, and letting go of the triggers with the sticks pushed hard tosses it; the trigger on the crust and the
+      stick snapped outward slaps it. In a headset: two fingertips held still on the dough lift it, turn your real hands
+      round and throw it up.
+    Thin bases: roll with the pin (or tap the sheeter). Deep pan: push into the pan.
   - Tap a pan on the rail to pick that topping up, with the hand you want to hold it in; that hand then puts it on,
     anywhere, any time, while the other hand stays free for the dough. Tap the pan again (or Put down) to have both
     hands free.
@@ -204,10 +216,14 @@ The stations (the same in both layouts):
   - The moment the dough is on the bench it can go in the oven: turn to the oven and it comes with you on the peel
     (turn back without loading it and it comes back). Starting the next ticket sends the one on the bench to the shelf
     by the oven.
-- **Oven**: drag the pizza off the shelf onto the deck: it goes in on the peel. Drag its edge to spin it with the
-  turning peel. Drag it out when it is done. Wood ovens: put it where you like on the floor (hot by the fire, gentler
-  by the mouth), turn it so it colours evenly, and tap the stack of logs beside the mouth when the Oven button says
-  FEED THE FIRE.
+- **Oven**: drag the pizza off the shelf onto the deck: it goes in on the peel. Drag it out when it is done. To turn
+  it, touch its edge: the turning peel slides under and lifts that side. Then push forward or pull back: the lifted
+  edge goes where you push it and the pizza pivots (lifted on the left, pushing turns it to the right and pulling to
+  the left; lifted on the right, the other way round). While it is held up it browns less underneath. Wood ovens: put
+  it where you like on the floor (hot by the fire, gentler by the mouth), and tap the stack of logs beside the mouth
+  when the Oven button says FEED THE FIRE. The flames blister the crust in leopard spots where they hit it: turn the
+  pizza as it bakes so every side meets the fire and the spots go all round (left alone, one side spots and then
+  scorches); the review notices.
 - **Board**: swipe across with an empty hand to slice; anything you pick up goes on wherever you put it (sauce or
   cheese after the oven is judged as uncooked; finishing toppings belong here). Tap the pass behind the board to send
   it out. The bin is at the end of the counter.

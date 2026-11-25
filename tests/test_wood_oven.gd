@@ -35,7 +35,9 @@ func bake_one(at: Vector2, turn_every: float) -> Dictionary:
 			next_turn += turn_every
 		if p.bake_avg() >= 1.0: break
 	var rg: Array = p.bake_range()
-	return {"t": snappedf(t, 0.1), "spread": snappedf(rg[1] - rg[0], 0.01), "status": o.status(it)}
+	var lp: Dictionary = p.leopard()
+	return {"t": snappedf(t, 0.1), "spread": snappedf(rg[1] - rg[0], 0.01), "status": o.status(it),
+		"spots": snappedf(lp.avg, 0.01), "even": snappedf(lp.even, 0.01)}
 
 func run() -> void:
 	OV = load("res://scripts/oven.gd")
@@ -59,6 +61,11 @@ func run() -> void:
 	check(fire0.status == "BURNING", "by the fire and never turned, one side burns", fire0.status)
 	check(fire1.status == "READY" and fire1.spread < fire0.spread / 3.0, "turned often, it colours evenly", [fire1.spread, fire0.spread])
 	check(mouth0.status == "READY", "by the mouth it bakes evenly even unturned", mouth0)
+	# leopard spots come from the flames: one side of a pizza left facing the fire, all round a pizza that was turned,
+	# and few by the mouth
+	check(fire0.spots > 0.2 and fire0.even < 0.35, "never turned, the leopard spots are all on the side facing the fire", [fire0.spots, fire0.even])
+	check(fire1.spots > 0.3 and fire1.even > 0.6, "turned as it bakes, the spots go all round the crust", [fire1.spots, fire1.even])
+	check(mouth0.spots < fire1.spots, "by the mouth, far from the flames, it barely spots", [mouth0.spots, fire1.spots])
 
 	# the deck cools under a pizza and recovers
 	var o2 = oven(120)

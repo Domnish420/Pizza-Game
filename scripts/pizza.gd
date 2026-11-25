@@ -35,6 +35,8 @@ var dough_cost := 0.0
 var gsum := 0.0            # grams x quality, for the average ingredient grade
 var gw := 0.0
 var bake := []             # doneness of each edge sector (1.0 = done)
+var spots := []            # leopard spots on each edge sector's crust: char blisters where the flames hit it hard
+                           # (0 none, about 1 a good spotting, much more is scorched)
 var floor := 0.0           # doneness of the underside
 var turn := 0.0            # which way it faces in the oven
 var cuts := []             # [{a, b, d: distance of the cut from the centre}]
@@ -56,7 +58,9 @@ func _init(ticket: Dictionary, dough: Dictionary) -> void:
 	cost = dough.cost
 	gw = d.ball * 0.4          # the base counts for less than what is on it
 	gsum = dough.g * gw
-	for i in NSEC: bake.append(0.0)
+	for i in NSEC:
+		bake.append(0.0)
+		spots.append(0.0)
 	var lim: float = d.R * 0.84
 	var y := -lim
 	while y <= lim:
@@ -250,6 +254,23 @@ static func done_score(p: float) -> float:
 	if p < 1.4: return 1.0 - (p - 1.12) / 0.28 * 0.7
 	return 0.0
 
+## the leopard spotting round the crust: how spotted on average (0..1, 1 a good spotting), how even it is round the
+## edge (the least spotted quarter against the average quarter: 1 = the same all round; spots come in patches, so a
+## quarter is the measure, not each sector), and how many sectors are scorched
+func leopard() -> Dictionary:
+	var t := 0.0
+	var burnt := 0
+	var q := [0.0, 0.0, 0.0, 0.0]
+	for j in NSEC:
+		var s: float = minf(spots[j], 1.0)
+		t += s
+		q[j * 4 / NSEC] += s
+		if spots[j] > 2.2: burnt += 1
+	var avg := t / NSEC
+	var qm: float = (q[0] + q[1] + q[2] + q[3]) / 4.0
+	var mn: float = minf(minf(q[0], q[1]), minf(q[2], q[3]))
+	return {"avg": avg, "even": (mn / qm) if avg > 0.05 else 1.0, "scorched": burnt}
+
 func bake_avg() -> float:
 	var t := 0.0
 	for b in bake: t += b
@@ -278,6 +299,7 @@ func assess(c: Dictionary) -> Dictionary:
 	var a := {"notes": []}
 	var bs := base.score()
 	a.shape = bs.total
+	if bs.tears > 0: a.notes.append("A hole torn in the base")
 	if bs.size < 0.7: a.notes.append("Lopsided base")
 	elif bs.crust < 0.6: a.notes.append("Crust is all wrong" if base.crust >= 1.0 else "Base is not flat")
 	var cover := []
@@ -333,6 +355,12 @@ func assess(c: Dictionary) -> Dictionary:
 	if raw: a.notes.push_front("Raw in the middle")
 	elif burnt: a.notes.push_front("Burnt")
 	elif a.bake_even < 0.6: a.notes.push_front("Pale one side, dark the other")
+	# the leopard spotting a wood fire gives the crust: all round if the pizza was turned, one side if not
+	var lp := leopard()
+	a.leopard = lp.avg * (0.4 + 0.6 * lp.even)
+	if lp.scorched > 1: a.notes.append("Scorched where it sat facing the flames")
+	elif lp.avg > 0.35 and lp.even < 0.35: a.notes.append("Leopard spots on one side only: turn it so every side meets the fire")
+	elif lp.avg > 0.45 and lp.even > 0.6: a.notes.append("Leopard spots all round the crust")
 	elif avg < 0.9: a.notes.append("A bit pale")
 	elif avg > 1.15: a.notes.append("Overdone")
 	a.cut = cut_score()

@@ -15,6 +15,9 @@ uniform float mid_b = 0.0;      // how browned the middle is
 uniform float seed = 0.0;
 uniform float max_amt = 2.5;
 uniform float bake[12];
+uniform float spots[12];        // leopard spots per crust sector (Pizza.spots: 0 none, 1 a good spotting, more scorched)
+uniform vec3 holes[3];          // holes torn through the base (PizzaBase.holes: xy where, z how wide), n_holes of them
+uniform int n_holes = 0;
 
 varying vec2 pp;
 
@@ -51,7 +54,24 @@ float bake_at(vec2 p) {
 	return mix(bake[i], bake[(i + 1) % 12], k);
 }
 
+float spots_at(vec2 p) {
+	float f = fract(atan(p.y, p.x) / 6.2831853) * 12.0;
+	int i = int(floor(f)) % 12;
+	float k = f - floor(f);
+	return mix(spots[i], spots[(i + 1) % 12], k);
+}
+
 void fragment() {
+	// a hole torn through: nothing there, a ragged edge, the dough round it stretched thin and a little darker
+	float lip = 0.0;
+	for (int i = 0; i < 3; i++) {
+		if (i >= n_holes) break;
+		vec2 d = pp - holes[i].xy;
+		float l = length(d);
+		float rr = holes[i].z * (0.7 + 0.6 * vnoise(d / max(l, 0.001) * 2.2 + float(i) * 7.0));
+		if (l < rr) discard;
+		lip = max(lip, 1.0 - smoothstep(rr, rr * 1.6, l));
+	}
 	float inner = clamp(UV2.x, 0.0, 1.0);
 	float top = UV2.y;
 	float edge_b = bake_at(pp);
@@ -90,10 +110,14 @@ void fragment() {
 	cc = mix(cc, vec3(0.78, 0.5, 0.2), blister * 0.75);
 	col = mix(col, cc, cm);
 	gloss = max(gloss, cm * mix(0.15, 0.85, melt));
-	// leopard spots on the crust once it is well baked
-	float lc = smoothstep(0.85, 1.25, crust_b) * (1.0 - inner);
-	float spot = smoothstep(0.76, 0.8, vnoise(pp * 0.3 + 11.0)) * lc;
-	col = mix(col, vec3(0.03, 0.02, 0.015), spot * 0.9);
+	// leopard spots on the crust where the flames blistered it (Pizza.spots): more and bigger spots the harder each side
+	// was hit; far too much and the side is scorched
+	float sp = spots_at(pp);
+	float lc = (1.0 - inner) * smoothstep(0.02, 0.15, sp);
+	float spot = smoothstep(0.84 - 0.16 * clamp(sp, 0.0, 1.5), 0.88 - 0.16 * clamp(sp, 0.0, 1.5), vnoise(pp * 0.3 + 11.0)) * lc;
+	col = mix(col, vec3(0.03, 0.02, 0.015), spot * 0.92);
+	col = mix(col, vec3(0.04, 0.03, 0.02), (1.0 - inner) * smoothstep(1.8, 2.8, sp) * 0.75);
+	col = mix(col, col * vec3(0.8, 0.72, 0.62), lip * 0.7);
 	ALBEDO = col;
 	ROUGHNESS = mix(0.86, 0.24, gloss);
 	SPECULAR = mix(0.25, 0.7, gloss);

@@ -2252,7 +2252,7 @@ func _build_side() -> void:
 	# the bench: no steps. Shape it, top it, take it to the oven, in whatever order you like.
 	var b := pz.base
 	var how: String = {
-		"hand": "Hand empty: one finger presses the dough out (leave a rim), two fingers stretch it and twist it.",
+		"hand": "Hand empty: one finger presses the dough out (leave a rim), two fingers stretch it and twist it, a quick flick out from the crust slaps it. Hold two fingers still and it comes up onto your knuckles: turn them round to stretch it, turn and flick them off to toss it.",
 		"roll": "Hand empty: roll the pin across the dough with a finger, changing direction so it stays round.",
 		"press": "Hand empty: rub the dough outward to the wall of the pan."}[b.method]
 	var topping := "" if helps.has("top") else " Tap a pan to pick up a topping (tap it again to put it back); one finger then puts it on."

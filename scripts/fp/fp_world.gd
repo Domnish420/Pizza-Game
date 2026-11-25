@@ -71,6 +71,7 @@ var tap_hand := 0                       # the hand (by screen side) of the last 
 # a game controller: the sticks move your hands, the triggers put them down, the stick clicks are your thumbs
 const PAD := 100                        # pointer ids for the controller's hands: PAD + 0 the right, PAD + 1 the left
 var pad_test = null                     # tests: a Dictionary standing in for the controller (see _pad_read)
+var pad_dt := 0.0                       # tests: a fixed frame time for the controller's hands (0: the real one)
 var pad_on := false                     # the controller is in use: the hands follow the sticks
 var pad_at := [Vector2.ZERO, Vector2.ZERO]   # where each hand points, in the view's pixels (0 the right, 1 the left)
 var pad_down := [false, false]          # that hand's trigger is pulled: the hand is down on what it points at
@@ -100,6 +101,9 @@ var xr_ui := [false, false]             # pinching on the game's screens (the pa
 var xr_ui_at := [Vector2.ZERO, Vector2.ZERO]
 var xr_btn := {}                        # buttons and the stick last frame (each acts once)
 var xr_lasers: Array = []               # a thin beam from each hand to what it points at
+var xr_dough_prev = null                # while your real hands hold the lifted dough: {mid, ang, t} last frame
+var xr_dough_v := Vector3.ZERO          # how fast your hands are moving it (metres a second)
+var xr_dough_up := false               # your hands have raised the lifted dough off the marble (lowering it again sets it down)
 var stick := Vector2.ZERO               # the look stick (LookStick): -1..1 each way, held = turning
 var lean := Vector3.ZERO
 var t_lean := Vector3.ZERO
@@ -347,6 +351,7 @@ func _pizza_on(station: String, s: FPSurface, at: Vector3, unit: float) -> void:
 	p.unit = unit
 	p.position = at
 	p.steam_on = station == "board"
+	p.set_meta("y0", at.y)
 	add_child(p)
 	pizza3d[station] = p
 
@@ -574,7 +579,16 @@ func _sync_oven() -> void:
 			var moving: bool = dg != null and dg.pz == o.pz and dg.mode == "move"
 			if moving: at = _deck3d(dg.pos, OV_Y + 0.025)
 			n.position = at
+			n.rotation = Vector3.ZERO
 			n.show_pizza(o.pz)
+			if dg != null and dg.pz == o.pz and dg.mode == "lift":
+				# lifted on the turning peel: that side tilts up off the deck, the peel under it
+				var dir: Vector2 = Vector2.from_angle(dg.edge + o.pz.turn)
+				var edge3 := _deck3d(o.at + dir * ov.prad * o.pz.base.R / 106.0 * 0.85, OV_Y + 0.004)
+				var v := Vector3(edge3.x - at.x, 0.0, edge3.z - at.z).normalized()
+				n.basis = Basis(v.cross(Vector3.UP).normalized(), 0.16) * n.basis
+				n.position.y += 0.012
+				_hold(turner, edge3 + Vector3(0, 0.01, 0), 0.8, 0.0)      # (its handle back out of the mouth, toward you)
 			var st: String = ("%s has it" % Story.BOSS if Story.stage() == "pizzaiolo" else "your fornaio has it") if o.auto else ov.status(o)
 			var col := Color.WHITE
 			if st == "READY": col = Kit.BASIL
@@ -584,10 +598,6 @@ func _sync_oven() -> void:
 			if moving and ir: txt = "%d °C here" % ov.deck_at(dg.pos)
 			_oven_label(key, at, txt, col)
 			if moving: _hold(peel, at, r_m * 1.15 / 0.165, 0.0)
-			elif dg != null and dg.pz == o.pz and dg.mode == "turn":
-				# the turning peel under the edge you are dragging round
-				var edge := _deck3d(dg.pos, OV_Y + 0.004)
-				_hold(turner, edge, 0.8, 0.0)
 		else:
 			var key := "s%d" % o.tk.id
 			seen[key] = true
@@ -1193,7 +1203,7 @@ func _process(dt: float) -> void:
 		if phone: gyro.y = clamp(gyro.y + dy, -85.0 - t_pitch, 40.0 - t_pitch)
 		else: gyro.y = clamp(gyro.y + dy, -60.0, 60.0)
 	if phone and not working: _face_station(dt)
-	_pad(dt)
+	_pad(pad_dt if pad_dt > 0.0 else dt)
 	if stick != Vector2.ZERO and not immersive:
 		# the look stick: the further you push, the faster you turn (eased so small pushes are fine aiming)
 		var sp := stick * stick.length() * look_speed()
@@ -1219,6 +1229,7 @@ func _process(dt: float) -> void:
 	cam.position.y = 0.0 if immersive else sin(time * 1.7) * 0.004       # breathing (not in VR or AR: it would sway you)
 	_sync_pans()
 	_sync_ladles()
+	_sync_dough()
 	_sync_hands(dt)
 	if XRRig.active: _xr(dt)
 	if not staff.is_empty(): _animate_staff(dt)
@@ -1777,6 +1788,7 @@ func _press(index: int, pos: Vector2, down: bool, ray = null) -> void:
 						cap.s = s
 						cap.px = px
 						cap.hand = index if index < 0 else (_fixed_hand(index) if index >= PAD else _hand_for(pos))   # your left thumb is your left hand
+						if s.control is Bench: s.control.pad_hand[cap.hand] = index >= PAD and index < XRP
 						s.press(cap.hand, px, true)
 						_hand(cap.hand, s.from_px(px))
 			else:
@@ -2131,6 +2143,13 @@ func _ar_camera() -> void:
 	for n in shell:
 		if is_instance_valid(n): n.visible = want < 0
 
+## the dough off the bench: lifted on your knuckles, or up in the air spinning after a toss
+func _sync_dough() -> void:
+	if svc == null or not pizza3d.has("bench"): return
+	var p: Node3D = pizza3d.bench
+	var h: float = svc.bench.base.height() if svc.bench != null else 0.0
+	p.position.y = float(p.get_meta("y0", p.position.y)) + h
+
 # ---------- a VR headset: your real hands ----------
 ## where the headset's space sits in the kitchen, so that its camera is exactly your head here (see the head's
 ## composition in _process: your station's turn, then the headset's own turn and position from where you started)
@@ -2145,6 +2164,7 @@ func xr_origin() -> Transform3D:
 ## the menu button looks at your station again
 func _xr(_dt: float) -> void:
 	var o := xr_origin()
+	var holding := _xr_dough(o)
 	for i in 2:
 		var h := XRRig.hand(i)
 		if not h.get("tracked", false):
@@ -2154,9 +2174,55 @@ func _xr(_dt: float) -> void:
 		var aim: Transform3D = o * (h.aim as Transform3D)
 		var palm: Transform3D = o * (h.get("palm", h.aim) as Transform3D)
 		_xr_place_hand(i, palm, h)
-		var touching := _xr_touch(i, tip)
+		var touching := false if holding else _xr_touch(i, tip)
 		_xr_point(i, aim, float(h.get("pinch", 0.0)), touching)
 		_xr_buttons(i, h)
+
+## your real hands under the lifted dough (two fingertips held still on it lift it, as on the screen): turning them
+## round each other turns it and its weight stretches it; throwing them up throws it, spinning as fast as you were
+## turning it; bringing them down to the marble sets it down. True while they hold it.
+func _xr_dough(o: Transform3D) -> bool:
+	if svc == null or svc.bench == null or svc.view != "bench" or not surfaces.has("bench"): return false
+	var b: PizzaBase = svc.bench.base
+	var bench: Bench = surfaces.bench.control
+	if not b.lifted:
+		bench.xr_hold = false
+		xr_dough_prev = null
+		return false
+	var h0 := XRRig.hand(0)
+	var h1 := XRRig.hand(1)
+	if not (h0.get("tracked", false) and h1.get("tracked", false)): return true
+	if not bench.xr_hold:
+		bench.xr_hold = true                          # (the fingertips that lifted it are under it now, off the marble)
+		xr_dough_up = false
+		for i in 2:
+			if xr_touch[i] != null:
+				_press(XRP + i, Vector2.ZERO, false, _xr_down(xr_touch[i], xr_tip[i]))
+				xr_touch[i] = null
+	var t0: Vector3 = o * (h0.tip as Vector3)
+	var t1: Vector3 = o * (h1.tip as Vector3)
+	var mid := (t0 + t1) * 0.5
+	var ang := atan2(t1.z - t0.z, t1.x - t0.x)
+	var now := Time.get_ticks_usec()
+	if xr_dough_prev != null:
+		var dt := bench.frame_dt(maxf((now - int(xr_dough_prev.t)) / 1000000.0, 0.001))
+		bench.twist(angle_difference(float(xr_dough_prev.ang), ang))
+		xr_dough_v = xr_dough_v.lerp((mid - (xr_dough_prev.mid as Vector3)) / dt, 0.5)
+		if xr_dough_v.y > 0.9:
+			bench.tossed(b.toss(bench.spin(), clampf(xr_dough_v.y / 2.2, 0.4, 1.1)))
+			bench.xr_hold = false
+			xr_dough_prev = null
+			xr_dough_v = Vector3.ZERO
+			return true
+	xr_dough_prev = {"mid": mid, "ang": ang, "t": now}
+	var s: FPSurface = surfaces.bench
+	var z := minf(s.to_local(t0).z, s.to_local(t1).z)
+	if z > 0.04: xr_dough_up = true                   # (raised off the marble...)
+	elif z < 0.02 and xr_dough_up:
+		b.lifted = false                              # (...and brought back down to it)
+		bench.xr_hold = false
+		xr_dough_prev = null
+	return true
 
 ## the hand model on your real hand, shaped by what it does
 func _xr_place_hand(i: int, palm: Transform3D, h: Dictionary) -> void:

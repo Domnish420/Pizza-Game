@@ -120,7 +120,7 @@ func run() -> void:
 	check(svc.tool == "mozz" and svc.tool_hand == 0, "the right trigger on the cheese pan: the right hand holds the cheese", [svc.tool, svc.tool_hand])
 
 	# both hands at once
-	w.pad_at[1] = mid + Vector2(-12, 0)                  # the dough is small on screen: about 2 bench units a pixel
+	w.pad_at[1] = mid + Vector2(-12, 0)                  # the dough is small on screen: under a bench unit a pixel
 	w.pad_at[0] = mid + Vector2(14, 2)
 	var r0: float = pz.base.mean_r()
 	var c0: float = pz.grams.get("mozz", 0.0)
@@ -149,6 +149,58 @@ func run() -> void:
 	# the thumb lets go
 	await hold({"r3": true}, 2)
 	check(svc.tool == "", "clicking the right stick in (the thumb): the right hand puts the cheese down", svc.tool)
+
+	# both triggers held still on the dough: up onto your knuckles; the sticks opposite ways turn it; let go of the
+	# triggers as you turn it and it goes up spinning
+	var b = pz.base
+	w.pad_at[1] = mid + Vector2(-12, 0)
+	w.pad_at[0] = mid + Vector2(12, 0)
+	w.pad_test = {"lt": 1.0, "rt": 1.0}
+	await until(func(): return b.lifted, 10.0)
+	check(b.lifted, "both triggers held still on the dough: it comes up onto your knuckles", b.lifted)
+	var rl: float = b.mean_r()
+	var upx: float = (bn.touches[0] - bn.touches[1]).length() / 24.0          # (bench units a pixel, here)
+	bn.test_dt = 1.0 / 60.0                       # (frames 1/60 s apart for the hands and the bench, however slow this machine)
+	w.pad_dt = 1.0 / 60.0
+	# both sticks steering the hands round the middle, half a turn apart (as you would turn a wheel)
+	var st := {}
+	for step in 14:
+		st = {"lt": 1.0, "rt": 1.0}
+		for i in 2:
+			var o: Vector2 = w.pad_at[i] - mid
+			st["r" if i == 0 else "l"] = Vector2(-o.y, o.x).normalized() * 0.4
+		w.pad_test = st
+		await process_frame
+	check(b.mean_r() > rl and absf(bn.spin()) > 0.8, "the sticks steering your hands round turn it on your knuckles, stretching it", [snappedf(b.mean_r() - rl, 0.1), snappedf(bn.spin(), 0.01)])
+	for step in 2:                                # then the sticks pushed hard, and the triggers let go
+		for i in 2:
+			var o: Vector2 = w.pad_at[i] - mid
+			st["r" if i == 0 else "l"] = Vector2(-o.y, o.x).normalized()
+		w.pad_test = st
+		await process_frame
+	st.erase("lt")
+	st.erase("rt")
+	w.pad_test = st
+	await frames(1)
+	await frames(1)
+	check(b.last == "stretched" and b.air > 0.0, "push the sticks hard and let go of the triggers: it goes up, spinning", [b.last, snappedf(b.spin, 0.01)])
+	w.pad_test = IDLE
+	await until(func(): return b.air <= 0.0, 10.0)
+
+	# a hand at the crust, the trigger, and the stick snapped outward: the slap
+	var rs: float = b.mean_r()
+	var rims: float = b.mean_rim()
+	w.pad_at[0] = mid + Vector2(b.rad_at(0.0) * 0.85 / upx, 0)
+	w.pad_test = {"rt": 1.0}
+	await frames(2)
+	w.pad_test = {"rt": 1.0, "r": Vector2(1, 0)}
+	await frames(4)
+	w.pad_test = IDLE
+	await frames(2)
+	check(b.mean_r() > rs + 1.0 and b.mean_rim() > rims * 0.9, "a hand on the crust and the stick snapped outward: the slap (the crust kept)",
+		[snappedf(b.mean_r() - rs, 0.1), snappedf(b.mean_rim(), 0.1), snappedf(rims, 0.1)])
+	bn.test_dt = 0.0
+	w.pad_dt = 0.0
 
 	# a dialog stops the hands; thumbs on the screen put them away
 	m.confirm("Test", "A dialog.", "OK", func(): pass)
