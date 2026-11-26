@@ -80,6 +80,7 @@ static func draw(ci: CanvasItem, pz: Pizza, origin: Vector2, k: float) -> void:
 	if b.mean_rim() < b.mean_r() - 3.0:
 		var inner := b.outline(1.0, 1.0, 48)
 		_fan(ci, inner, CRUMB, _flat(inner.size(), CRUMB))
+	_thickness(ci, b)
 	# sauce: thicker where more was laid
 	if pz.sauce != "":
 		var sc := Color(Data.ING[pz.sauce].col)
@@ -125,6 +126,16 @@ static func draw(ci: CanvasItem, pz: Pizza, origin: Vector2, k: float) -> void:
 	for ct in pz.cuts:
 		ci.draw_line(ct.a, ct.b, Color(1, 0.98, 0.92, 0.95), 2.5)
 	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+## thin patches darker (the bench shows through), thick ones paler, across the middle
+static func _thickness(ci: CanvasItem, b: PizzaBase) -> void:
+	for i in PizzaBase.NS:
+		for j in PizzaBase.NR:
+			var v: float = b.thk[i * PizzaBase.NR + j]
+			var at := b.cell_pos(i, j)
+			var rad: float = b.inner_at(at.angle()) / PizzaBase.NR * 0.9 + 2.0
+			if v < 0.85: ci.draw_circle(at, rad, Color(0.45, 0.36, 0.28, clampf((0.85 - v) * 0.7, 0.0, 0.4)))
+			elif v > 1.2: ci.draw_circle(at, rad, Color(1.0, 0.97, 0.9, clampf((v - 1.2) * 0.5, 0.0, 0.3)))
 
 ## holes torn through the base: ragged, dark through to what is underneath, thin pale dough round them
 static func _holes(ci: CanvasItem, b: PizzaBase) -> void:

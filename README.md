@@ -194,7 +194,9 @@ The stations (the same in both layouts):
   is on the bench. There are no steps and no "base is ready" button: shape it, top it and take it to the oven in
   whatever order you like.
   - An empty hand works the dough, every technique there from the first base, however you like to do it:
-    - one finger presses it out (leave a rim); two stretch and twist it;
+    - one finger presses it out (leave a rim); two stretch and twist it. Work it evenly: pressing one spot over and
+      over thins it there (it shows darker, the bench's line says how even it is) and in the end goes right through
+      (a hole); stretching along one line thins that line; on your knuckles, tossed, rolled or sheeted it evens out;
     - a quick flick outward from the crust slaps it: it stretches and turns a little, and the crust is kept;
     - hold two fingers still on it a moment and it comes up onto your knuckles (in 3D it rises off the marble); turn
       your fingers round each other and it turns, and its own weight stretches it evenly; let go gently and it goes back

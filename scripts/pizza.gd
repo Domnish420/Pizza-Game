@@ -302,6 +302,12 @@ func assess(c: Dictionary) -> Dictionary:
 	if bs.tears > 0: a.notes.append("A hole torn in the base")
 	if bs.size < 0.7: a.notes.append("Lopsided base")
 	elif bs.crust < 0.6: a.notes.append("Crust is all wrong" if base.crust >= 1.0 else "Base is not flat")
+	if bs.even < 0.6:
+		var mo := base.middle_vs_out()
+		if mo < 0.8: a.notes.append("Thin in the middle, thick round the edge")
+		elif mo > 1.25: a.notes.append("Thick in the middle")
+		else: a.notes.append("Thick and thin patches")
+	elif bs.even > 0.9 and bs.size > 0.85: a.notes.append("An even base")
 	var cover := []
 	var even := []
 	var parts := []

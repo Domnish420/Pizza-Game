@@ -343,7 +343,7 @@ func _down(p: Vector2) -> void:
 ## a hand goes down on the dough
 func _dough_down(pz, p: Vector2) -> void:
 	if pz.base.method == "hand":
-		pz.base.press(p)
+		if pz.base.press(p): _pressed_through()
 		Art.sfx("slap", true, 0.18)            # a floury pat on the marble
 		Art.buzz(8)
 	elif pz.base.method == "roll":
@@ -362,11 +362,19 @@ func _move(prev: Vector2, p: Vector2) -> void:
 ## one hand works the dough
 func _dough_move(pz, prev: Vector2, p: Vector2) -> void:
 	match pz.base.method:
-		"hand": pz.base.press(p)
+		"hand":
+			if pz.base.press(p, 16.0, (p - prev).length()): _pressed_through()
 		"roll":
 			if _pin(): pz.base.roll(p, p - prev)
 			pin_at = p
 		_: pz.base.pan(p, p - prev)
+
+## a fingertip went right through, working one spot too long
+func _pressed_through() -> void:
+	Art.sfx("slap", true)
+	Art.buzz(20)
+	Kit.main.toast("Pressed right through: a hole. Work it out evenly from the middle, not in one spot", true)
+	svc.dirty = true
 
 ## a rolled base needs the rolling pin (or the sheeter button)
 var _pin_warned := false

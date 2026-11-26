@@ -2259,7 +2259,7 @@ func _build_side() -> void:
 	_detail(Kit.label(how + topping + " %s" % ("Turn to the oven and the pizza comes with you on the peel." if fp_mode else "Go to the Oven tab and the pizza comes with you."), 14, Kit.MUTED, true))
 	if b.method == "hand" and not DisplayServer.is_touchscreen_available():
 		_detail(Kit.label("With a mouse: left button is one finger, right button is two.", 13, Kit.MUTED, true))
-	_info(func(): return ["Size %.1f of %d cm · rim %.1f (aim %.1f) · %d%%" % [b.diameter_cm(), pz.d.size_cm, b.crust_cm(), pz.d.crust_cm, b.score().total * 100], Kit.BASIL if b.score().total >= 0.8 else Kit.CHEESE], 16)
+	_info(func(): return ["Size %.1f of %d cm · rim %.1f (aim %.1f) · even %d%% · %d%%" % [b.diameter_cm(), pz.d.size_cm, b.crust_cm(), pz.d.crust_cm, b.evenness() * 100, b.score().total * 100], Kit.BASIL if b.score().total >= 0.8 else Kit.CHEESE], 16)
 	next_btn.text = "To the oven"
 	if helps.has("top"):
 		# you only stretch today: when it is out to the ring, Marco takes it

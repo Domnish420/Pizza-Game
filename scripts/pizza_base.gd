@@ -5,7 +5,10 @@ extends RefCounted
 ## The dough is an outline of NS sectors around its centre. Each sector has:
 ##   r    how far the dough reaches (bench units)
 ##   rim  how wide the still-puffy, unpressed edge is. A ball starts all rim; pressing flattens it from the middle out.
-## The dough has a fixed weight, so the bigger you open it the thinner it gets.
+## The dough has a fixed weight, so the bigger you open it the thinner it gets. Across the middle (inside the crust)
+## it is thicker or thinner in places: `thk`, NR rings out from the centre in each sector, 1 = the average. Working one
+## spot thins it there and pushes the dough outward (pressed through, it tears); stretching thins it along the pull;
+## its own weight on your knuckles, a toss, the pin and the sheeter even it out.
 ##
 ## Techniques are the methods below. Each one only edits r / rim / rot (and tears), so new ones can be added here and
 ## called from Bench without touching anything else. Every technique is there from the first day, for anyone: none is
@@ -23,6 +26,8 @@ extends RefCounted
 ##   sheet()    one pass through a dough sheeter
 
 const NS := 24
+const NR := 5            # rings across the middle, from the centre to the inside of the crust
+const THROUGH := 0.22    # thinner than this against the average and a fingertip goes right through
 
 var r := []
 var rim := []
@@ -33,7 +38,9 @@ var mass := 260.0       # grams
 var cm := 0.14          # real centimetres per bench unit
 var method := "hand"    # hand / roll / press
 var max_r := 1.15       # how far past the target it will go before it would tear
-var tears: Array = []   # where it has torn through (angles): holes in the base
+var tears: Array = []   # where it has torn through: Vector3(angle round the dough, how far out (0 centre .. 1 the
+                        #   crust), how big (1 a toss's tear)), turning with the dough: holes in the base
+var thk := []           # NS * NR (sector i, ring j at i * NR + j): how thick the middle is there against its average
 var lifted := false     # off the bench, on your knuckles (to drape it, or to toss it)
 var air := 0.0          # seconds still in the air after a toss
 var air0 := 0.0         # how long that toss is in the air in all
@@ -50,6 +57,7 @@ func _init(d: Dictionary) -> void:
 	for i in NS:
 		r.append(r0)
 		rim.append(r0)
+	for c in NS * NR: thk.append(1.0)
 
 # ---------- reading the shape ----------
 func _ang(i: int) -> float:
@@ -106,7 +114,100 @@ func crust_cm() -> float:
 func target_thickness_mm() -> float:
 	return mass / (PI * R * R * cm * cm) * 10.0
 
-## 0..1 scores: size (right diameter and round), crust (rim as the recipe wants it), total
+# ---------- how thick it is across the middle ----------
+## how much of the middle ring j is (rings further out are bigger)
+func _ring_w(j: int) -> float:
+	return (j + 0.5) / NR
+
+## how far the middle reaches at an angle (inside the crust)
+func inner_at(ang: float) -> float:
+	return maxf(rad_at(ang) - rim_at(ang), 0.0)
+
+## where cell (i, j) sits (dough-local, as the outline)
+func cell_pos(i: int, j: int) -> Vector2:
+	var a := _ang(i)
+	return Vector2.from_angle(a) * inner_at(a) * _ring_w(j)
+
+## how thick it is at an angle and a distance out (u: 0 the centre .. 1 the inside of the crust), against the average
+func thick_at(ang: float, u: float) -> float:
+	var f := fposmod((ang - rot) / TAU, 1.0) * NS
+	var i := int(f) % NS
+	var i2 := (i + 1) % NS
+	var k: float = f - floor(f)
+	var g := clampf(u * NR - 0.5, 0.0, NR - 1.0)
+	var j := mini(int(g), NR - 1)
+	var j2 := mini(j + 1, NR - 1)
+	var l: float = g - j
+	return lerpf(lerpf(thk[i * NR + j], thk[i * NR + j2], l), lerpf(thk[i2 * NR + j], thk[i2 * NR + j2], l), k)
+
+## keep the average at 1
+func _norm() -> void:
+	var m := 0.0
+	var sw := 0.0
+	for i in NS:
+		for j in NR:
+			m += thk[i * NR + j] * _ring_w(j)
+			sw += _ring_w(j)
+	m /= sw
+	if m <= 0.001: return
+	for c in thk.size(): thk[c] /= m
+
+## evened out by k (0 none .. 1 all even)
+func _even_out(k: float) -> void:
+	k = clampf(k, 0.0, 1.0)
+	if k <= 0.0: return
+	for c in thk.size(): thk[c] = lerpf(thk[c], 1.0, k)
+
+## worked thinner round p (dough-local) within rad, by k: the dough goes elsewhere, some of it into the next ring
+## outward; where it goes right through it tears. True if it did.
+func _thin(p: Vector2, rad: float, k: float) -> bool:
+	var through := -1
+	for i in NS:
+		for j in NR:
+			var dist := cell_pos(i, j).distance_to(p)
+			if dist >= rad: continue
+			var c := i * NR + j
+			var take: float = thk[c] * k * (1.0 - dist / rad)
+			thk[c] -= take
+			if j < NR - 1: thk[c + 1] += take * 0.3 * _ring_w(j) / _ring_w(j + 1)    # (some of it pushed outward)
+			if thk[c] < THROUGH:
+				if through < 0 or thk[c] < thk[through]: through = c
+				thk[c] = THROUGH + 0.15
+	_norm()
+	if through < 0: return false
+	# one hole where it went through (none more if there is one there already)
+	var i0 := floori(float(through) / NR)
+	var at := cell_pos(i0, through % NR)
+	for h in holes():
+		if (h[0] as Vector2).distance_to(at) < R * 0.15: return false
+	tears.append(Vector3(i0 * TAU / NS, _ring_w(through % NR), 0.65))
+	return true
+
+## how evenly thick the middle is: 1 even all over .. 0 thick and thin patches (every part counts the same: a thin
+## middle is as bad as a thin patch further out, though it is smaller)
+func evenness() -> float:
+	var v := 0.0
+	for c in thk.size(): v += pow(thk[c] - 1.0, 2)
+	return clampf(1.0 - (sqrt(v / thk.size()) - 0.06) * 3.5, 0.0, 1.0)
+
+## the middle against further out: under 1, thinner in the middle (pressed there too much); over 1, thicker
+func middle_vs_out() -> float:
+	var a := 0.0
+	var b := 0.0
+	for i in NS:
+		a += thk[i * NR] + thk[i * NR + 1]
+		b += thk[i * NR + NR - 2] + thk[i * NR + NR - 1]
+	return a / maxf(b, 0.001)
+
+## the thinnest place: {c (cell), v (how thick against the average)}
+func thinnest() -> Dictionary:
+	var best := 0
+	for c in thk.size():
+		if thk[c] < thk[best]: best = c
+	return {"c": best, "v": thk[best]}
+
+## 0..1 scores: size (right diameter and round), crust (rim as the recipe wants it), even (thickness across the
+## middle), total
 func score() -> Dictionary:
 	var sz := 0.0
 	var cr := 0.0
@@ -118,14 +219,17 @@ func score() -> Dictionary:
 	sz /= NS
 	cr /= NS
 	var holes := clampf(tears.size() * 0.2, 0.0, 0.6)       # a hole in the base: sauce through it, a sorry pizza
-	return {"size": sz, "crust": cr, "tears": tears.size(), "total": maxf(0.0, sz * 0.65 + cr * 0.35 - holes)}
+	var ev := evenness()
+	return {"size": sz, "crust": cr, "even": ev, "tears": tears.size(), "total": maxf(0.0, sz * 0.55 + cr * 0.3 + ev * 0.15 - holes)}
 
 # ---------- techniques ----------
-## fingertip press at a point (dough-local coordinates). tip = fingertip radius.
-func press(p: Vector2, tip: float = 16.0) -> void:
+## fingertip press at a point (dough-local coordinates). tip = fingertip radius; amt how far the fingertip moved
+## pressing (a pat: a little). Working one spot thins it there; pressed right through, it tears (true if it did).
+func press(p: Vector2, tip: float = 16.0, amt: float = 4.0) -> bool:
 	var d := p.length()
 	var ang := p.angle()
-	if d > rad_at(ang) + tip * 0.5: return
+	if d > rad_at(ang) + tip * 0.5: return false
+	var tore := _thin(p, tip * 1.3, minf(amt, 20.0) * 0.005)
 	var span: float = PI * 1.1 if d < tip else atan(tip / d) * 1.7
 	for i in NS:
 		var da: float = abs(angle_difference(ang, _ang(i)))
@@ -135,6 +239,7 @@ func press(p: Vector2, tip: float = 16.0) -> void:
 		var flat: float = (rim[i] - target) * w
 		rim[i] -= flat
 		r[i] = min(r[i] + flat * 0.3, R * max_r)
+	return tore
 
 ## one finger pulling the dough from p0 to p1 while it is held somewhere else
 func stretch(p0: Vector2, p1: Vector2) -> void:
@@ -145,6 +250,11 @@ func stretch(p0: Vector2, p1: Vector2) -> void:
 		var da: float = abs(angle_difference(ang, _ang(i)))
 		var w: float = exp(-pow(da / 0.6, 2)) * 0.8 + 0.1
 		r[i] = min(r[i] + gain * w * (0.2 if r[i] > R else 1.0), R * max_r)
+		# the pull thins it along its line through the middle (both ways), most near the centre
+		var dl: float = minf(da, PI - da)
+		for j in NR:
+			thk[i * NR + j] *= 1.0 - minf(gain, 10.0) * 0.006 * exp(-pow(dl / 0.5, 2)) * (1.0 - 0.15 * j)
+	_norm()
 
 func rotate(by: float) -> void:
 	rot = fposmod(rot + by, TAU)
@@ -163,6 +273,7 @@ func drape(turn: float) -> void:
 	var mr := mean_r()
 	for i in NS:
 		r[i] = minf(r[i] + t * 2.2 * _thick(i, mr) * (0.25 if r[i] > R else 1.0), R * max_r)
+	_even_out(t * 0.08)
 
 ## the Neapolitan slap: flipped over the back of your hand and slapped down further out, turning a little as it goes
 ## (dir: the way you slapped it; strength 0..1). It stretches along the slap and a little all round, and keeps its crust.
@@ -174,6 +285,7 @@ func slap(dir: Vector2, strength: float) -> void:
 		var w: float = 0.35 + 0.65 * pow(cos(_ang(i) - phi), 2)
 		r[i] = minf(r[i] + s * 9.0 * w * (0.25 if r[i] > R else 1.0), R * max_r)
 	rotate(0.5 * s * (1.0 if dir.x >= 0.0 else -1.0))
+	_even_out(0.08 * s)
 
 ## thrown up spinning at `turns` a second for `airtime` seconds: it spreads out evenly as it spins (faster spins and
 ## longer in the air, more), the thicker parts most, and the crust stays. Too little spin and it just flops, a little
@@ -186,13 +298,21 @@ func toss(turns: float, airtime: float) -> String:
 	var sp := absf(turns)
 	if sp < 0.6:
 		for i in NS: r[i] = maxf(r[i] + randf_range(-3.0, 3.0), 5.0)
+		for c in thk.size(): thk[c] *= randf_range(0.85, 1.15)
+		_norm()
 		last = "flop"
 		return last
-	var th := thickness_mm() / maxf(target_thickness_mm(), 0.1)        # 1 = as thin as the recipe wants it
+	# it tears at its thinnest place: 1 = as thin there as the recipe wants it all over
+	var thin := thinnest()
+	var th := thickness_mm() / maxf(target_thickness_mm(), 0.1) * minf(float(thin.v), 1.0)
 	var limit := 1.6 + 2.2 * clampf(th - 0.6, 0.0, 1.5)              # the spin it takes before it tears (turns a second)
 	if sp > limit:
 		var a := randf() * TAU                                       # (round the dough itself: it turns with it)
-		tears.append(a)
+		var u := 0.55
+		if float(thin.v) < 0.85:
+			a = floori(float(thin.c) / NR) * TAU / NS
+			u = _ring_w(int(thin.c) % NR)
+		tears.append(Vector3(a, u, 1.0))
 		for i in NS:
 			if absf(angle_difference(a, i * TAU / NS)) < 0.6: r[i] *= 0.85   # it goes ragged where it tore
 		last = "tore"
@@ -201,15 +321,16 @@ func toss(turns: float, airtime: float) -> String:
 	var mr := mean_r()
 	for i in NS:
 		r[i] = minf(r[i] + grow * _thick(i, mr) * (0.3 if r[i] > R else 1.0), R * max_r)
+	_even_out(grow * 0.015)
 	last = "stretched"
 	return last
 
 ## the holes torn in it, as [where (round the middle, as the outline), how wide (radius)], bench units
 func holes() -> Array:
 	var out := []
-	for t in tears:
-		var a: float = float(t) + rot
-		out.append([Vector2.from_angle(a) * rad_at(a) * 0.55, R * 0.12])
+	for tv in tears:
+		var a: float = tv.x + rot
+		out.append([Vector2.from_angle(a) * maxf(inner_at(a), rad_at(a) * 0.5) * tv.y, R * 0.12 * tv.z])
 	return out
 
 ## in the air: it comes down after its time, spinning as it goes. True on the frame it lands.
@@ -238,6 +359,7 @@ func roll(p: Vector2, mv: Vector2) -> void:
 		var w: float = pow(cos(_ang(i) - phi), 2)
 		r[i] = min(r[i] + ln * w * 0.2 * (0.2 if r[i] > R else 1.0), R * max_r)
 		rim[i] = max(0.0, rim[i] - ln * (0.25 + w * 0.5))
+	_even_out(ln * 0.003)
 
 ## pushing dough toward the wall of the pan; it cannot go past the wall
 func pan(p: Vector2, mv: Vector2) -> void:
@@ -249,9 +371,12 @@ func pan(p: Vector2, mv: Vector2) -> void:
 		var w: float = exp(-pow(da / 0.7, 2))
 		r[i] = min(r[i] + ln * w * 0.35, R)
 		rim[i] = max(0.0, rim[i] - ln * w * 0.6)
+	_even_out(ln * 0.002)
 
 ## through the dough sheeter: evenness 0..1 is how good the machine is
-func sheet(evenness: float) -> void:
+func sheet(quality: float) -> void:
 	for i in NS:
-		r[i] = R * (1.0 + randf_range(-1.0, 1.0) * (1.0 - evenness) * 0.5)
+		r[i] = R * (1.0 + randf_range(-1.0, 1.0) * (1.0 - quality) * 0.5)
 		rim[i] = 0.0
+	for c in thk.size(): thk[c] = 1.0 + randf_range(-1.0, 1.0) * (1.0 - quality) * 0.25
+	_norm()

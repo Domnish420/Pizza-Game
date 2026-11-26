@@ -4,7 +4,8 @@ shader_type spatial;
 // and is drawn here per pixel: sauce that is glossy and darker where it is thick, cheese that is shreds when raw and
 // melted pools with golden blisters once baked, and leopard-spot char on the crust when the oven has pushed it.
 // UV is where a point falls on the layer map; UV2.x is 1 on the flat middle and 0 on the crust; UV2.y is how much
-// that point is the top of the crust. The bake is a uniform (12 sectors round the edge, 1 = done, as Pizza.bake), so
+// that point is the top of the crust; COLOR.a is how thick the dough is there against its average, halved
+// (PizzaBase.thk: 0.5 even), so thin dough shows darker and browns quicker, thick dough paler. The bake is a uniform (12 sectors round the edge, 1 = done, as Pizza.bake), so
 // the pizza browns in the oven without its mesh being rebuilt.
 
 uniform sampler2D layers : filter_linear, repeat_disable;
@@ -76,8 +77,11 @@ void fragment() {
 	float top = UV2.y;
 	float edge_b = bake_at(pp);
 	float crust_b = edge_b * (0.6 + 0.45 * top);
-	vec3 raw = COLOR.rgb;
-	vec3 baked_col = mix(brown(raw, edge_b * (0.9 + 0.12 * top), vec3(0.812, 0.561, 0.247)), brown(raw, mid_b, vec3(0.886, 0.718, 0.4)), inner);
+	float tk = COLOR.a * 2.0;
+	vec3 raw = COLOR.rgb * mix(vec3(0.8, 0.77, 0.74), vec3(1.0), smoothstep(0.3, 0.95, tk));
+	raw = mix(raw, min(raw * 1.05, vec3(1.0)), smoothstep(1.15, 1.7, tk) * inner);
+	float mb = mid_b * mix(1.3, 0.85, smoothstep(0.4, 1.4, tk));
+	vec3 baked_col = mix(brown(raw, edge_b * (0.9 + 0.12 * top), vec3(0.812, 0.561, 0.247)), brown(raw, mb, vec3(0.886, 0.718, 0.4)), inner);
 	vec3 col = pow(baked_col, vec3(2.2));
 	vec4 L = texture(layers, UV);
 	float sa = L.r * max_amt * smoothstep(0.55, 0.95, inner);

@@ -324,9 +324,17 @@ raising them fast tosses it, lowering it to the marble sets it down. Tests fix t
 (and `FPWorld.pad_dt`).
 
 To add a technique (docking with a roller, edge pinching, the stretch over the backs of the hands), add a method that
-edits `r`, `rim` and `rot`, and a gesture in `bench.gd` that calls it. If you need thickness to vary across the base,
-add a per-sector or per-cell thickness array here, and have `score()` and `PizzaDraw` read it. Then make the
-dough look like dough: a deforming mesh or shader that shows thickness, the puffed rim and flour, driven by those arrays.
+edits `r`, `rim`, `rot` and `thk`, and a gesture in `bench.gd` that calls it.
+
+Thickness across the middle is `thk`: NR rings out from the centre in each of the NS sectors, 1 = the average (the
+average itself is `thickness_mm()`). `press` thins where the fingertip works, by how far it moved (`_thin`), and some
+of the dough goes outward; under `THROUGH` it tears (one hole per spot). `stretch` thins along the line of the pull,
+most in the middle. `drape`, a good `toss`, `slap`, `roll`, `pan` and `sheet` even it out (`_even_out`); a flop
+roughens it. A toss tears at the thinnest place. `evenness()` (every part counts the same) goes into `score()` (15%),
+`middle_vs_out()` picks the review's note ("Thin in the middle, thick round the edge", "Thick in the middle", "Thick and
+thin patches", or "An even base"). `Pizza3D` raises or sinks the middle by it and passes it in the vertex colour's
+alpha so the shader draws thin dough darker (it browns quicker) and thick dough paler; `PizzaDraw` draws thin and thick
+patches. Still to come: flour, and the dough's look under the fingers as it is worked.
 
 ### 2. The pizza and the bake
 

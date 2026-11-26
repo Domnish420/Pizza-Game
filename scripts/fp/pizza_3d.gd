@@ -141,6 +141,7 @@ func _signature() -> String:
 	var b := pz.base
 	var s := 0.0
 	for i in PizzaBase.NS: s += b.r[i] * 1.31 + b.rim[i] * 0.71
+	for c in b.thk.size(): s += b.thk[c] * (c % 7 + 1) * 3.7
 	var sa := 0.0
 	for k in pz.sauce_amt: sa += pz.sauce_amt[k]
 	var ca := 0.0
@@ -256,8 +257,10 @@ func _build() -> void:
 			var cb := 0.0
 			if j < IN_RINGS.size():
 				p = dir * r_in * IN_RINGS[j]
-				h = h_in
+				var tk: float = b.thick_at(a, IN_RINGS[j])
+				h = h_in + h0 * (tk - 1.0)              # (thinner where it was worked thin, thicker where it was not)
 				col = DOUGH
+				col.a = clampf(tk * 0.5, 0.0, 1.0)      # (the shader shows it: thin dough darker, thick paler)
 				# a little height where sauce and cheese are laid thick (the colour is drawn by the shader)
 				var sa := _amt(pz.sauce_amt, p) if pz.sauce != "" else 0.0
 				var ca := _amt(pz.cheese_amt, p) if pz.cheese != "" else 0.0
@@ -269,6 +272,7 @@ func _build() -> void:
 				else: h = h_pk * pow(cos(PI * 0.5 * (s - peak_s) / max(1.0 - peak_s, 0.001)), 0.6)
 				h = max(h, 0.0)
 				col = DOUGH_RIM
+				col.a = 0.5
 				inner = 0.0
 				cb = sin(PI * clamp(s, 0.0, 1.0))              # how much this is the top of the crust
 			st.set_color(col)
@@ -300,6 +304,7 @@ func _height(p: Vector2, h0: float, melted: bool) -> float:
 	var r_in: float = rad - w
 	var h: float = h0 + max(w * 0.5, 1.4) * (1.0 - clamp(r_in / max(w * 0.5, 0.001), 0.0, 1.0))
 	if p.length() > r_in: h = h0 + max(w * 0.5, 1.4)
+	else: h += h0 * (b.thick_at(a, p.length() / maxf(r_in, 0.001)) - 1.0)
 	var sa := _amt(pz.sauce_amt, p) if pz.sauce != "" else 0.0
 	var ca := _amt(pz.cheese_amt, p) if pz.cheese != "" else 0.0
 	return h + min(sa, 2.0) * 0.55 + min(ca, 2.0) * (0.75 if melted else 1.3)

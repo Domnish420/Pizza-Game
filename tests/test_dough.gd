@@ -167,3 +167,56 @@ func run() -> void:
 	check(int(w.pizza3d.bench._mat.get_shader_parameter("n_holes")) == 1, "and there is a hole in it", w.pizza3d.bench._mat.get_shader_parameter("n_holes"))
 	await shot("torn")
 	check(pz.assess(svc.c).notes.has("A hole torn in the base"), "and the review says so", pz.assess(svc.c).notes)
+
+	# working one spot: thin there and thick round it, the review says so, and in the end a fingertip goes through
+	svc.training_order("margherita")
+	svc.claim(svc.tickets[-1])
+	await frames(5)
+	pz = svc.bench
+	b = pz.base
+	for rep in 4:                                       # fingertips pressed evenly all over, as it opens out
+		for gx in range(-60, 61, 10):
+			for gy in range(-60, 61, 10):
+				var q := Vector2(gx, gy)
+				if q.length() < b.inner_at(q.angle()): b.press(q, 16.0, 3.0)
+	var ev0: float = b.evenness()
+	check(ev0 > 0.85 and b.tears.is_empty(), "pressed out evenly all over, it is an even thickness", snappedf(ev0, 0.01))
+	var p := Vector2(8, 0)
+	touch(0, p, true)
+	var k := 0
+	while k < 400 and b.middle_vs_out() > 0.65:
+		var p2 := Vector2(8, 0).rotated(0.5 * (k + 1))
+		drag(0, p, p2)
+		p = p2
+		k += 1
+		await process_frame
+	touch(0, p, false)
+	check(b.middle_vs_out() < 0.7 and b.evenness() < 0.6 and b.tears.is_empty(), "a fingertip working the middle: thin there, thick round it",
+		[snappedf(b.middle_vs_out(), 0.01), snappedf(b.evenness(), 0.01), k])
+	check(pz.assess(svc.c).notes.has("Thin in the middle, thick round the edge"), "and the review says so", pz.assess(svc.c).notes)
+	await shot("thin-middle")
+
+	# on your knuckles its weight evens it out again
+	var ev1: float = b.evenness()
+	await lift(b, Vector2(-25, 0), Vector2(25, 0))
+	await frames(2)
+	await twist(Vector2(-25, 0), Vector2(25, 0), 0.12, 30)
+	touch(1, Vector2(25, 0), false)
+	touch(0, Vector2(-25, 0), false)
+	check(b.evenness() > ev1 + 0.1, "turned round on your knuckles, its weight evens the thickness out", [snappedf(ev1, 0.01), snappedf(b.evenness(), 0.01)])
+	await frames(2)
+
+	# keep on at one spot and a fingertip goes right through
+	p = Vector2(8, 0)
+	touch(0, p, true)
+	k = 0
+	while k < 1500 and b.tears.is_empty():
+		var p2 := Vector2(8, 0).rotated(0.5 * (k + 1))
+		drag(0, p, p2)
+		p = p2
+		k += 1
+		await process_frame
+	touch(0, p, false)
+	check(b.tears.size() > 0 and m.toast_label.text.begins_with("Pressed right through"), "keep on at one spot and the fingertip goes right through", [b.tears.size(), m.toast_label.text, k])
+	await frames(3)
+	await shot("pressed-through")
