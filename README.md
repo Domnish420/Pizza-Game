@@ -139,7 +139,9 @@ finger on the screen for two seconds, leaves VR. With AR on (below), walking mov
 
 **The Quest** (`tools/android/build.sh debug Quest`, a separate app, "Crust Empire VR"): the game is in VR from the
 start, through OpenXR. Your head is your head: turn, lean, walk round the van for real (the station you turn to is
-where you work). Your hands are your hands, tracked or holding the Touch controllers:
+where you work). Standing (Settings > Headset), the counters are at their real heights whatever your height; seated,
+the kitchen comes down so the bench is at a desk's height. Your hands are your hands, tracked or holding the Touch
+controllers:
 - touch the marble with a fingertip and that is a finger on the dough: press it out; two fingertips stretch it. The
   same on the cutting board, the oven's deck and the prep tablet
 - pinch (or pull the trigger) at something out of reach: a pan on the rail (that hand takes what is in it), a
@@ -206,8 +208,11 @@ The stations (the same in both layouts):
       tears (a hole in the base, and the review says so). A finger on the bench as it comes down catches it.
     - With a controller the triggers are your fingers: both held still lift it, the sticks steering your hands round
       turn it, and letting go of the triggers with the sticks pushed hard tosses it; the trigger on the crust and the
-      stick snapped outward slaps it. In a headset: two fingertips held still on the dough lift it, turn your real hands
-      round and throw it up.
+      stick snapped outward slaps it. In a headset: two fingertips held still on the dough lift it, and it is where
+      your hands hold it; turn your real hands round and throw it up; hands under it as it comes down catch it; lower
+      it to the marble to set it down.
+    - Caught on two fingers (or both real hands) it is back on your knuckles, to turn and throw again; a soft shadow
+      on the marble shows where it is while it is up.
     Thin bases: roll with the pin (or tap the sheeter). Deep pan: push into the pan.
   - Tap a pan on the rail to pick that topping up, with the hand you want to hold it in; that hand then puts it on,
     anywhere, any time, while the other hand stays free for the dough. Tap the pan again (or Put down) to have both

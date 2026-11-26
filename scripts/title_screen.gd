@@ -318,6 +318,11 @@ func show_page(p: String) -> void:
 				Game.save_game()
 				Kit.main.set_vr(Game.s.vr)
 				show_page("controls"), "", false, 28)
+			if XRRig.running():
+				_chalk(FPWorld.xr_height_name(), func():
+					FPWorld.next_xr_height()
+					Game.save_game()
+					show_page("controls"), "", false, 28)
 			_chalk("Back", func(): show_page("settings"), "", true)
 		"settings":
 			_heading("Settings")

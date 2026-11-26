@@ -46,6 +46,8 @@ var air := 0.0          # seconds still in the air after a toss
 var air0 := 0.0         # how long that toss is in the air in all
 var spin := 0.0         # how fast it is turning, in turns a second (lifted or in the air)
 var last := ""          # the last toss's verdict: "stretched", "flop", "tore" ("" none yet)
+var hold_h := 0.12      # how high it is held above the bench when lifted (metres): on your knuckles, or in a headset
+                        #   where your real hands hold it; a toss goes up from there and comes down there
 
 func _init(d: Dictionary) -> void:
 	R = float(d.R)
@@ -347,8 +349,8 @@ func fly(dt: float) -> bool:
 func height() -> float:
 	if air > 0.0 and air0 > 0.0:
 		var u := 1.0 - air / air0
-		return 0.12 + 4.0 * (0.4 * air0 * air0) * u * (1.0 - u)
-	return 0.12 if lifted else 0.0
+		return hold_h + 4.0 * (0.4 * air0 * air0) * u * (1.0 - u)
+	return hold_h if lifted else 0.0
 
 ## the rolling pin, centred at p, moved by mv
 func roll(p: Vector2, mv: Vector2) -> void:

@@ -132,6 +132,7 @@ func run() -> void:
 	var turn0: float = b.rot
 	await frames(3)
 	check(w.pizza3d.bench.position.y > y0 + 0.13 and b.rot != turn0, "in 3D it goes up in the air, turning", snappedf(w.pizza3d.bench.position.y - y0, 0.01))
+	check(w.dough_shadow != null and w.dough_shadow.visible, "with its shadow on the marble under it", w.dough_shadow != null)
 	await shot("tossed")
 	touch(0, Vector2(0, 0), true)                  # a finger ready under it
 	await until(func(): return b.air <= 0.0, 30.0)
@@ -154,6 +155,23 @@ func run() -> void:
 	touch(1, Vector2(25, 0), false)
 	touch(0, Vector2(-25, 0), false)
 	check(not b.lifted and b.air <= 0.0, "let go gently and it is set back down", b.lifted)
+	await frames(2)
+	check(not w.dough_shadow.visible, "down on the marble, no shadow", w.dough_shadow.visible)
+
+	# caught on two fingers it is back on your knuckles, and up it goes again
+	await lift(b, Vector2(-25, 0), Vector2(25, 0))
+	await frames(2)
+	at = await twist(Vector2(-25, 0), Vector2(25, 0), 0.35, 4)
+	await flick(at[0], at[1], Vector2(0, -120))
+	touch(0, Vector2(-25, 0), true)
+	touch(1, Vector2(25, 0), true)
+	await until(func(): return b.air <= 0.0, 30.0)
+	await frames(2)
+	check(b.lifted and m.toast_label.text.begins_with("Caught it on your knuckles"), "two fingers under it as it comes down: caught, back on your knuckles", [b.lifted, m.toast_label.text])
+	at = await twist(Vector2(-25, 0), Vector2(25, 0), 0.35, 4)
+	await flick(at[0], at[1], Vector2(0, -120))
+	check(b.last == "stretched" and b.air > 0.0, "and thrown again", b.last)
+	await until(func(): return b.air <= 0.0, 30.0)
 	await frames(2)
 
 	# a thin base spun far too fast tears

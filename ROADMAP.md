@@ -126,8 +126,9 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
       on the dough, pinch at things out of reach and at the panel's buttons, the thumbstick turns, B/Y put down,
       controller buzz — to be tried on the headset
 - [x] Quest: passthrough (AR's "the kitchen in your room": the room through the headset's cameras)
-- [ ] Quest: the kitchen at counter height for your height, hand-made hand poses on the tracked joints, sounds placed
-      in the room, picking things up with a fist
+- [x] Quest: the counters at their real height for your height (standing), or brought down to a desk (seated);
+      the dough held, tossed and caught in your real hands
+- [ ] Quest: hand-made hand poses on the tracked joints, sounds placed in the room, picking things up with a fist
 - [ ] VR (OpenXR, Quest): the same kitchen with tracked hands
 - [x] A clock on the wall in each scene to clock in and out on (open, close early, lock up), its hands keeping time
 - [x] Hands that change pose with what they hold (open, pinch, grip)

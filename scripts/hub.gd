@@ -270,6 +270,8 @@ func _page_home() -> void:
 	vh.add_child(Kit.button("VR viewer: " + ("on" if G.s.get("vr", false) else "off"), func(): _act(func():
 		Game.s.vr = not Game.s.get("vr", false)
 		Kit.main.set_vr(Game.s.vr)), "ghost", 15))
+	if XRRig.running():
+		vh.add_child(Kit.button(FPWorld.xr_height_name(), func(): _act(FPWorld.next_xr_height), "ghost", 15))
 	vh.add_child(Kit.button("Retro look: " + ("on" if G.s.get("retro", false) else "off"), func(): _act(func(): Game.s.retro = not Game.s.get("retro", false)), "ghost", 15))
 	vh.add_child(Kit.button("Sound: " + ("off" if G.s.get("mute", false) else "on"), func(): _act(func(): Game.s.mute = not Game.s.get("mute", false)), "ghost", 15))
 	vh.add_child(Kit.button("Music: " + ("on" if G.s.get("music", true) else "off"), func(): _act(func(): Game.s.music = not Game.s.get("music", true)), "ghost", 15))

@@ -191,7 +191,11 @@ Service runs in `scripts/fp/`. `FPWorld` builds the room, `FPView` puts it on sc
   `hand(i)`: aim, fingertip, palm, pinch, grip, stick, buttons; tracked hands measure the pinch between thumb and
   finger) and holds the XROrigin3D and XRCamera3D in the window (OpenXR draws it). VRView's "openxr" backend: no
   phone eyes, the window shows the kitchen's World3D, the rig's origin is `FPWorld.xr_origin()` so its camera is
-  exactly the game's head (the head pose goes through the same path as AR: `immersive`, position from `ar_ref`).
+  exactly the game's head (the head pose goes through the same path as AR: `immersive`, position from `ar_ref`,
+  through `_xr_ref()`: standing (`Game.s.xr_height`), the headset's floor is the kitchen's floor so the counters are
+  at their real heights for anyone's height; seated, your eyes are put at `SEAT_EYE`, the bench at a desk's height).
+  The lifted dough sits where your real hands hold it (`PizzaBase.hold_h`); both hands under it as it lands catch it
+  (`Bench.xr_catch`) and it is back in your hands to throw again.
   The hands (`FPWorld._xr`): the hand models on the tracked palms; a fingertip within 1.2 cm of a working surface is
   a press there (`_xr_touch`, a ray straight down onto it: the same per-finger bench code as thumbs, so two
   fingertips stretch); a pinch is a ray from the hand (`_xr_point`): the panel first (PadUI's mouse), then the

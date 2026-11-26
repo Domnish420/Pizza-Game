@@ -45,6 +45,7 @@ var test_dt := 0.0               # tests: a fixed time for each frame and betwee
 var twists := []                 # [clock, radians]: how your two hands under the lifted dough turned it, lately
 var line_ang = null              # the angle of the line between your two hands under it, last time (null: not yet)
 var xr_hold := false             # a headset's real hands hold the lifted dough (FPWorld moves it, not the fingers here)
+var xr_catch := false            # a headset's real hands are under the tossed dough, ready to catch it (FPWorld)
 const LIFT_HOLD := 0.45          # two fingers held this long (seconds), still, on the dough: it comes up onto your knuckles
 const TOSS_SPEED := 450.0        # letting go of the lifted dough this fast (bench units a second) throws it up
 const SLAP_SPEED := 650.0        # a flick outward from the crust this fast slaps it
@@ -298,11 +299,23 @@ func _process(dt: float) -> void:
 	else:
 		line_ang = null
 	if b.fly(dt):
-		var caught: bool = roles.values().has("dough")
+		# caught on two fingers (or two real hands under it): back on your knuckles, to turn and throw again; one finger
+		# on the bench: down on the bench
+		var n := roles.values().count("dough")
 		Art.sfx("slap", true)
 		Art.buzz(10)
-		if caught: Kit.main.toast("Caught it")
+		if n >= 2 or xr_catch:
+			b.lifted = true
+			twists.clear()
+			line_ang = _hands_line()
+			Kit.main.toast("Caught it on your knuckles: turn it and throw it again, or let it down")
+		elif n == 1:
+			b.hold_h = 0.12
+			Kit.main.toast("Caught it")
+		else:
+			b.hold_h = 0.12
 		svc.dirty = true
+	xr_catch = false
 	if b.lifted or b.air > 0.0 or xr_hold: return
 	var still := 0
 	for i in roles:

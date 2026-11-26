@@ -85,6 +85,28 @@ func run() -> void:
 	var pz = svc.bench
 	var s = w.surfaces.bench
 
+	# standing (the setting's default): the headset's floor is the kitchen's floor, so the bench is at its real height in
+	# your room, whoever you are; seated, the kitchen comes down so the bench is at a desk's height
+	head(bn.x - w.t_yaw, bn.y, Vector3(0, 1.78, 0))
+	await frames(2)
+	check(absf(rig(s.global_position).y - s.global_position.y) < 0.02 and absf(w.cam.global_position.y - 1.78) < 0.03,
+		"standing, a tall player: the bench is at its real height in the room and the head is theirs", [snappedf(rig(s.global_position).y, 0.01), snappedf(w.cam.global_position.y, 0.01)])
+	G.s.xr_height = "seated"
+	head(bn.x - w.t_yaw, bn.y, Vector3(0, 1.2, 0))
+	var rm: Dictionary = rest(1.0)
+	rm.menu = true
+	set_hands(rm, rest(-1.0))
+	await frames(2)
+	set_hands(rest(1.0), rest(-1.0))
+	await frames(2)
+	var desk: float = 1.2 - (w.SEAT_EYE - s.global_position.y)
+	check(absf(rig(s.global_position).y - desk) < 0.03 and desk > 0.65 and desk < 0.85, "seated: the kitchen comes down, the bench at a desk's height under your eyes",
+		[snappedf(rig(s.global_position).y, 0.01), snappedf(desk, 0.01)])
+	G.s.xr_height = "standing"
+	head(bn.x - w.t_yaw, bn.y)
+	await frames(2)
+	await until(func(): return svc.view == "bench", 2.0)
+
 	# a fingertip on the dough presses it
 	var r0: float = pz.base.mean_r()
 	var at: Vector3 = s.global_transform * Vector3(-0.035, 0.0, 0.004)
@@ -156,6 +178,8 @@ func run() -> void:
 		set_hands(hand(rig(pr), pointing(pr + Vector3(0, 0.1, 0.1), pr)), hand(rig(pl), pointing(pl + Vector3(0, 0.1, 0.1), pl)))
 		await process_frame
 	check(db.lifted and db.mean_r() > rb0 + 2.0, "turning your hands round under it stretches it", snappedf(db.mean_r() - rb0, 0.1))
+	var hy: float = (s.global_transform * Vector3(0, 0, 0.05)).y
+	check(absf(w.pizza3d.bench.global_position.y - hy - 0.01) < 0.02, "the dough is up where your hands hold it", snappedf(w.pizza3d.bench.global_position.y - hy, 0.01))
 	for i in 4:
 		var a := 0.12 * (24 + i)
 		var z := 0.05 + 0.03 * (i + 1)
@@ -164,8 +188,19 @@ func run() -> void:
 		set_hands(hand(rig(pr), pointing(pr + Vector3(0, 0.1, 0.1), pr)), hand(rig(pl), pointing(pl + Vector3(0, 0.1, 0.1), pl)))
 		await process_frame
 	check(db.last == "stretched" and db.air > 0.0 and absf(db.spin) > 0.6, "throw it up as you turn it: it flies, spinning", [db.last, snappedf(db.spin, 0.01)])
+	await until(func(): return db.air <= 0.0, 30.0)                 # (your hands stay up, under it)
+	await frames(2)
+	check(db.lifted and m.toast_label.text.begins_with("Caught it on your knuckles"), "your hands under it as it comes down catch it", [db.lifted, m.toast_label.text])
+	var ac: float = 0.12 * 27
+	for i in 12:                                                    # brought down to the marble: set down
+		var z := maxf(0.17 - 0.015 * (i + 1), 0.004)
+		var pr: Vector3 = s.global_transform * Vector3(0.03 * cos(ac), 0.03 * sin(ac), z)
+		var pl: Vector3 = s.global_transform * Vector3(-0.03 * cos(ac), -0.03 * sin(ac), z)
+		set_hands(hand(rig(pr), pointing(pr + Vector3(0, 0.1, 0.1), pr)), hand(rig(pl), pointing(pl + Vector3(0, 0.1, 0.1), pl)))
+		await process_frame
+	check(not db.lifted and not bench_ctl.xr_hold, "lower it to the marble and it is set down", db.lifted)
 	set_hands(rest(1.0), rest(-1.0))
-	await until(func(): return db.air <= 0.0, 30.0)
+	await frames(2)
 	bench_ctl.test_dt = 0.0
 
 	# a pinch on a button on the panel: the Oven button

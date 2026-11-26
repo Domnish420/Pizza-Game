@@ -20,6 +20,7 @@ extends Node3D
 ## Units are metres. You stand at the origin facing -Z with your eyes EYE high.
 
 const EYE := 1.62
+const SEAT_EYE := 1.37                  # seated in a headset: your eyes this high in the kitchen (the bench at a desk's height)
 const LOOK := 0.11                     # degrees of head turn per pixel of drag
 ## each station: where you lean to (from where you stand), what you look at, and how wide the view is there
 const STATION_LEAN := {"front": Vector3(0, 0, 0), "bench": Vector3(0, -0.13, -0.24), "board": Vector3(0.6, -0.17, -0.32), "oven": Vector3(0.4, -0.2, 0.2), "prep": Vector3(-0.72, -0.18, -0.4), "stores": Vector3(0, -0.05, 0.15)}
@@ -104,6 +105,7 @@ var xr_lasers: Array = []               # a thin beam from each hand to what it 
 var xr_dough_prev = null                # while your real hands hold the lifted dough: {mid, ang, t} last frame
 var xr_dough_v := Vector3.ZERO          # how fast your hands are moving it (metres a second)
 var xr_dough_up := false               # your hands have raised the lifted dough off the marble (lowering it again sets it down)
+var dough_shadow: MeshInstance3D = null  # a soft shadow on the marble under the dough while it is up (lifted or tossed)
 var stick := Vector2.ZERO               # the look stick (LookStick): -1..1 each way, held = turning
 var lean := Vector3.ZERO
 var t_lean := Vector3.ZERO
@@ -1177,7 +1179,7 @@ func _process(dt: float) -> void:
 			if arp != null: t_lean = Vector3.ZERO
 		if arp != null:
 			if ar_ref == null: ar_ref = arp
-			ar_pos = Basis(Vector3.UP, deg_to_rad(t_yaw)) * (arp.origin - ar_ref.origin)
+			ar_pos = Basis(Vector3.UP, deg_to_rad(t_yaw)) * (arp.origin - _xr_ref())
 		else:
 			ar_pos = Vector3.ZERO
 		if not working: _face_station(dt)
@@ -2146,17 +2148,68 @@ func _ar_camera() -> void:
 ## the dough off the bench: lifted on your knuckles, or up in the air spinning after a toss
 func _sync_dough() -> void:
 	if svc == null or not pizza3d.has("bench"): return
-	var p: Node3D = pizza3d.bench
+	var p: Pizza3D = pizza3d.bench
 	var h: float = svc.bench.base.height() if svc.bench != null else 0.0
-	p.position.y = float(p.get_meta("y0", p.position.y)) + h
+	var y0 := float(p.get_meta("y0", p.position.y))
+	p.position.y = y0 + h
+	# a soft shadow on the marble under it while it is up, smaller and fainter the higher it goes
+	if h > 0.005 and svc.bench != null:
+		if dough_shadow == null:
+			dough_shadow = MeshInstance3D.new()
+			var pm := PlaneMesh.new()
+			pm.size = Vector2(2, 2)
+			dough_shadow.mesh = pm
+			var gt := GradientTexture2D.new()
+			gt.fill = GradientTexture2D.FILL_RADIAL
+			gt.fill_from = Vector2(0.5, 0.5)
+			gt.fill_to = Vector2(1.0, 0.5)
+			var gr := Gradient.new()
+			gr.set_color(0, Color(0.1, 0.08, 0.06, 0.55))
+			gr.set_color(1, Color(0.1, 0.08, 0.06, 0.0))
+			gt.gradient = gr
+			var m := StandardMaterial3D.new()
+			m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			m.albedo_texture = gt
+			dough_shadow.material_override = m
+			dough_shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(dough_shadow)
+		dough_shadow.visible = true
+		dough_shadow.position = Vector3(p.position.x, y0 + 0.002, p.position.z)
+		var rad: float = svc.bench.base.mean_r() * p.unit * (1.0 + h * 0.8)
+		dough_shadow.scale = Vector3(rad, 1.0, rad)
+		(dough_shadow.material_override as StandardMaterial3D).albedo_color.a = clampf(1.0 - h * 1.5, 0.3, 1.0)
+	elif dough_shadow != null:
+		dough_shadow.visible = false
 
 # ---------- a VR headset: your real hands ----------
 ## where the headset's space sits in the kitchen, so that its camera is exactly your head here (see the head's
 ## composition in _process: your station's turn, then the headset's own turn and position from where you started)
 func xr_origin() -> Transform3D:
 	var b := Basis(Vector3.UP, deg_to_rad(t_yaw))
-	var r: Vector3 = ar_ref.origin if ar_ref != null else Vector3.ZERO
-	return Transform3D(b, Vector3(0, EYE, 0) + lean - b * r)
+	return Transform3D(b, Vector3(0, EYE, 0) + lean - b * _xr_ref())
+
+## where your head was when you put the headset on (or last faced your station), in the headset's space: that place is
+## your station. Height (Settings: Headset): standing, the headset's floor is the kitchen's floor, so you are your own
+## height and the counters are at their real heights; seated, your eyes are put SEAT_EYE high, so the bench comes down
+## to a desk. (AR on a phone: just where the phone was.)
+func _xr_ref() -> Vector3:
+	if ar_ref == null: return Vector3.ZERO
+	var r: Vector3 = ar_ref.origin
+	if XRRig.active:
+		if xr_seated(): r.y += EYE - SEAT_EYE
+		else: r.y = EYE
+	return r
+
+## the headset setting: seated (the kitchen brought down to you) rather than standing (real heights)
+static func xr_seated() -> bool:
+	return String(Game.s.get("xr_height", "standing")) == "seated"
+
+static func xr_height_name() -> String:
+	return "Headset: seated (the kitchen comes down to you)" if xr_seated() else "Headset: standing (counters at real height)"
+
+static func next_xr_height() -> void:
+	Game.s.xr_height = "standing" if xr_seated() else "seated"
 
 ## each frame in a headset: your hands where your real hands are; a fingertip on a working surface is a finger on it
 ## (two fingertips stretch the dough); a pinch (or the trigger) works what the hand points at further away, and the
@@ -2185,13 +2238,24 @@ func _xr_dough(o: Transform3D) -> bool:
 	if svc == null or svc.bench == null or svc.view != "bench" or not surfaces.has("bench"): return false
 	var b: PizzaBase = svc.bench.base
 	var bench: Bench = surfaces.bench.control
+	var h0 := XRRig.hand(0)
+	var h1 := XRRig.hand(1)
+	var both: bool = h0.get("tracked", false) and h1.get("tracked", false)
+	var s: FPSurface = surfaces.bench
+	if b.air > 0.0 and both and pizza3d.has("bench"):
+		# tossed: both hands under it as it comes down catch it (FPWorld tells the bench; it lands on them)
+		var c: Vector3 = pizza3d.bench.global_position
+		var ok := true
+		for hh in [h0, h1]:
+			var tp: Vector3 = o * (hh.tip as Vector3)
+			var lz := s.to_local(tp).z
+			ok = ok and Vector2(tp.x - c.x, tp.z - c.z).length() < 0.25 and lz > 0.03 and tp.y < c.y + 0.08
+		bench.xr_catch = ok
 	if not b.lifted:
 		bench.xr_hold = false
 		xr_dough_prev = null
 		return false
-	var h0 := XRRig.hand(0)
-	var h1 := XRRig.hand(1)
-	if not (h0.get("tracked", false) and h1.get("tracked", false)): return true
+	if not both: return true
 	if not bench.xr_hold:
 		bench.xr_hold = true                          # (the fingertips that lifted it are under it now, off the marble)
 		xr_dough_up = false
@@ -2202,6 +2266,7 @@ func _xr_dough(o: Transform3D) -> bool:
 	var t0: Vector3 = o * (h0.tip as Vector3)
 	var t1: Vector3 = o * (h1.tip as Vector3)
 	var mid := (t0 + t1) * 0.5
+	if pizza3d.has("bench"): b.hold_h = clampf(mid.y + 0.01 - float(pizza3d.bench.get_meta("y0", 0.0)), 0.02, 0.7)   # (it is where your hands are)
 	var ang := atan2(t1.z - t0.z, t1.x - t0.x)
 	var now := Time.get_ticks_usec()
 	if xr_dough_prev != null:
@@ -2215,11 +2280,11 @@ func _xr_dough(o: Transform3D) -> bool:
 			xr_dough_v = Vector3.ZERO
 			return true
 	xr_dough_prev = {"mid": mid, "ang": ang, "t": now}
-	var s: FPSurface = surfaces.bench
 	var z := minf(s.to_local(t0).z, s.to_local(t1).z)
 	if z > 0.04: xr_dough_up = true                   # (raised off the marble...)
 	elif z < 0.02 and xr_dough_up:
 		b.lifted = false                              # (...and brought back down to it)
+		b.hold_h = 0.12
 		bench.xr_hold = false
 		xr_dough_prev = null
 	return true
