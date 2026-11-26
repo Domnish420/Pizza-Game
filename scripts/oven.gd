@@ -147,11 +147,12 @@ func step(dt: float, speed: float) -> Array:
 		if def.feeds:
 			_bake_wood(o, pz, dt, t)
 		else:
+			var domed: bool = o.get("domed", false)           # (held up near the top: more heat on the top, none from the deck)
 			for j in Pizza.NSEC:
-				var h := heat(o.at, j * TAU / Pizza.NSEC + pz.turn)
+				var h := heat(o.at, j * TAU / Pizza.NSEC + pz.turn) * (1.6 if domed else 1.0)
 				pz.bake[j] += h * dt / t * (def.soft if pz.bake[j] > 1.0 else 1.0)
 				_spot(pz, j, (h - def.ambient * level()) * 0.8, dt, t)          # (gas flames spot it a little; elements barely)
-			pz.floor += (def.ambient + def.fire * 0.5) * level() * dt / t * (def.soft if pz.floor > 1.0 else 1.0)
+			if not domed: pz.floor += (def.ambient + def.fire * 0.5) * level() * dt / t * (def.soft if pz.floor > 1.0 else 1.0)
 		o.p = pz.bake_avg()
 	return done
 
@@ -275,16 +276,20 @@ func _bake_wood(o: Dictionary, pz: Pizza, dt: float, t: float) -> void:
 	var under: float = (deck_at(o.at) * 2.0 + deck_at(o.at + Vector2(r * 0.5, 0)) + deck_at(o.at - Vector2(r * 0.5, 0)) + deck_at(o.at + Vector2(0, r * 0.5)) + deck_at(o.at - Vector2(0, r * 0.5))) / 6.0
 	var fr: float = clamp((under - 150.0) / 250.0, 0.0, 2.2)
 	var fl := flame() + 0.3 * coals
+	var domed: bool = o.get("domed", false)               # held up to the dome: its heat on the top, the deck's on nothing
 	for j in Pizza.NSEC:
 		var a: float = j * TAU / Pizza.NSEC + pz.turn
 		var e: Vector2 = o.at + Vector2.from_angle(a) * r
 		var v: Vector2 = fire_pos - e
 		var facing: float = max(0.0, cos(v.angle() - a))
-		var flames: float = 0.95 * fl * facing * min(3.0, pow(FIRE_REACH / max(v.length(), 40.0), 2))
-		var h: float = 0.75 * dr + flames
+		var flames: float = 0.95 * fl * facing * min(3.0, pow(FIRE_REACH / max(v.length(), 40.0), 2)) * (1.2 if domed else 1.0)
+		var h: float = 0.75 * dr * (DOMED if domed else 1.0) + flames
 		pz.bake[j] += h * dt / t * (def.soft if pz.bake[j] > 1.0 else 1.0)
 		_spot(pz, j, flames, dt, t)
+	if domed: return
 	pz.floor += fr * dt / t * (def.soft if pz.floor > 1.0 else 1.0) * (0.35 if o.get("lifted", false) else 1.0)
+
+const DOMED := 2.4         # held up to the dome, the top gets this much more of the dome's heat
 
 ## leopard spots: once the crust has set, the flames' radiant heat blisters it in dark spots, more where it hits harder
 ## (a good spotting all round comes from turning the pizza so each side meets the fire in turn; left facing the fire, one

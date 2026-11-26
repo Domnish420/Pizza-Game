@@ -154,5 +154,6 @@ Each stage has goals to pass before promotion and a boss who checks your work. T
 
 - [x] Story mode (above)
 - [ ] Settings and save slots
+- [x] Your hands: milestones from your first base to a chef's pizza, and a rank, on the phone
 - [ ] Balance and progression pass
 - [ ] Testing on real phones: two-finger stretching, performance at the flagship

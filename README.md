@@ -93,6 +93,12 @@ beside it), during service to clock out early (it asks first; at closing time th
 clock out, lock up and go home. There are no open or close buttons: the time on the screen and on the phone is only a
 readout. (The classic 2D layout, kept for testing, has no room to look round, so there its time is the button.)
 
+**Your hands.** The phone's Today page keeps how you are getting on at the bench and the oven: how many bases you have
+opened, how good your last ones were, and nine milestones from your first base to a chef's pizza (round and right, even
+all over, the slap, a toss, tossed twice, a crust leopard-spotted all round, five good bases in a row, and Chef's hands:
+a pizza of your own, opened by hand, looking 90 or better). Your rank goes from Beginner to Chef's hands. Nothing waits
+behind them: every technique is yours from the first base.
+
 **Sound.** Every action has its own sound (the dough's pat, the ladle, cheese going on, the peel on the stone, the
 pizza wheel, the pass bell, the till), and the kitchen has a background: the extractor's hum, the wood fire
 crackling (louder at the oven) and the customers' murmur. A gentle waltz plays on the title screen and between
@@ -226,7 +232,9 @@ The stations (the same in both layouts):
 - **Oven**: drag the pizza off the shelf onto the deck: it goes in on the peel. Drag it out when it is done. To turn
   it, touch its edge: the turning peel slides under and lifts that side. Then push forward or pull back: the lifted
   edge goes where you push it and the pizza pivots (lifted on the left, pushing turns it to the right and pulling to
-  the left; lifted on the right, the other way round). While it is held up it browns less underneath. Wood ovens: put
+  the left; lifted on the right, the other way round). While it is held up it browns less underneath. Hold a pizza's
+  middle still a moment and the peel takes all of it up to the dome ("doming"): the top and the cheese finish quickly
+  and the base stops cooking; let go and it is back down where it was. Wood ovens: put
   it where you like on the floor (hot by the fire, gentler by the mouth), and tap the stack of logs beside the mouth
   when the Oven button says FEED THE FIRE. The flames blister the crust in leopard spots where they hit it: turn the
   pizza as it bakes so every side meets the fire and the spots go all round (left alone, one side spots and then
@@ -349,7 +357,8 @@ and invoices are paid when they fall due.
 | `scripts/hygiene.gd` | Cleanliness, traps, pests, mouse sightings, inspections (autoload `Hygiene`) |
 | `scripts/game.gd` | Save file, calendar, money, XP, pitches, menus, upgrades, staff, the night (autoload `Game`) |
 | `scripts/art.gd` | Art and sound lookup by key (autoload `Art`) |
-| `scripts/pizza_base.gd` | The dough base being opened: press, stretch, rotate, roll, pan, sheet |
+| `scripts/pizza_base.gd` | The dough base being opened: press, stretch, rotate, slap, drape, toss, roll, pan, sheet; thickness across it |
+| `scripts/skills.gd` | Your hands: milestones from your first base to a chef's pizza, and your rank |
 | `scripts/pizza.gd` | One pizza: weighed toppings, bake state, and how a customer judges it |
 | `scripts/oven.gd` | Oven heat, fire, deck spots |
 | `scripts/service.gd` | A day's trading: customers, tickets, staff, reviews, the day's accounts |

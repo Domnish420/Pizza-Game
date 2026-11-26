@@ -34,14 +34,20 @@ Each part below says how it works now and what would make it better.
   across that edge (the lifted edge goes with the peel; it pivots); held up it bakes less from the deck. Leopard spots
   (`Pizza.spots`, one per crust sector) come only from the flames' radiant heat once the crust has set (`Oven._spot`),
   so they go all round only if the pizza is turned; `Pizza.leopard()` measures how spotted and how even by quarters,
-  and the review says so. The 3D crust draws them per sector (the pizza shader's `spots`).
+  and the review says so. The 3D crust draws them per sector (the pizza shader's `spots`). The same peel domes a
+  pizza: its middle held still `OvenView.DOME_HOLD` seconds lifts all of it to the dome (mode "dome", `o.domed`): the
+  top gets `Oven.DOMED` times the dome's heat and the deck none, the way a pizzaiolo finishes the top without
+  burning the base.
 - "Dough streching, tossing and spinning the dough are all unique interactions thats everyone will do differently.
   Need to make sure that all techniques are able to be used for the get go, wether your passionate about pizza or
   never done it before. The end progression of this is being able to fully make pizzas that a chef like me can do."
   So there is no technique to unlock: pressing, stretching, the slap, lifting it onto your knuckles, draping and
   tossing all work on the first base (`Bench`, see section 1), with fingers, a controller's hands and a headset's real
   hands. Each can be done well or badly (a pressed-flat crust, a flop, a tear), so a beginner gets a base out and a
-  chef's hands get a better one.
+  chef's hands get a better one. The progression is your own hands: `Skills` (`scripts/skills.gd`, kept in
+  `Game.s.skills`) counts the bases you send to the oven (`Service._carry_to_oven`), your tosses (`Bench.tossed`) and
+  your pizzas served (`Service.serve`) against nine milestones, First base to Chef's hands, with a rank from Beginner
+  to Chef's hands; the phone's Today page shows them ("Your hands"). They are never needed to unlock anything.
 - "Buying things by weight, as you would in real life", from "different businesses for different quality
   ingredients that all have variable costs". Quality costs more but customers tip more; quantity over quality is a
   valid choice when money is short.

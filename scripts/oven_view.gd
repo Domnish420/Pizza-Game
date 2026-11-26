@@ -7,6 +7,8 @@ extends Control
 ##     -> it turns: lifting the left side, pushing turns it to the right and pulling to the left (the lifted edge goes
 ##        where you push it and the pizza pivots); this is how a side that has had the fire is swapped for one that
 ##        has not, for leopard spots all round
+##   hold a pizza's middle still a moment (the turning peel under all of it): it is held up to the dome ("doming") ->
+##     the top and the cheese finish fast from the dome's heat and the base stops cooking; let go to set it back down
 ## Art keys: "oven.<type>" (background), "oven.fire" (flame). Pizzas are drawn by PizzaDraw.
 
 const W := 400.0
@@ -15,7 +17,11 @@ const MOUTH_Y := 250.0     # anything dragged below this line has left the oven
 
 var svc: ServiceScreen
 var font: Font
-var drag = null            # {pz, o (deck item or null), mode "move"/"lift", pos, start, last, edge (lift: the lifted edge's angle on the pizza)}
+var drag = null            # {pz, o (deck item or null), mode "move"/"lift"/"dome", pos, start, last, t0 (when, on clock),
+                           #   edge (lift: the lifted edge's angle on the pizza)}
+var clock := 0.0           # seconds, frame by frame
+const DOME_HOLD := 0.6     # a pizza's middle held still this long (seconds): it goes up to the dome
+var dome_told := false
 var draw3d := false        # in the 3D kitchen this lies flat on the oven's deck and the world draws the pizzas, fire and
                            # oven in 3D (FPWorld): here we only draw the empty spots and take the touches
 var shelf_pos: Array = Oven.SHELF_POS   # where pizzas wait on the landing (in 3D, further out on the landing shelf)
@@ -65,7 +71,7 @@ func _down(p: Vector2) -> void:
 	if best == null: return
 	var centre: Vector2 = best.at
 	if p.distance_to(centre) < _pizza_r(best.pz) * 0.5:
-		drag = {"pz": best.pz, "o": best, "mode": "move", "pos": p, "start": p}
+		drag = {"pz": best.pz, "o": best, "mode": "move", "pos": p, "start": p, "t0": clock}
 	elif not Equip.has("turner"):
 		Kit.main.toast("You need a turning peel to turn pizzas in the oven. Order one from %s." % Equip.SHOP.name, true)
 	else:
@@ -75,9 +81,31 @@ func _down(p: Vector2) -> void:
 		Art.sfx("tap", true, 0.2)
 
 func _move(p: Vector2) -> void:
+	if drag.mode == "dome": return                   # (held up: it stays over its spot)
 	drag.pos = p
 	if drag.mode == "lift": lift_push(p - drag.last)
 	drag.last = p
+
+## each frame: a pizza's middle held still long enough goes up to the dome on the turning peel
+func _process(dt: float) -> void:
+	clock += dt
+	if drag == null or drag.mode != "move" or drag.o == null: return
+	if clock - float(drag.get("t0", clock)) < DOME_HOLD or (drag.pos as Vector2).distance_to(drag.start) > 6.0: return
+	if not Equip.has("turner"):
+		drag.t0 = INF
+		Kit.main.toast("You need a turning peel to hold a pizza up to the dome. Order one from %s." % Equip.SHOP.name, true)
+		return
+	dome(drag)
+
+## the turning peel under the whole pizza, held up to the dome: the top finishes, the base stops
+func dome(dg: Dictionary) -> void:
+	dg.mode = "dome"
+	dg.o.domed = true
+	Art.sfx("tap", true, 0.2)
+	if not dome_told:
+		dome_told = true
+		Kit.main.toast("Up to the dome: the top and the cheese finish, the base stops. Let go to set it back down")
+	queue_redraw()
 
 ## the peel under the lifted side pushed (forward, away from you) or pulled back by d: the lifted edge goes with it and
 ## the pizza pivots by how far you push across that edge (lifted on the left, pushing turns it to the right); it slides
@@ -106,6 +134,10 @@ func _up(p: Vector2) -> void:
 	drag = null
 	if dg.mode == "lift":
 		dg.o.lifted = false                          # set back down on the deck
+		return
+	if dg.mode == "dome":
+		dg.o.domed = false                           # down from the dome, where it was
+		Art.sfx("peel", true, 0.3)
 		return
 	if dg.mode != "move": return
 	var ov: Oven = svc.oven
@@ -240,6 +272,10 @@ func _draw() -> void:
 		PizzaDraw.draw(self, drag.pz, off + drag.pos * k, k * ov.prad / 106.0)
 		draw_set_transform(off, 0, Vector2(k, k))
 		if drag.o != null and drag.pos.y > MOUTH_Y: _text(Vector2(200, 304), "Let go to take it out", 12, Kit.CHEESE)
+	if drag != null and drag.mode == "dome" and not draw3d:
+		draw_arc(drag.o.at, _pizza_r(drag.pz) * 1.12, 0.0, TAU, 40, Color(1.0, 0.85, 0.5, 0.7), 3.0)
+		draw_line(drag.o.at, Vector2(drag.o.at.x, MOUTH_Y + 40.0), Color("8a6a48"), 5.0)
+	if drag != null and drag.mode == "dome": _text(Vector2(200, 304), "Up to the dome: the top finishes, the base stops", 12, Kit.CHEESE)
 	if drag != null and drag.mode == "lift" and not draw3d:
 		# the turning peel under the lifted side, its handle back out of the mouth
 		var e: Vector2 = drag.o.at + Vector2.from_angle(drag.edge + drag.pz.turn) * _pizza_r(drag.pz) * 0.85

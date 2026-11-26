@@ -306,6 +306,7 @@ func _process(dt: float) -> void:
 		Art.buzz(10)
 		if n >= 2 or xr_catch:
 			b.lifted = true
+			b.catches += 1
 			twists.clear()
 			line_ang = _hands_line()
 			Kit.main.toast("Caught it on your knuckles: turn it and throw it again, or let it down")
@@ -334,6 +335,7 @@ func _process(dt: float) -> void:
 ## how a toss went: a word, and the sound of it landing comes when it lands
 func tossed(res: String) -> void:
 	Art.sfx("slap", true, 0.2)
+	if _shaping(true) != null: Skills.tossed(_shaping(true).base, res)
 	match res:
 		"stretched": Kit.main.toast("Up it goes, spinning: it opens out evenly")
 		"flop": Kit.main.toast("It flopped: give it a spin as you throw it (turn your fingers round, then flick)", true)

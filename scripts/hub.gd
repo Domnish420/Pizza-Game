@@ -131,6 +131,18 @@ func _story_card() -> void:
 	if Story.employed(): sc[1].add_child(Kit.label("Wage %s a shift, paid into your savings. You will need them for your own van one day." % Kit.money(Story.WAGE[Story.role()]), 14, Kit.MUTED, true))
 	page.add_child(sc[0])
 
+## Your hands: how you are getting on making pizzas (Skills), from your first base to a chef's
+func _hands_card() -> Control:
+	var hc = Kit.card("Your hands: " + Skills.rank())
+	var av := Skills.average()
+	var st: Dictionary = Skills.state()
+	hc[1].add_child(Kit.label(("%d bases opened · your last %d average %d%% · %d of %d" % [st.bases, st.recent.size(), av * 100, Skills.count(), Skills.MILESTONES.size()])
+		if av >= 0.0 else "Every technique is yours from the first base. Open one and it counts here.", 15, Kit.MUTED, true))
+	for ms in Skills.MILESTONES:
+		if Skills.has(ms.id): hc[1].add_child(Kit.label(ms.name, 15, Kit.BASIL))
+		else: hc[1].add_child(Kit.label("%s: %s" % [ms.name, ms.how], 14, Kit.INK, true))
+	return hc[0]
+
 func _page_home() -> void:
 	var G := Game
 	var c := G.calc()
@@ -251,6 +263,7 @@ func _page_home() -> void:
 		if l.get("n_rev", 0) > 0:
 			_stats(lc[1], ["Look %.1f" % l.cats.look, "Taste %.1f" % l.cats.taste, "Service %.1f" % l.cats.service, "Value %.1f" % l.cats.value])
 		g.add_child(lc[0])
+	g.add_child(_hands_card())
 	var nc = Kit.card("Next step up")
 	if G.s.venue + 1 < Data.VENUES.size():
 		var nv = Data.VENUES[G.s.venue + 1]

@@ -46,6 +46,9 @@ var air := 0.0          # seconds still in the air after a toss
 var air0 := 0.0         # how long that toss is in the air in all
 var spin := 0.0         # how fast it is turning, in turns a second (lifted or in the air)
 var last := ""          # the last toss's verdict: "stretched", "flop", "tore" ("" none yet)
+var used := {}          # the techniques it has been opened with ("slap", "drape", "toss": true) (Skills)
+var catches := 0        # times it was caught on your knuckles after a toss
+var recorded := false   # Skills has counted it (once, as it goes to the oven)
 var hold_h := 0.12      # how high it is held above the bench when lifted (metres): on your knuckles, or in a headset
                         #   where your real hands hold it; a toss goes up from there and comes down there
 
@@ -271,6 +274,7 @@ func _thick(i: int, mr: float) -> float:
 func drape(turn: float) -> void:
 	var t := absf(turn)
 	if t < 0.0005 or not lifted: return
+	used.drape = true
 	rotate(turn)
 	var mr := mean_r()
 	for i in NS:
@@ -282,6 +286,7 @@ func drape(turn: float) -> void:
 func slap(dir: Vector2, strength: float) -> void:
 	var s := clampf(strength, 0.0, 1.0)
 	if s <= 0.0: return
+	used.slap = true
 	var phi := dir.angle()
 	for i in NS:
 		var w: float = 0.35 + 0.65 * pow(cos(_ang(i) - phi), 2)
@@ -324,6 +329,7 @@ func toss(turns: float, airtime: float) -> String:
 	for i in NS:
 		r[i] = minf(r[i] + grow * _thick(i, mr) * (0.3 if r[i] > R else 1.0), R * max_r)
 	_even_out(grow * 0.015)
+	used.toss = true
 	last = "stretched"
 	return last
 

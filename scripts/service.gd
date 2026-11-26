@@ -1692,6 +1692,7 @@ func _carry_to_oven(say: bool) -> Pizza:
 	if bench == null: return null
 	_drop_ladle(bench)
 	var pz: Pizza = bench
+	if not helps.has("stretch"): Skills.based(pz.base)        # (a base you opened: Your hands)
 	if helps.has("top"): _marco_tops(pz)
 	if c.fornaio or helps.has("oven"):
 		var slot := oven.free_slot()
@@ -1971,6 +1972,7 @@ func serve(by_marco: bool = false) -> void:
 	var a := pz.assess(c)
 	Equip.adjust(a, pz.rec, false)
 	a.mine = true
+	Skills.served(pz, a)
 	to_pass(pz.tk, a)
 	board.pop_front()
 	Art.sfx("bell")                         # the pass bell: it is going out

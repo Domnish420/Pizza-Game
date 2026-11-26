@@ -591,6 +591,10 @@ func _sync_oven() -> void:
 				n.basis = Basis(v.cross(Vector3.UP).normalized(), 0.16) * n.basis
 				n.position.y += 0.012
 				_hold(turner, edge3 + Vector3(0, 0.01, 0), 0.8, 0.0)      # (its handle back out of the mouth, toward you)
+			elif dg != null and dg.pz == o.pz and dg.mode == "dome":
+				# held up to the dome on the turning peel, under its middle
+				n.position.y += 0.12
+				_hold(turner, n.position - Vector3(0, 0.008, 0), 0.8, 0.0)
 			var st: String = ("%s has it" % Story.BOSS if Story.stage() == "pizzaiolo" else "your fornaio has it") if o.auto else ov.status(o)
 			var col := Color.WHITE
 			if st == "READY": col = Kit.BASIL

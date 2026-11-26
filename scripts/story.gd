@@ -139,9 +139,13 @@ func start() -> void:
 	_crew("pizzaiolo")
 	s.equip = Equip.starter("pizzeria")
 	for st in ["fridge", "dry"]: s.vent[st] = int(round(Stock.vent_need(st)))
-	# the boss has stocked up and made today's dough
+	# the boss has stocked up and made today's dough: plenty for the pizzas and the sides made from it (he does not run
+	# out on his crew's first days)
 	var c := Game.calc()
-	s.dough = [{"style": "neapolitan", "n": int(c.total * 1.25) + 2, "q": 78, "d": 0, "speed": 0, "g": 3.0, "c": 0.3}]
+	var sides := 0.0
+	for x in Game.extras_on():
+		if x.make == "oven": sides += Game.extra_rate(x)
+	s.dough = [{"style": "neapolitan", "n": int(ceil(c.total * (1.25 + sides * 1.3))) + 3, "q": 78, "d": 0, "speed": 0, "g": 3.0, "c": 0.3}]
 	s.stock.erase("mozz")
 	s.stock.erase("tomato")
 	for e in [["flour00", 25000, 3], ["tomato", 5000, 3], ["mozz", 5000, 3], ["basil", 125, 2], ["pepperoni", 1000, 2], ["mushroom", 1000, 2], ["box", 50, 2],
@@ -197,7 +201,7 @@ func evening() -> Array:
 	var plan := Game.dough_plan()
 	var made := 0
 	for sty in plan:
-		var balls: int = plan[sty]
+		var balls: int = int(ceil(plan[sty] * 1.15)) + 2 if plan[sty] > 0 else 0     # (the boss keeps a little over)
 		if balls <= 0: continue
 		var per := Stock.dough_parts(sty, Stock.flour_per_ball(sty))
 		for ing in per:

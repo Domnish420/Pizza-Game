@@ -44,6 +44,7 @@ var _gn := Vector2i.ZERO          # the size of the cell grid
 var _layer_img: Image
 var _layer_tex: ImageTexture
 var _tsig := ""
+var _ksig := 0
 var _zero_bake := PackedFloat32Array()
 
 func _ready() -> void:
@@ -129,25 +130,35 @@ func show_pizza(p) -> void:
 	_mat.set_shader_parameter("melt", clamp((avg - 0.3) / 0.4, 0.0, 1.0) if baked else 0.0)
 	var s := _signature()
 	var t := "%s|%d|%d|%d" % [s, pz.tops.size(), pz.cuts.size(), int(avg * 8.0) if baked else -1]
-	if (s != _sig or t != _tsig) and (_since > 0.035 or _sig == ""):
+	var k := _thk_sig()
+	# the thickness across it changes with every press of a fingertip: that rebuilds it a few times a second, not every frame
+	var thk_due: bool = k != _ksig and _since > 0.25
+	if (s != _sig or t != _tsig or thk_due) and (_since > 0.035 or _sig == ""):
 		_since = 0.0
-		if s != _sig: _build()
+		if s != _sig or thk_due: _build()
 		else: _build_toppings(_thick(), baked, avg * 0.75 if baked else 0.0, baked and avg > 0.5)
 		_sig = s
 		_tsig = t
+		_ksig = k
 
 ## what the mesh is built from: the dough's shape, the sauce and cheese, and whether the cheese has melted
 func _signature() -> String:
 	var b := pz.base
 	var s := 0.0
 	for i in PizzaBase.NS: s += b.r[i] * 1.31 + b.rim[i] * 0.71
-	for c in b.thk.size(): s += b.thk[c] * (c % 7 + 1) * 3.7
 	var sa := 0.0
 	for k in pz.sauce_amt: sa += pz.sauce_amt[k]
 	var ca := 0.0
 	for k in pz.cheese_amt: ca += pz.cheese_amt[k]
 	var melted: bool = (pz.stage == "oven" or pz.stage == "board") and pz.bake_avg() > 0.5
 	return "%d|%.1f|%.2f|%.1f|%.1f|%s|%s%s" % [pz.id, s, b.rot, sa, ca, melted, pz.sauce, pz.cheese]
+
+## the thickness across it, coarsely (a change you could see)
+func _thk_sig() -> int:
+	var k := 0
+	var b := pz.base
+	for c in b.thk.size(): k = (k * 31 + int(round(b.thk[c] * 12.0))) % 1000000007
+	return k
 
 ## a soft round puff for the steam
 func _wisp() -> ImageTexture:

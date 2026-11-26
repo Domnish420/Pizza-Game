@@ -1,8 +1,9 @@
 extends "res://tests/bot.gd"
 ## The turning peel in a wood oven, in service in 3D. Touch a pizza's edge and the peel slides under and lifts that
 ## side; with the left side lifted, pushing forward turns the pizza to the right and pulling back to the left (lifted on
-## the right side, the other way round); lifted, the base bakes less from the deck; in 3D it tilts up on the peel. Turned
-## with the peel as it bakes, every side meets the fire: leopard spots all round the crust, and the review says so.
+## the right side, the other way round); lifted, the base bakes less from the deck; in 3D it tilts up on the peel. Its
+## middle held still a moment, the peel takes it up to the dome: the top finishes quicker and the base stops cooking.
+## Turned with the peel as it bakes, every side meets the fire: leopard spots all round the crust, and the review says so.
 
 var svc
 var ovv
@@ -82,6 +83,25 @@ func run() -> void:
 	for i in 10: ov.step(0.1, 1.0)
 	o.lifted = false
 	check(pz.floor - f0 < down_rate * 0.6, "held up on the peel, the base browns less from the deck", [snappedf(pz.floor - f0, 0.001), snappedf(down_rate, 0.001)])
+
+	# its middle held still a moment: up to the dome on the peel; the top finishes quicker, the base stops
+	var b0: float = pz.bake_avg()
+	for i in 10: ov.step(0.1, 1.0)
+	var top_rate: float = pz.bake_avg() - b0
+	var y_deck: float = n.position.y
+	var at0: Vector2 = o.at
+	ovv._down(o.at)
+	await until(func(): return ovv.drag != null and ovv.drag.mode == "dome", 5.0)
+	await frames(2)
+	check(o.get("domed", false) and n.position.y > y_deck + 0.1 and w.turner.visible, "the middle held still a moment: the peel takes it up to the dome", [o.get("domed", false), snappedf(n.position.y - y_deck, 0.01)])
+	await shot("domed")
+	b0 = pz.bake_avg()
+	f0 = pz.floor
+	for i in 10: ov.step(0.1, 1.0)
+	check(pz.bake_avg() - b0 > top_rate * 1.5 and pz.floor == f0, "up there the top finishes quicker and the base stops cooking", [snappedf(pz.bake_avg() - b0, 0.001), snappedf(top_rate, 0.001), snappedf(pz.floor - f0, 0.001)])
+	ovv._up(o.at)
+	await frames(2)
+	check(not o.get("domed", false) and absf(n.position.y - y_deck) < 0.01 and o.at.distance_to(at0) < 1.0, "let go and it is back down where it was", o.get("domed", false))
 
 	# baked, turned with the peel every second: every side meets the fire
 	for j in pz.bake.size():
